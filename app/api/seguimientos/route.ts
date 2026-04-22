@@ -9,10 +9,11 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
+    const userId = parseInt(session.user.id)
     const { searchParams } = new URL(request.url)
     const arbolId = searchParams.get("arbol_id")
 
@@ -21,19 +22,17 @@ export async function GET(request: NextRequest) {
       result = await query(
         `SELECT s.*, a.nombre as arbol_nombre FROM seguimientos s
          INNER JOIN arboles a ON s.arbol_id = a.id
-         INNER JOIN usuarios u ON s.usuario_id = u.id
-         WHERE s.arbol_id = $1 AND u.email = $2
+         WHERE s.arbol_id = $1 AND s.usuario_id = $2 AND a.usuario_id = $2
          ORDER BY s.fecha_seguimiento DESC`,
-        [arbolId, session.user.email],
+        [arbolId, userId],
       )
     } else {
       result = await query(
         `SELECT s.*, a.nombre as arbol_nombre FROM seguimientos s
          INNER JOIN arboles a ON s.arbol_id = a.id
-         INNER JOIN usuarios u ON s.usuario_id = u.id
-         WHERE u.email = $1
+         WHERE s.usuario_id = $1
          ORDER BY s.fecha_seguimiento DESC`,
-        [session.user.email],
+        [userId],
       )
     }
 
@@ -49,7 +48,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
@@ -60,16 +59,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
 
-    // Obtener el ID del usuario
-    const userResult = await query("SELECT id FROM usuarios WHERE email = $1", [session.user.email])
+    const usuarioId = parseInt(session.user.id)
 
-    if (userResult.rows.length === 0) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
-    }
-
-    const usuarioId = userResult.rows[0].id
-
-    // Verificar que el árbol pertenece al usuario
+    // Verificar que el árbol pertenece al usuario - una sola consulta
     const arbolResult = await query("SELECT id FROM arboles WHERE id = $1 AND usuario_id = $2", [arbol_id, usuarioId])
 
     if (arbolResult.rows.length === 0) {
