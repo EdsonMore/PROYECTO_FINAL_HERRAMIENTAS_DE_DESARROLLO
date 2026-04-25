@@ -20,9 +20,9 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Buscar usuario en la base de datos
+          // Buscar usuario en la base de datos - seleccionar solo campos necesarios
           const result = await query(
-            "SELECT * FROM usuarios WHERE email = $1",
+            "SELECT id, email, password_hash, nombre, avatar_url FROM usuarios WHERE email = $1",
             [credentials.email]
           );
 
@@ -68,28 +68,16 @@ export const authOptions: NextAuthOptions = {
       // Si viene de Google u otro provider OAuth
       if (account?.provider === "google") {
         try {
-          // Verificar si el usuario ya existe
-          const existingUser = await query(
-            "SELECT id FROM usuarios WHERE email = $1",
-            [user.email]
+          // Usar UPSERT para optimizar: una sola consulta en lugar de SELECT + INSERT/UPDATE
+          const nombre = user.name || user.email?.split("@")[0] || "Usuario";
+          await query(
+            `INSERT INTO usuarios (nombre, email, password_hash, avatar_url) 
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (email) DO UPDATE 
+             SET avatar_url = COALESCE($4, avatar_url),
+                 actualizado_en = NOW()`,
+            [nombre, user.email, "", user.image || ""]
           );
-
-          if (existingUser.rows.length === 0) {
-            // Crear nuevo usuario con contraseña vacía (OAuth)
-            const nombre = user.name || user.email?.split("@")[0] || "Usuario";
-            await query(
-              "INSERT INTO usuarios (nombre, email, password_hash, avatar_url) VALUES ($1, $2, $3, $4)",
-              [nombre, user.email, "", user.image || ""]
-            );
-          } else {
-            // Actualizar avatar si existe
-            if (user.image) {
-              await query(
-                "UPDATE usuarios SET avatar_url = $1 WHERE email = $2",
-                [user.image, user.email]
-              );
-            }
-          }
 
           return true;
         } catch (error) {
@@ -103,6 +91,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+        // Guardar el user_id aquí para evitar búsquedas en las APIs
       }
       if (account) {
         token.provider = account.provider;

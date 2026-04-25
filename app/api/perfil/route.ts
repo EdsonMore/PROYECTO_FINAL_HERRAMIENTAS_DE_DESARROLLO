@@ -9,14 +9,14 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     const result = await query(
       `SELECT id, nombre, email, avatar_url, fecha_registro 
-       FROM usuarios WHERE email = $1`,
-      [session.user.email]
+       FROM usuarios WHERE id = $1`,
+      [parseInt(session.user.id)]
     );
 
     if (result.rows.length === 0) {
@@ -41,27 +41,14 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
+    const userId = parseInt(session.user.id);
     const body = await request.json();
     const { nombre, avatar_url, password_actual, nueva_password } = body;
 
-    // Obtener usuario actual
-    const userResult = await query(
-      "SELECT id, password_hash FROM usuarios WHERE email = $1",
-      [session.user.email]
-    );
-
-    if (userResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: "Usuario no encontrado" },
-        { status: 404 }
-      );
-    }
-
-    const usuario = userResult.rows[0];
     let updateFields = [];
     let queryParams = [];
     let paramCount = 1;
@@ -86,25 +73,30 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      // Si es base64 y es muy largo, truncar a un tamaño razonable
-      if (avatar_url.startsWith("data:image")) {
-        // Guardar en base64 directamente (PostgreSQL soporta texto largo)
-        updateFields.push(`avatar_url = $${paramCount}`);
-        queryParams.push(avatar_url);
-        paramCount++;
-      } else {
-        updateFields.push(`avatar_url = $${paramCount}`);
-        queryParams.push(avatar_url);
-        paramCount++;
-      }
+      updateFields.push(`avatar_url = $${paramCount}`);
+      queryParams.push(avatar_url);
+      paramCount++;
     }
 
     // Actualizar contraseña si se proporciona
     if (password_actual && nueva_password) {
+      // Obtener password_hash del usuario
+      const userResult = await query(
+        "SELECT password_hash FROM usuarios WHERE id = $1",
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Usuario no encontrado" },
+          { status: 404 }
+        );
+      }
+
       // Verificar contraseña actual
       const isValidPassword = await bcrypt.compare(
         password_actual,
-        usuario.password_hash
+        userResult.rows[0].password_hash
       );
       if (!isValidPassword) {
         return NextResponse.json(
@@ -129,7 +121,7 @@ export async function PUT(request: NextRequest) {
 
     // Agregar fecha de actualización y ID del usuario
     updateFields.push(`actualizado_en = NOW()`);
-    queryParams.push(usuario.id);
+    queryParams.push(userId);
 
     const queryText = `
       UPDATE usuarios 

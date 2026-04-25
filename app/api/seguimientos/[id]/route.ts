@@ -9,7 +9,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
@@ -22,14 +22,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json()
     const { arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento } = body
 
+    const userId = parseInt(session.user.id)
     const result = await query(
-      `UPDATE seguimientos s
+      `UPDATE seguimientos
        SET arbol_id = $1, titulo = $2, descripcion = $3, foto_url = $4, 
            altura_cm = $5, salud = $6, fecha_seguimiento = $7, actualizado_en = NOW()
-       FROM usuarios u
-       WHERE s.id = $8 AND s.usuario_id = u.id AND u.email = $9
-       RETURNING s.*`,
-      [arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, seguimientoId, session.user.email],
+       WHERE id = $8 AND usuario_id = $9
+       RETURNING *`,
+      [arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, seguimientoId, userId],
     )
 
     if (result.rows.length === 0) {
@@ -48,7 +48,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
@@ -58,12 +58,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
+    const userId = parseInt(session.user.id)
     const result = await query(
-      `DELETE FROM seguimientos s
-       USING usuarios u
-       WHERE s.id = $1 AND s.usuario_id = u.id AND u.email = $2
-       RETURNING s.id`,
-      [seguimientoId, session.user.email],
+      `DELETE FROM seguimientos
+       WHERE id = $1 AND usuario_id = $2
+       RETURNING id`,
+      [seguimientoId, userId],
     )
 
     if (result.rows.length === 0) {

@@ -9,7 +9,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
@@ -19,11 +19,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
+    const userId = parseInt(session.user.id)
     const result = await query(
-      `SELECT a.* FROM arboles a
-       INNER JOIN usuarios u ON a.usuario_id = u.id
-       WHERE a.id = $1 AND u.email = $2`,
-      [treeId, session.user.email],
+      `SELECT * FROM arboles
+       WHERE id = $1 AND usuario_id = $2`,
+      [treeId, userId],
     )
 
     if (result.rows.length === 0) {
@@ -42,7 +42,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
@@ -55,14 +55,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json()
     const { nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url } = body
 
+    const userId = parseInt(session.user.id)
     const result = await query(
-      `UPDATE arboles a
+      `UPDATE arboles
        SET nombre = $1, especie = $2, latitud = $3, longitud = $4, 
            fecha_plantacion = $5, descripcion = $6, foto_url = $7, actualizado_en = NOW()
-       FROM usuarios u
-       WHERE a.id = $8 AND a.usuario_id = u.id AND u.email = $9
-       RETURNING a.*`,
-      [nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, treeId, session.user.email],
+       WHERE id = $8 AND usuario_id = $9
+       RETURNING *`,
+      [nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, treeId, userId],
     )
 
     if (result.rows.length === 0) {
@@ -81,7 +81,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
@@ -91,12 +91,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
+    const userId = parseInt(session.user.id)
     const result = await query(
-      `DELETE FROM arboles a
-       USING usuarios u
-       WHERE a.id = $1 AND a.usuario_id = u.id AND u.email = $2
-       RETURNING a.id`,
-      [treeId, session.user.email],
+      `DELETE FROM arboles
+       WHERE id = $1 AND usuario_id = $2
+       RETURNING id`,
+      [treeId, userId],
     )
 
     if (result.rows.length === 0) {

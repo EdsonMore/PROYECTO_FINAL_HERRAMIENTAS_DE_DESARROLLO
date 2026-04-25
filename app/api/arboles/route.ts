@@ -9,16 +9,16 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
+    const userId = parseInt(session.user.id)
     const result = await query(
-      `SELECT a.* FROM arboles a
-       INNER JOIN usuarios u ON a.usuario_id = u.id
-       WHERE u.email = $1
-       ORDER BY a.creado_en DESC`,
-      [session.user.email],
+      `SELECT * FROM arboles
+       WHERE usuario_id = $1
+       ORDER BY creado_en DESC`,
+      [userId],
     )
 
     return NextResponse.json(result.rows)
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
@@ -44,14 +44,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
 
-    // Obtener el ID del usuario
-    const userResult = await query("SELECT id FROM usuarios WHERE email = $1", [session.user.email])
-
-    if (userResult.rows.length === 0) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
-    }
-
-    const usuarioId = userResult.rows[0].id
+    const usuarioId = parseInt(session.user.id)
 
     // Insertar el árbol
     const result = await query(
