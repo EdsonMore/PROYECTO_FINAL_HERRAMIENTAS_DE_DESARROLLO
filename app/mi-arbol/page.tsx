@@ -41,6 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TreePhotoForm } from "@/components/tree-photo-form";
+import { ChatbotPanel } from "@/components/chatbot-panel";
 import type { Arbol } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -713,6 +714,7 @@ export default function MiArbolPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <ChatbotPanel />
       <Footer />
     </div>
   );
