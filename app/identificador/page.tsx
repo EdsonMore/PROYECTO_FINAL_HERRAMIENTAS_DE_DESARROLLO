@@ -1,6 +1,7 @@
 import { SpeciesIdentifier } from "@/components/species-identifier";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import { ChatbotPanel } from "@/components/chatbot-panel";
 
 export default function IdentificadorPage() {
   return (
@@ -17,6 +18,7 @@ export default function IdentificadorPage() {
           <SpeciesIdentifier />
         </div>
       </main>
+      <ChatbotPanel />
       <Footer />
     </div>
   );
