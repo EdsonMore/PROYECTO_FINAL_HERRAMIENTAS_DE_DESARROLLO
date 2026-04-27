@@ -11,11 +11,34 @@ export default function HomePage() {
       <Navbar />
 
       <main className="flex-1">
-        {/* Hero Section */}
-        {/* aca section va la foto de arriba */}
-        <section>
-          <div className="absolute inset-0  z-0"></div>
-          <img src="/logo.jpg" alt="Fondo de árboles" />
+        {/* Hero Section: imagen de fondo con texto superpuesto */}
+        <section className="relative h-[70vh] md:h-[80vh] flex items-center">
+          <div className="absolute inset-0 z-0">
+            <img
+              src="/img/EcoDataIA (2).png"
+              alt="EcoData IA - árbol"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: "center 50%" }}
+            />
+            <div className="absolute inset-0 bg-black/30" />
+          </div>
+
+          <div className="container mx-auto relative z-10 text-center">
+            <h1 className="text-5xl md:text-8xl font-extrabold text-white">
+              EcoData IA
+            </h1>
+            <p className="mt-4 text-lg text-white/90">
+              Cuida y sigue el crecimiento de tu árbol
+            </p>
+
+            <div className="mt-6">
+              <Link href="/registro">
+                <Button size="lg" className="bg-green-600/90 hover:bg-green-700">
+                  Comienza ahora
+                </Button>
+              </Link>
+            </div>
+          </div>
         </section>
 
         <section className="relative py-20 md:py-32 px-4 bg-gradient-to-b from-secondary/30 to-background">

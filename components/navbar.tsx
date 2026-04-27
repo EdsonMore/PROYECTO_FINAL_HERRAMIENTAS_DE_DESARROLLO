@@ -64,7 +64,7 @@ export function Navbar() {
               className="rounded"
             />
             <span className="text-white text-base sm:text-lg md:text-xl font-bold">
-              ReVerdecer Piura
+              EcoData IA
             </span>
           </Link>
 
