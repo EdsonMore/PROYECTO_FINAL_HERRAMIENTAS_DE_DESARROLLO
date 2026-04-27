@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script de ayuda para deployment
 
-echo "🌳 REVERDECER PIURA - Deployment Helper"
+echo "🌳 EcoData IA - Deployment Helper"
 echo "========================================"
 echo ""
 echo "1. Generar NEXTAUTH_SECRET"

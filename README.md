@@ -195,7 +195,7 @@ Un sistema capaz de:
 
 ## 📌 11. Metadatos del Proyecto
 
-* Nombre: ReVerdecer Piura AI
+* Nombre: EcoData IA
 * Tipo: Sistema Web Inteligente
 * Enfoque: Data-driven + IA
 * Tecnologías: Next.js, PostgreSQL, APIs externas

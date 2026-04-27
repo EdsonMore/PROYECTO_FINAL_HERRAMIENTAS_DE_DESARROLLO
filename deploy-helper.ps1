@@ -1,7 +1,7 @@
 # PowerShell Script de ayuda para deployment
-# REVERDECER PIURA - Deployment Helper
+# EcoData IA - Deployment Helper
 
-Write-Host "🌳 REVERDECER PIURA - Deployment Helper" -ForegroundColor Green
+Write-Host "🌳 EcoData IA - Deployment Helper" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "1. Generar NEXTAUTH_SECRET" -ForegroundColor Cyan

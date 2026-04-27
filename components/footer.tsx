@@ -17,7 +17,7 @@ export function Footer() {
                 alt="logo de la pagina"
                 className="rounded"
               />
-              <span>ReVerdecer Piura</span>
+              <span>EcoData IA</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Plataforma que conecta a personas con la naturaleza, fomentando el
@@ -103,7 +103,7 @@ export function Footer() {
             pasión por el planeta
           </p>
           <p className="mt-2">
-            © {new Date().getFullYear()} ReVerdecer Piura. Todos los derechos
+            © {new Date().getFullYear()} EcoData IA. Todos los derechos
             reservados.
           </p>
         </div>

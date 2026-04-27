@@ -9,7 +9,7 @@ import { Providers } from "./providers"; // 👈 Asegúrate de importar esto
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ReVerdecer Piura  - Cuida y sigue el crecimiento de tu árbol",
+  title: "EcoData IA - Cuida y sigue el crecimiento de tu árbol",
   description:
     "Plataforma para registrar, seguir y cuidar tus árboles plantados. Documenta su crecimiento con fotos y aprende consejos de cuidado.",
 };
