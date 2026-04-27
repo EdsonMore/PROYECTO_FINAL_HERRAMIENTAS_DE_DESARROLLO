@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
     let result
     if (arbolId) {
       result = await query(
-        `SELECT s.*, a.nombre as arbol_nombre FROM seguimientos s
+        `SELECT s.id, s.arbol_id, s.usuario_id, s.titulo, s.descripcion, s.foto_url, s.altura_cm, s.salud, s.fecha_seguimiento, s.creado_en, s.actualizado_en, a.nombre as arbol_nombre 
+         FROM seguimientos s
          INNER JOIN arboles a ON s.arbol_id = a.id
          WHERE s.arbol_id = $1 AND s.usuario_id = $2 AND a.usuario_id = $2
          ORDER BY s.fecha_seguimiento DESC`,
@@ -28,7 +29,8 @@ export async function GET(request: NextRequest) {
       )
     } else {
       result = await query(
-        `SELECT s.*, a.nombre as arbol_nombre FROM seguimientos s
+        `SELECT s.id, s.arbol_id, s.usuario_id, s.titulo, s.descripcion, s.foto_url, s.altura_cm, s.salud, s.fecha_seguimiento, s.creado_en, s.actualizado_en, a.nombre as arbol_nombre 
+         FROM seguimientos s
          INNER JOIN arboles a ON s.arbol_id = a.id
          WHERE s.usuario_id = $1
          ORDER BY s.fecha_seguimiento DESC`,

@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
        SET arbol_id = $1, titulo = $2, descripcion = $3, foto_url = $4, 
            altura_cm = $5, salud = $6, fecha_seguimiento = $7, actualizado_en = NOW()
        WHERE id = $8 AND usuario_id = $9
-       RETURNING *`,
+       RETURNING id, arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, creado_en, actualizado_en`,
       [arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, seguimientoId, userId],
     )
 

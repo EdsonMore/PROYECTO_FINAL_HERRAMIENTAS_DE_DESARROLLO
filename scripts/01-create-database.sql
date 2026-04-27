@@ -52,11 +52,17 @@ CREATE TABLE IF NOT EXISTS seguimientos (
 -- ==================================
 -- 4. ÍNDICES (rendimiento)
 -- ==================================
+-- Índices simples
 CREATE INDEX IF NOT EXISTS idx_arboles_usuario ON arboles(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_seguimientos_arbol ON seguimientos(arbol_id);
 CREATE INDEX IF NOT EXISTS idx_seguimientos_usuario ON seguimientos(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_seguimientos_fecha ON seguimientos(fecha_seguimiento);
 CREATE INDEX IF NOT EXISTS idx_usuarios_avatar ON usuarios(id) WHERE avatar_url IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
+
+-- Índices compuestos para optimizar búsquedas comunes
+CREATE INDEX IF NOT EXISTS idx_arboles_usuario_id ON arboles(usuario_id, id);
+CREATE INDEX IF NOT EXISTS idx_seguimientos_usuario_arbol ON seguimientos(usuario_id, arbol_id);
 
 -- ==================================
 -- 5. TRIGGER: Actualizar timestamp

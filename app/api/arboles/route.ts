@@ -15,7 +15,8 @@ export async function GET(request: NextRequest) {
 
     const userId = parseInt(session.user.id)
     const result = await query(
-      `SELECT * FROM arboles
+      `SELECT id, usuario_id, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, creado_en, actualizado_en
+       FROM arboles
        WHERE usuario_id = $1
        ORDER BY creado_en DESC`,
       [userId],
