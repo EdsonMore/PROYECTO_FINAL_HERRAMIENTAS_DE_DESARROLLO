@@ -10,12 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TreePine, Camera, Calendar, TrendingUp, Plus } from "lucide-react";
 import Link from "next/link";
-import type { Arbol, Seguimiento } from "@/types";
+import type { ArbolResumen, Seguimiento } from "@/types";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [arboles, setArboles] = useState<Arbol[]>([]);
+  const [arboles, setArboles] = useState<ArbolResumen[]>([]);
   const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const fetchData = async () => {
     try {
       const [arbolesRes, seguimientosRes] = await Promise.all([
-        fetch("/api/arboles"),
+        fetch("/api/arboles?mode=summary"),
         fetch("/api/seguimientos"),
       ]);
 

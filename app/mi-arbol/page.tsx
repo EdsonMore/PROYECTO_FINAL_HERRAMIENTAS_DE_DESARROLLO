@@ -159,7 +159,7 @@ export default function MiArbolPage() {
 
   const fetchArboles = async () => {
     try {
-      const res = await fetch("/api/arboles");
+      const res = await fetch("/api/arboles?mode=full");
       if (res.ok) {
         const data = await res.json();
         setArboles(data);

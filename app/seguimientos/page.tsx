@@ -27,14 +27,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { CalendarComponent } from "@/components/calendar-component"
 import { ImageUploader } from "@/components/image-uploader"
-import type { Arbol, Seguimiento } from "@/types"
+import type { ArbolResumen, Seguimiento } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SeguimientosPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { toast } = useToast()
-  const [arboles, setArboles] = useState<Arbol[]>([])
+  const [arboles, setArboles] = useState<ArbolResumen[]>([])
   const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -68,7 +68,10 @@ export default function SeguimientosPage() {
 
   const fetchData = async () => {
     try {
-      const [arbolesRes, seguimientosRes] = await Promise.all([fetch("/api/arboles"), fetch("/api/seguimientos")])
+      const [arbolesRes, seguimientosRes] = await Promise.all([
+        fetch("/api/arboles?mode=summary"),
+        fetch("/api/seguimientos"),
+      ])
 
       if (arbolesRes.ok) {
         const arbolesData = await arbolesRes.json()
