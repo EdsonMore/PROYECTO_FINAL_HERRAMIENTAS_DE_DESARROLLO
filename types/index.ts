@@ -20,6 +20,24 @@ export interface Arbol {
   actualizado_en: Date
 }
 
+export interface ArbolResumen {
+  id: number
+  nombre: string
+  especie?: string
+  foto_url?: string
+  creado_en: Date
+}
+
+export interface ArbolGeo {
+  id: number
+  nombre: string
+  especie?: string
+  latitud: number
+  longitud: number
+  foto_url?: string
+  creado_en: Date
+}
+
 export interface Seguimiento {
   id: number
   arbol_id: number
