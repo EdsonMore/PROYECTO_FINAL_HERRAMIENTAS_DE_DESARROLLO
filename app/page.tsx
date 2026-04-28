@@ -92,71 +92,59 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-              <Card className="border-2 hover:border-primary/50 transition-colors">
-                <CardContent className="pt-6 space-y-4">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <img
-                      src="/img/logo_mapa.png"
-                      width={60}
-                      height={60}
-                      className="rounded"
-                    />
+              <Card className="rounded-2xl shadow-sm hover:shadow-lg transition-shadow transform hover:-translate-y-1 focus-within:shadow-lg overflow-hidden">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="flex-shrink-0 h-16 w-16 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                    <img src="/img/logo_mapa.png" width={44} height={44} className="rounded-md" />
                   </div>
-                  <h3 className="text-xl font-semibold">Ubicación en Mapa</h3>
-                  <p className="text-muted-foreground">
-                    Marca la ubicación exacta de tu árbol en un mapa interactivo
-                    y guarda sus coordenadas.
-                  </p>
+                  <div>
+                    <h3 className="text-lg md:text-xl font-semibold">Ubicación en Mapa</h3>
+                    <p className="mt-2 text-muted-foreground max-w-xl">
+                      Marca la ubicación exacta de tu árbol en un mapa interactivo y guarda sus coordenadas.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-2 hover:border-primary/50 transition-colors">
-                <CardContent className="pt-6 space-y-4">
-                  <img
-                    src="/img/logo_camara.webp"
-                    width={60}
-                    height={60}
-                    className="rounded"
-                  />
-                  <h3 className="text-xl font-semibold">Galería de Fotos</h3>
-                  <p className="text-muted-foreground">
-                    Sube fotos del crecimiento de tu árbol y crea una línea de
-                    tiempo visual de su evolución.
-                  </p>
+              <Card className="rounded-2xl shadow-sm hover:shadow-lg transition-shadow transform hover:-translate-y-1 focus-within:shadow-lg overflow-hidden">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="flex-shrink-0 h-16 w-16 rounded-xl bg-gradient-to-br from-yellow-200/60 to-yellow-100 flex items-center justify-center">
+                    <img src="/img/logo_camara.webp" width={44} height={44} className="rounded-md" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg md:text-xl font-semibold">Galería de Fotos</h3>
+                    <p className="mt-2 text-muted-foreground max-w-xl">
+                      Sube fotos del crecimiento de tu árbol y crea una línea de tiempo visual de su evolución.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-2 hover:border-primary/50 transition-colors">
-                <CardContent className="pt-6 space-y-4">
-                  <img
-                    src="/img/calendario.jpg"
-                    width={60}
-                    height={60}
-                    className="rounded"
-                  />
-                  <h3 className="text-xl font-semibold">
-                    Calendario de Seguimiento
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Visualiza todos tus seguimientos en un calendario y mantén
-                    un registro organizado.
-                  </p>
+              <Card className="rounded-2xl shadow-sm hover:shadow-lg transition-shadow transform hover:-translate-y-1 focus-within:shadow-lg overflow-hidden">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="flex-shrink-0 h-16 w-16 rounded-xl bg-gradient-to-br from-cyan-100/60 to-cyan-50 flex items-center justify-center">
+                    <img src="/img/calendario.jpg" width={44} height={44} className="rounded-md" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg md:text-xl font-semibold">Calendario de Seguimiento</h3>
+                    <p className="mt-2 text-muted-foreground max-w-xl">
+                      Visualiza todos tus seguimientos en un calendario y mantén un registro organizado.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-2 hover:border-primary/50 transition-colors">
-                <CardContent className="pt-6 space-y-4">
-                  <img
-                    src="/img/logo_register.png"
-                    width={60}
-                    height={60}
-                    className="rounded"
-                  />
-                  <h3 className="text-xl font-semibold">Registro Detallado</h3>
-                  <p className="text-muted-foreground">
-                    Documenta altura, salud y notas importantes sobre el
-                    desarrollo de tu árbol.
-                  </p>
+              <Card className="rounded-2xl shadow-sm hover:shadow-lg transition-shadow transform hover:-translate-y-1 focus-within:shadow-lg overflow-hidden">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="flex-shrink-0 h-16 w-16 rounded-xl bg-gradient-to-br from-emerald-100/60 to-emerald-50 flex items-center justify-center">
+                    <img src="/img/logo_register.png" width={44} height={44} className="rounded-md" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg md:text-xl font-semibold">Registro Detallado</h3>
+                    <p className="mt-2 text-muted-foreground max-w-xl">
+                      Documenta altura, salud y notas importantes sobre el desarrollo de tu árbol.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </div>

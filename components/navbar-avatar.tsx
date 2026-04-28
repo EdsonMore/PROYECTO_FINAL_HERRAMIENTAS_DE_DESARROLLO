@@ -17,7 +17,7 @@ export function NavbarAvatar({
   userName,
   size = 35,
   className = "",
-  defaultAvatarPath = "/img/default_avatar.png",
+  defaultAvatarPath = "/img/perfil.jpg",
   refreshTrigger = 0,
 }: NavbarAvatarProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -35,7 +35,13 @@ export function NavbarAvatar({
         const response = await fetch("/api/perfil");
         if (response.ok) {
           const data = await response.json();
-          setAvatarUrl(data.avatar_url || defaultAvatarPath);
+          // Evitar usar la imagen institucional UCV: si la URL contiene 'ucv', usar la foto local.
+          const remote = data.avatar_url || "";
+          if (remote && !remote.toLowerCase().includes("ucv")) {
+            setAvatarUrl(remote);
+          } else {
+            setAvatarUrl(defaultAvatarPath);
+          }
         } else {
           setAvatarUrl(defaultAvatarPath);
         }
