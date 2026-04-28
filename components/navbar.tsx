@@ -23,9 +23,9 @@ export function Navbar() {
     try {
       // Llamar a API de logout explícito primero
       await fetch("/api/auth/logout", { method: "POST" });
-      
+
       // Luego hacer signOut de NextAuth
-      await signOut({ redirectUrl: "/" });
+      await signOut({ redirect: true, callbackUrl: "/" });
     } catch (error) {
       console.error("Error durante logout:", error);
       // Si falla, intentar redirect manual
@@ -40,6 +40,7 @@ export function Navbar() {
     { href: "/dashboard", label: "Dashboard", protected: true },
     { href: "/mi-arbol", label: "Mi Árbol", protected: true },
     { href: "/seguimientos", label: "Seguimientos", protected: true },
+    { href: "/clima", label: "Clima", protected: true },
     { href: "/identificador", label: "Identificador IA", protected: true },
     { href: "/beneficios", label: "Beneficios", protected: false },
   ];
@@ -73,23 +74,24 @@ export function Navbar() {
             {navLinks.map((link) => {
               // Mostrar links públicos siempre, links protegidos solo si está logueado
               if (link.protected && status !== "authenticated") {
-                return null
+                return null;
               }
-              
+
               return (
                 <Link key={link.href} href={link.href}>
                   <Button
                     variant={isActive(link.href) ? "default" : "ghost"}
                     size="sm"
-                    className={`text-sm ${isActive(link.href)
-                      ? "bg-white text-[#28254D]"
-                      : "text-white hover:bg-white/20"
-                      }`}
+                    className={`text-sm ${
+                      isActive(link.href)
+                        ? "bg-white text-[#28254D]"
+                        : "text-white hover:bg-white/20"
+                    }`}
                   >
                     {link.label}
                   </Button>
                 </Link>
-              )
+              );
             })}
 
             {session ? (
@@ -172,9 +174,9 @@ export function Navbar() {
             {navLinks.map((link) => {
               // Mostrar links públicos siempre, links protegidos solo si está logueado
               if (link.protected && status !== "authenticated") {
-                return null
+                return null;
               }
-              
+
               return (
                 <Link
                   key={link.href}
@@ -184,15 +186,16 @@ export function Navbar() {
                   <Button
                     variant={isActive(link.href) ? "default" : "ghost"}
                     size="sm"
-                    className={`w-full justify-start ${isActive(link.href)
-                      ? "bg-white text-[#28254D]"
-                      : "text-white hover:bg-white/20"
-                      }`}
+                    className={`w-full justify-start ${
+                      isActive(link.href)
+                        ? "bg-white text-[#28254D]"
+                        : "text-white hover:bg-white/20"
+                    }`}
                   >
                     {link.label}
                   </Button>
                 </Link>
-              )
+              );
             })}
 
             {session ? (
