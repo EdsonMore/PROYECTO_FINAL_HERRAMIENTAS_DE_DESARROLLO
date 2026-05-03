@@ -299,7 +299,28 @@ export default function MiArbolPage() {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-1 container mx-auto px-4 py-8">
-          <Skeleton className="h-10 w-64 mb-8" />
+          <div className="space-y-8">
+            {/* Header skeleton */}
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-64" />
+              <Skeleton className="h-4 w-96" />
+            </div>
+
+            {/* Grid skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <Skeleton className="h-[240px] w-full rounded-none" />
+                  <CardContent className="pt-4 space-y-3">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </main>
         <Footer />
       </div>
@@ -313,9 +334,11 @@ export default function MiArbolPage() {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">Mis Árboles</h1>
-            <p className="text-muted-foreground">
-              Gestiona y visualiza todos tus árboles plantados
+            <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+              Mis Árboles 🌳
+            </h1>
+            <p className="text-gray-600 text-lg">
+              Gestiona y visualiza todos tus árboles plantados. Rastrear el crecimiento es importante.
             </p>
           </div>
 
@@ -326,9 +349,11 @@ export default function MiArbolPage() {
                   resetForm();
                   setDialogOpen(true);
                 }}
+                size="lg"
+                className="gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg hover:shadow-xl transition-shadow"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Registrar Árbol
+                <Plus className="h-5 w-5" />
+                Registrar Nuevo Árbol
               </Button>
             </DialogTrigger>
             <DialogContent
@@ -341,7 +366,8 @@ export default function MiArbolPage() {
               }}
             >
               <DialogHeader>
-                <DialogTitle>
+                <DialogTitle className="flex items-center gap-2">
+                  <TreePine className="h-5 w-5 text-green-600" />
                   {editingArbol ? "Editar Árbol" : "Registrar Nuevo Árbol"}
                 </DialogTitle>
                 <DialogDescription>
@@ -350,216 +376,263 @@ export default function MiArbolPage() {
                     : "Completa los datos para registrar tu nuevo árbol"}
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nombre">Nombre del Árbol *</Label>
-                    <Input
-                      id="nombre"
-                      value={formData.nombre}
-                      onChange={(e) =>
-                        setFormData({ ...formData, nombre: e.target.value })
-                      }
-                      placeholder="Ej: Mi primer roble"
-                      required
-                    />
-                  </div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Sección: Información Básica */}
+                <div className="border-l-4 border-green-500 pl-4">
+                  <h3 className="font-semibold text-sm text-green-700 mb-3 flex items-center gap-1">
+                    <span className="text-base">ℹ️</span> Información Básica
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nombre" className="font-semibold">
+                        Nombre del Árbol <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="nombre"
+                        value={formData.nombre}
+                        onChange={(e) =>
+                          setFormData({ ...formData, nombre: e.target.value })
+                        }
+                        placeholder="Ej: Mi primer roble"
+                        required
+                        className="border-green-200 focus:border-green-500"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Dale un nombre descriptivo a tu árbol
+                      </p>
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="fecha_plantacion">
-                      Fecha de Plantación
-                    </Label>
-                    <Input
-                      id="fecha_plantacion"
-                      type="date"
-                      value={formData.fecha_plantacion}
-                      onChange={(e) =>
+                    <div className="space-y-2">
+                      <Label htmlFor="fecha_plantacion" className="font-semibold">
+                        Fecha de Plantación
+                      </Label>
+                      <Input
+                        id="fecha_plantacion"
+                        type="date"
+                        value={formData.fecha_plantacion}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            fecha_plantacion: e.target.value,
+                          })
+                        }
+                        className="border-green-200 focus:border-green-500"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Recuerda cuándo lo plantaste
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: Identificación de Especie */}
+                <div className="border-l-4 border-blue-500 pl-4">
+                  <h3 className="font-semibold text-sm text-blue-700 mb-3 flex items-center gap-1">
+                    <span className="text-base">📸</span> Foto e Identificación
+                  </h3>
+                  {/* Componente unificado: Foto + Identificación automática de especie */}
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
+                    <TreePhotoForm
+                      onPhotoIdentified={(result) => {
                         setFormData({
                           ...formData,
-                          fecha_plantacion: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                {/* Componente unificado: Foto + Identificación automática de especie */}
-                <TreePhotoForm
-                  onPhotoIdentified={(result) => {
-                    setFormData({
-                      ...formData,
-                      especie: result.species,
-                      foto_url: result.photo,
-                      descripcion: result.careInstructions || formData.descripcion,
-                    });
-                    toast({
-                      title: "✓ Foto y especie listas",
-                      description: `${result.species} (${result.scientificName}) - ${Math.round(result.confidence * 100)}%`,
-                    });
-                  }}
-                  initialPhoto={formData.foto_url}
-                  initialSpecies={formData.especie}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="especie">Especie *</Label>
-                    <Input
-                      id="especie"
-                      value={formData.especie}
-                      onChange={(e) =>
-                        setFormData({ ...formData, especie: e.target.value })
-                      }
-                      placeholder="Ej: Roble (auto-completada)"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="descripcion">Descripción (Auto-completada con cuidados)</Label>
-                  <Textarea
-                    id="descripcion"
-                    value={formData.descripcion}
-                    onChange={(e) =>
-                      setFormData({ ...formData, descripcion: e.target.value })
-                    }
-                    placeholder="Describe tu árbol..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label>Ubicación en el Mapa *</Label>
-                    <div className="flex gap-2">
-                      {!editingArbol && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={getGeolocation}
-                          disabled={geoLoading}
-                          className="gap-2"
-                        >
-                          {geoLoading ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Detectando...
-                            </>
-                          ) : (
-                            <>
-                              <Navigation className="h-4 w-4" />
-                              Mi ubicación
-                            </>
-                          )}
-                        </Button>
-                      )}
-                      {editingArbol && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={isChangingLocation ? "destructive" : "outline"}
-                          onClick={() => setIsChangingLocation(!isChangingLocation)}
-                          className="gap-2"
-                        >
-                          {isChangingLocation ? "Cancelar cambio" : "Cambiar ubicación"}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {editingArbol && isChangingLocation && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm mb-3">
-                      <p className="text-yellow-800 font-semibold">⚠️ Modo cambio de ubicación activado</p>
-                      <p className="text-yellow-700 text-xs mt-1">
-                        Haz clic en el mapa donde deseas trasladar el árbol. Se te pedirá confirmación antes de guardar.
-                      </p>
-                    </div>
-                  )}
-
-                  <DynamicMapComponent
-                    center={[
-                      formData.latitud || -5.1946,
-                      formData.longitud || -80.6307,
-                    ]}
-                    zoom={13}
-                    onLocationSelect={(lat, lng) => {
-                      // Si está editando y NO activó cambio de ubicación = ignorar
-                      if (editingArbol && !isChangingLocation) {
-                        return;
-                      }
-                      
-                      // Si está en modo cambio de ubicación = mostrar confirmación
-                      if (isChangingLocation && editingArbol) {
-                        setNewCoordinates({ lat, lng });
-                        setShowLocationConfirm(true);
-                        return;
-                      }
-                      
-                      // Si está creando árbol nuevo = actualizar directamente
-                      if (!editingArbol) {
-                        setFormData({ ...formData, latitud: lat, longitud: lng });
-                        toast({
-                          title: "Ubicación actualizada",
-                          description: `Coordenadas: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                          especie: result.species,
+                          foto_url: result.photo,
+                          descripcion: result.careInstructions || formData.descripcion,
                         });
-                      }
-                    }}
-                    markers={
-                      formData.latitud && formData.longitud
-                        ? [
-                            {
-                              lat: formData.latitud,
-                              lng: formData.longitud,
-                              popup: formData.nombre || "Ubicación del árbol",
-                            },
-                          ]
-                        : []
-                    }
-                  />
-                  
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
-                    <p className="text-xs font-semibold text-blue-900">📍 Ubicación actual guardada:</p>
-                    <p className="text-xs text-blue-800">
-                      Lat: {(Number(editingArbol?.latitud || formData.latitud) || 0).toFixed(6)} | 
-                      Lng: {(Number(editingArbol?.longitud || formData.longitud) || 0).toFixed(6)}
-                    </p>
+                        toast({
+                          title: "✓ Foto y especie listas",
+                          description: `${result.species} (${result.scientificName}) - ${Math.round(result.confidence * 100)}%`,
+                        });
+                      }}
+                      initialPhoto={formData.foto_url}
+                      initialSpecies={formData.especie}
+                    />
                   </div>
 
-                  {isChangingLocation && newCoordinates && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
-                      <p className="text-xs font-semibold text-green-900">✓ Nueva ubicación seleccionada:</p>
-                      <p className="text-xs text-green-800">
-                        Lat: {newCoordinates.lat.toFixed(6)} | Lng: {newCoordinates.lng.toFixed(6)}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="especie" className="font-semibold">
+                        Especie <span className="text-red-500">*</span> {formData.especie && <span className="text-green-600 text-xs ml-1">✓ Identificada</span>}
+                      </Label>
+                      <Input
+                        id="especie"
+                        value={formData.especie}
+                        onChange={(e) =>
+                          setFormData({ ...formData, especie: e.target.value })
+                        }
+                        placeholder="Ej: Roble (auto-completada)"
+                        required
+                        className="border-blue-200 focus:border-blue-500"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Se completa automáticamente con la foto
                       </p>
                     </div>
-                  )}
+                  </div>
 
-                  {!editingArbol && (
+                  <div className="space-y-2">
+                    <Label htmlFor="descripcion" className="font-semibold">
+                      Descripción & Cuidados
+                    </Label>
+                    <Textarea
+                      id="descripcion"
+                      value={formData.descripcion}
+                      onChange={(e) =>
+                        setFormData({ ...formData, descripcion: e.target.value })
+                      }
+                      placeholder="Describe tu árbol y cuidados especiales..."
+                      rows={3}
+                      className="border-blue-200 focus:border-blue-500 resize-none"
+                    />
                     <p className="text-xs text-muted-foreground">
-                      📍 Haz clic en el mapa para cambiar la ubicación o usa el botón "Mi ubicación"
+                      {formData.descripcion.length} caracteres
                     </p>
-                  )}
-                  
-                  {editingArbol && !isChangingLocation && (
-                    <p className="text-xs text-muted-foreground">
-                      🔒 Ubicación protegida. Presiona "Cambiar ubicación" si necesitas modificarla.
-                    </p>
-                  )}
+                  </div>
                 </div>
 
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit">
-                    {editingArbol ? "Actualizar" : "Registrar"}
-                  </Button>
+                {/* Sección: Ubicación en Mapa */}
+                {/* Sección: Ubicación en Mapa */}
+                <div className="border-l-4 border-purple-500 pl-4">
+                  <h3 className="font-semibold text-sm text-purple-700 mb-3 flex items-center gap-1">
+                    <span className="text-base">📍</span> Ubicación en el Mapa
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">
+                        Coordenadas <span className="text-red-500">*</span>
+                      </span>
+                      <div className="flex gap-2">
+                        {!editingArbol && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={getGeolocation}
+                            disabled={geoLoading}
+                            className="gap-2 bg-gradient-to-r from-green-50 to-emerald-50 border-green-300 hover:bg-green-100"
+                          >
+                            {geoLoading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Detectando...
+                              </>
+                            ) : (
+                              <>
+                                <Navigation className="h-4 w-4" />
+                                Mi ubicación
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        {editingArbol && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={isChangingLocation ? "destructive" : "outline"}
+                            onClick={() => setIsChangingLocation(!isChangingLocation)}
+                            className="gap-2"
+                          >
+                            {isChangingLocation ? "❌ Cancelar cambio" : "✏️ Cambiar ubicación"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {editingArbol && isChangingLocation && (
+                      <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
+                        <p className="text-yellow-900 font-semibold text-sm">⚠️ Modo cambio de ubicación</p>
+                        <p className="text-yellow-800 text-xs mt-1">
+                          Haz clic en el mapa para seleccionar la nueva ubicación. Se te pedirá confirmación.
+                        </p>
+                      </div>
+                    )}
+
+                    <DynamicMapComponent
+                      center={[
+                        formData.latitud || -5.1946,
+                        formData.longitud || -80.6307,
+                      ]}
+                      zoom={13}
+                      onLocationSelect={(lat, lng) => {
+                        if (editingArbol && !isChangingLocation) {
+                          return;
+                        }
+                        
+                        if (isChangingLocation && editingArbol) {
+                          setNewCoordinates({ lat, lng });
+                          setShowLocationConfirm(true);
+                          return;
+                        }
+                        
+                        if (!editingArbol) {
+                          setFormData({ ...formData, latitud: lat, longitud: lng });
+                          toast({
+                            title: "✓ Ubicación actualizada",
+                            description: `Coordenadas: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                          });
+                        }
+                      }}
+                      markers={
+                        formData.latitud && formData.longitud
+                          ? [
+                              {
+                                lat: formData.latitud,
+                                lng: formData.longitud,
+                                popup: formData.nombre || "Ubicación del árbol",
+                              },
+                            ]
+                          : []
+                      }
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="bg-blue-50 border border-blue-300 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-blue-900">📍 Ubicación guardada:</p>
+                        <p className="text-xs text-blue-800 font-mono">
+                          {(Number(editingArbol?.latitud || formData.latitud) || 0).toFixed(6)}, {(Number(editingArbol?.longitud || formData.longitud) || 0).toFixed(6)}
+                        </p>
+                      </div>
+
+                      {isChangingLocation && newCoordinates && (
+                        <div className="bg-green-50 border border-green-300 rounded-lg p-3">
+                          <p className="text-xs font-semibold text-green-900">✓ Nueva ubicación:</p>
+                          <p className="text-xs text-green-800 font-mono">
+                            {newCoordinates.lat.toFixed(6)}, {newCoordinates.lng.toFixed(6)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {!editingArbol && (
+                      <p className="text-xs text-muted-foreground italic">
+                        💡 Haz clic en el mapa o usa "Mi ubicación"
+                      </p>
+                    )}
+                    
+                    {editingArbol && !isChangingLocation && (
+                      <p className="text-xs text-muted-foreground italic">
+                        🔒 Ubicación protegida. Presiona "Cambiar ubicación" para modificarla.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sección: Acciones */}
+                <div className="bg-gradient-to-r from-slate-50 to-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex gap-3 justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDialogOpen(false)}
+                      className="min-w-[120px]"
+                    >
+                      ✕ Cancelar
+                    </Button>
+                    <Button type="submit" className="min-w-[120px]">
+                      {editingArbol ? "💾 Actualizar" : "✓ Registrar"}
+                    </Button>
+                  </div>
                 </div>
               </form>
             </DialogContent>
@@ -567,17 +640,23 @@ export default function MiArbolPage() {
         </div>
 
         {arboles.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <TreePine className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
-                No tienes árboles registrados
+          <Card className="border-2 border-dashed border-green-300 bg-gradient-to-br from-green-50 to-emerald-50">
+            <CardContent className="text-center py-16">
+              <div className="mb-4">
+                <TreePine className="h-20 w-20 text-green-300 mx-auto mb-4 opacity-75" />
+              </div>
+              <h3 className="text-2xl font-bold mb-2 text-gray-900">
+                ¡Comienza tu viaje verde! 🌱
               </h3>
-              <p className="text-muted-foreground mb-6">
-                Comienza registrando tu primer árbol
+              <p className="text-gray-600 mb-8 max-w-sm mx-auto">
+                Aún no tienes árboles registrados. Registra tu primer árbol y comienza a rastrear su crecimiento.
               </p>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button
+                onClick={() => setDialogOpen(true)}
+                size="lg"
+                className="gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+              >
+                <Plus className="h-5 w-5" />
                 Registrar Mi Primer Árbol
               </Button>
             </CardContent>
@@ -588,59 +667,79 @@ export default function MiArbolPage() {
               {arboles.map((arbol) => (
                 <Card
                   key={arbol.id}
-                  className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col"
+                  className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-gray-200 hover:border-green-400 group"
                 >
-                  <div className="h-[240px] bg-secondary relative flex-shrink-0 overflow-hidden">
+                  <div className="h-[240px] bg-gradient-to-br from-green-100 to-emerald-100 relative flex-shrink-0 overflow-hidden">
                     {arbol.foto_url ? (
                       <img
                         src={arbol.foto_url || "/placeholder.svg"}
                         alt={arbol.nombre}
-                        className="object-cover w-full h-full"
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <TreePine className="h-16 w-16 text-muted-foreground" />
+                      <div className="flex items-center justify-center h-full bg-gradient-to-br from-green-100 to-emerald-100">
+                        <TreePine className="h-20 w-20 text-green-300 opacity-50" />
+                      </div>
+                    )}
+                    {arbol.especie && (
+                      <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2.5 py-1.5 rounded-full font-semibold shadow-md">
+                        {arbol.especie.split(" ")[0]}
                       </div>
                     )}
                   </div>
-                  <CardContent className="pt-4 flex-1 flex flex-col">
-                    <h3 className="font-semibold text-lg mb-1 line-clamp-1">
-                      {arbol.nombre}
-                    </h3>
-                    {arbol.especie && (
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-1">
-                        {arbol.especie}
-                      </p>
-                    )}
+                  <CardContent className="pt-5 flex-1 flex flex-col">
+                    <div className="mb-2">
+                      <h3 className="font-bold text-lg mb-1 line-clamp-1 text-gray-900 group-hover:text-green-700 transition-colors">
+                        {arbol.nombre}
+                      </h3>
+                      {arbol.especie && (
+                        <p className="text-xs font-medium text-green-700 line-clamp-1">
+                          🌿 {arbol.especie}
+                        </p>
+                      )}
+                    </div>
+
                     {arbol.descripcion && (
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
                         {arbol.descripcion}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 line-clamp-1">
-                      <MapPin className="h-3 w-3 flex-shrink-0" />
+
+                    {arbol.fecha_plantacion && (
+                      <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
+                        <span>📅</span>
+                        {new Date(arbol.fecha_plantacion).toLocaleDateString("es-ES", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-1 text-xs text-gray-600 mb-4 bg-gray-50 p-2 rounded line-clamp-2 font-mono border border-gray-200">
+                      <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-purple-600" />
                       <span className="truncate">
-                        {Number(arbol.latitud).toFixed(4)},{" "}
-                        {Number(arbol.longitud).toFixed(4)}
+                        {Number(arbol.latitud).toFixed(4)}, {Number(arbol.longitud).toFixed(4)}
                       </span>
                     </div>
+
                     <div className="flex gap-2 mt-auto">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 bg-transparent"
+                        className="flex-1 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:border-blue-400 text-blue-700 font-medium"
                         onClick={() => openEditDialog(arbol)}
                       >
-                        <Edit className="h-3 w-3 mr-1" />
+                        <Edit className="h-3.5 w-3.5 mr-1.5" />
                         Editar
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
+                        className="text-red-600 hover:bg-red-50 hover:border-red-400 border-red-200 bg-transparent font-medium"
                         onClick={() => handleDelete(arbol.id)}
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </CardContent>
@@ -648,11 +747,17 @@ export default function MiArbolPage() {
               ))}
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Mapa de Todos los Árboles</CardTitle>
+            <Card className="overflow-hidden border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+              <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-500 text-white pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Mapa de Todos los Árboles
+                </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
+                <p className="text-xs text-gray-600 mb-3">
+                  📍 Visualiza la ubicación de todos tus árboles plantados
+                </p>
                 <DynamicMapComponent
                   center={
                     arboles.length > 0
@@ -663,8 +768,8 @@ export default function MiArbolPage() {
                   markers={arboles.map((a) => ({
                     lat: a.latitud,
                     lng: a.longitud,
-                    popup: `<strong>${a.nombre}</strong>${
-                      a.especie ? `<br/>${a.especie}` : ""
+                    popup: `<div class="font-semibold text-sm text-gray-900">${a.nombre}</div>${
+                      a.especie ? `<div class="text-xs text-gray-600">🌿 ${a.especie}</div>` : ""
                     }`,
                   }))}
                 />
@@ -675,40 +780,39 @@ export default function MiArbolPage() {
       </main>
 
       <AlertDialog open={showLocationConfirm} onOpenChange={setShowLocationConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>⚠️ Confirmar cambio de ubicación</AlertDialogTitle>
-            <AlertDialogDescription>
-              <div className="mt-3 space-y-2">
-                <p className="font-semibold text-foreground">¿Estás seguro de trasladar este árbol?</p>
-                
-                <div className="bg-red-50 p-2 rounded border border-red-200">
-                  <p className="text-xs font-semibold text-red-900">Ubicación actual:</p>
-                  <p className="text-xs text-red-700">
-                    Lat: {editingArbol ? Number(editingArbol.latitud).toFixed(6) : "N/A"} | 
-                    Lng: {editingArbol ? Number(editingArbol.longitud).toFixed(6) : "N/A"}
-                  </p>
-                </div>
-
-                <div className="bg-green-50 p-2 rounded border border-green-200">
-                  <p className="text-xs font-semibold text-green-900">Nueva ubicación:</p>
-                  <p className="text-xs text-green-700">
-                    Lat: {newCoordinates?.lat.toFixed(6)} | Lng: {newCoordinates?.lng.toFixed(6)}
-                  </p>
-                </div>
-
-                <p className="text-xs text-muted-foreground italic">
-                  Esta acción no se puede deshacer fácilmente. Asegúrate de que las nuevas coordenadas son correctas.
+            <AlertDialogTitle className="flex items-center gap-2 text-lg">
+              <span className="text-2xl">⚠️</span> Confirmar Traslado del Árbol
+            </AlertDialogTitle>
+            <AlertDialogDescription className="mt-4 space-y-3">
+              <p className="font-semibold text-foreground">¿Estás seguro de trasladar este árbol?</p>
+              
+              <div className="bg-red-50 p-3 rounded-lg border border-red-200 space-y-1">
+                <p className="text-xs font-semibold text-red-900">📍 Ubicación Actual:</p>
+                <p className="text-sm text-red-800 font-mono">
+                  {editingArbol ? Number(editingArbol.latitud).toFixed(6) : "N/A"}, {editingArbol ? Number(editingArbol.longitud).toFixed(6) : "N/A"}
                 </p>
               </div>
+
+              <div className="bg-green-50 p-3 rounded-lg border border-green-200 space-y-1">
+                <p className="text-xs font-semibold text-green-900">🎯 Nueva Ubicación:</p>
+                <p className="text-sm text-green-800 font-mono">
+                  {newCoordinates?.lat.toFixed(6)}, {newCoordinates?.lng.toFixed(6)}
+                </p>
+              </div>
+
+              <p className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
+                ⚡ Esta acción no se puede deshacer fácilmente. Asegúrate de que las coordenadas sean correctas.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex gap-2 justify-end">
-            <AlertDialogCancel onClick={cancelLocationChange}>
-              Cancelar
+          <div className="flex gap-3 justify-end mt-6">
+            <AlertDialogCancel onClick={cancelLocationChange} className="min-w-[120px]">
+              ✕ Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmLocationChange} className="bg-green-600 hover:bg-green-700">
-              Confirmar traslado
+            <AlertDialogAction onClick={confirmLocationChange} className="min-w-[120px] bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
+              ✓ Confirmar
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
