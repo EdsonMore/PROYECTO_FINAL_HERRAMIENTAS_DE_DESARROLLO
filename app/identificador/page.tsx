@@ -1,9 +1,15 @@
+"use client";
+
+import { useState } from "react";
 import { SpeciesIdentifier } from "@/components/species-identifier";
+import type { SpeciesResult } from "@/components/species-identifier";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { ChatbotPanel } from "@/components/chatbot-panel";
 
 export default function IdentificadorPage() {
+  const [identifiedSpecies, setIdentifiedSpecies] = useState<SpeciesResult | null>(null);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -15,10 +21,10 @@ export default function IdentificadorPage() {
               Usa la IA para identificar especies de árboles. Simplemente toma una foto o sube una imagen.
             </p>
           </div>
-          <SpeciesIdentifier />
+          <SpeciesIdentifier onSpeciesIdentified={setIdentifiedSpecies} />
         </div>
       </main>
-      <ChatbotPanel />
+      <ChatbotPanel speciesData={identifiedSpecies} />
       <Footer />
     </div>
   );

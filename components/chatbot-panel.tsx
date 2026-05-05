@@ -4,6 +4,18 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Leaf, MessageCircle, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { SpeciesResult } from "./species-identifier";
+
+interface ChatbotPanelProps {
+  speciesData?: SpeciesResult | null;
+}
 
 const welcomeMessages = [
   "🌱 ¡Bienvenido! Soy EcoAssistant, tu guía experto en cuidado de árboles.",
@@ -13,9 +25,10 @@ const welcomeMessages = [
   "💧 ¿Dudas sobre riego? ¿Plagas? ¿Fertilización? Estoy aquí para ayudarte.",
 ];
 
-export function ChatbotPanel() {
+export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [messageIndex, setMessageIndex] = useState(0);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const handleNextMessage = () => {
     setMessageIndex((prev) => (prev + 1) % welcomeMessages.length);
@@ -67,65 +80,128 @@ export function ChatbotPanel() {
 
         {/* Content */}
         <div className="p-4 space-y-4">
-          {/* Árbol grande decorativo */}
-          <div className="flex justify-center py-4">
-            <div className="relative w-24 h-32">
-              {/* Copa del árbol - 3 capas para efecto 3D */}
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-20 h-16 bg-gradient-to-b from-green-400 to-green-500 rounded-full shadow-lg" />
-              <div className="absolute top-3 left-1/2 transform -translate-x-1/2 w-16 h-14 bg-gradient-to-b from-green-300 to-green-400 rounded-full" />
-              <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-green-300 rounded-full" />
+          {/* Árbol grande decorativo - solo en bienvenida */}
+          {!speciesData && (
+            <div className="flex justify-center py-4">
+              <div className="relative w-24 h-32">
+                {/* Copa del árbol - 3 capas para efecto 3D */}
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-20 h-16 bg-gradient-to-b from-green-400 to-green-500 rounded-full shadow-lg" />
+                <div className="absolute top-3 left-1/2 transform -translate-x-1/2 w-16 h-14 bg-gradient-to-b from-green-300 to-green-400 rounded-full" />
+                <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-green-300 rounded-full" />
 
-              {/* Tronco del árbol */}
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2.5 h-12 bg-gradient-to-b from-amber-600 to-amber-800 rounded-sm" />
+                {/* Tronco del árbol */}
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2.5 h-12 bg-gradient-to-b from-amber-600 to-amber-800 rounded-sm" />
 
-              {/* Raíces */}
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 flex gap-1">
-                <div className="w-1 h-3 bg-amber-700 rounded-sm transform -rotate-30" />
-                <div className="w-1 h-3 bg-amber-700 rounded-sm" />
-                <div className="w-1 h-3 bg-amber-700 rounded-sm transform rotate-30" />
-              </div>
+                {/* Raíces */}
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 flex gap-1">
+                  <div className="w-1 h-3 bg-amber-700 rounded-sm transform -rotate-30" />
+                  <div className="w-1 h-3 bg-amber-700 rounded-sm" />
+                  <div className="w-1 h-3 bg-amber-700 rounded-sm transform rotate-30" />
+                </div>
 
-              {/* Hojas flotantes animadas */}
-              <div className="absolute top-2 left-2 text-green-600 text-lg animate-bounce" style={{ animationDuration: "3s" }}>
-                🍃
-              </div>
-              <div className="absolute top-4 right-1 text-green-500 text-lg animate-bounce" style={{ animationDuration: "2.5s", animationDelay: "0.5s" }}>
-                🌿
+                {/* Hojas flotantes animadas */}
+                <div className="absolute top-2 left-2 text-green-600 text-lg animate-bounce" style={{ animationDuration: "3s" }}>
+                  🍃
+                </div>
+                <div className="absolute top-4 right-1 text-green-500 text-lg animate-bounce" style={{ animationDuration: "2.5s", animationDelay: "0.5s" }}>
+                  🌿
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Mensaje de bienvenida */}
-          <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
-            <p className="text-sm text-gray-800 font-medium leading-relaxed">
-              {welcomeMessages[messageIndex]}
-            </p>
-          </div>
+          {/* Contenido: Especie Identificada o Bienvenida */}
+          {speciesData ? (
+            <>
+              {/* Información de la especie identificada */}
+              <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm space-y-3">
+                <div>
+                  <p className="text-sm font-bold text-green-900">
+                    🌳 {speciesData.commonName}
+                  </p>
+                  <p className="text-xs italic text-green-700">
+                    {speciesData.scientificName}
+                  </p>
+                </div>
 
-          {/* Botones de acción */}
-          <div className="space-y-2 pt-2">
-            <Button
-              onClick={handleNextMessage}
-              variant="outline"
-              className="w-full border-green-300 hover:bg-green-50 text-green-700 text-xs"
-            >
-              <MessageCircle className="w-3 h-3 mr-1" />
-              Ver más consejos
-            </Button>
+                {/* Confianza */}
+                <div>
+                  <p className="text-xs font-medium text-gray-700 mb-1">
+                    Confianza: {Math.round(speciesData.confidence * 100)}%
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div
+                      className="bg-green-600 h-1.5 rounded-full transition-all"
+                      style={{ width: `${speciesData.confidence * 100}%` }}
+                    />
+                  </div>
+                </div>
 
-            <div className="text-center text-xs text-gray-500 py-2">
-              💡 <strong>Próximamente:</strong> Chat inteligente con IA
-            </div>
+                {/* Resumen */}
+                <div className="bg-green-50 p-2 rounded border border-green-100">
+                  <p className="text-xs text-gray-700">
+                    <strong>Resumen:</strong> {speciesData.description}
+                  </p>
+                </div>
+              </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-800">
-              <p className="font-semibold mb-1">✨ ¿Cómo funciona?</p>
-              <ol className="space-y-0.5 list-decimal list-inside text-amber-700">
-                <li>Identifica tu árbol con la IA</li>
-                <li>Pregunta aquí sobre su cuidado</li>
-                <li>Recibe recomendaciones personalizadas</li>
-              </ol>
-            </div>
-          </div>
+              {/* Cuidados Recomendados */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                <p className="text-sm font-semibold text-blue-900">💧 Cuidados Recomendados</p>
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  {speciesData.careInstructions}
+                </p>
+              </div>
+
+              {/* Acciones */}
+              <div className="space-y-2">
+                <Button className="w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8">
+                  🌱 Guardar este árbol
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setDetailsOpen(true)}
+                  className="w-full border-green-300 text-green-700 text-xs h-8"
+                >
+                  📝 Ver más detalles
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Mensaje de bienvenida por defecto */}
+              <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                <p className="text-sm text-gray-800 font-medium leading-relaxed">
+                  {welcomeMessages[messageIndex]}
+                </p>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="space-y-2 pt-2">
+                <Button
+                  onClick={handleNextMessage}
+                  variant="outline"
+                  className="w-full border-green-300 hover:bg-green-50 text-green-700 text-xs"
+                >
+                  <MessageCircle className="w-3 h-3 mr-1" />
+                  Ver más consejos
+                </Button>
+
+                <div className="text-center text-xs text-gray-500 py-2">
+                  💡 <strong>Próximamente:</strong> Chat inteligente con IA
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-800">
+                  <p className="font-semibold mb-1">✨ ¿Cómo funciona?</p>
+                  <ol className="space-y-0.5 list-decimal list-inside text-amber-700">
+                    <li>Identifica tu árbol con la IA</li>
+                    <li>Pregunta aquí sobre su cuidado</li>
+                    <li>Recibe recomendaciones personalizadas</li>
+                  </ol>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer decorativo */}
@@ -133,6 +209,117 @@ export function ChatbotPanel() {
           🌍 Reverdecer Piura - Un árbol, un futuro
         </div>
       </Card>
+
+      {/* Dialog de Detalles */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-green-900">
+              🌳 {speciesData?.commonName}
+            </DialogTitle>
+            <DialogDescription className="italic text-green-700">
+              {speciesData?.scientificName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Confianza */}
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                Confianza de Identificación
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-green-600 h-2 rounded-full transition-all"
+                  style={{ width: `${(speciesData?.confidence || 0) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                {Math.round((speciesData?.confidence || 0) * 100)}% de confianza
+              </p>
+            </div>
+
+            {/* Descripción */}
+            {speciesData?.description && (
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-1">
+                  Descripción
+                </p>
+                <p className="text-sm text-gray-600">
+                  {speciesData.description}
+                </p>
+              </div>
+            )}
+
+            {/* Cuidados Detallados */}
+            {speciesData?.detailedCare && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold text-blue-900 text-sm">
+                  📋 Guía Completa de Cuidados
+                </h3>
+
+                <div>
+                  <p className="font-medium text-blue-900 text-xs">💧 Riego</p>
+                  <p className="text-xs text-blue-800 mt-1">
+                    {speciesData.detailedCare.riego}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-medium text-blue-900 text-xs">☀️ Luz Solar</p>
+                  <p className="text-xs text-blue-800 mt-1">
+                    {speciesData.detailedCare.luz}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-medium text-blue-900 text-xs">🌡️ Temperatura</p>
+                  <p className="text-xs text-blue-800 mt-1">
+                    {speciesData.detailedCare.temperatura}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-medium text-blue-900 text-xs">🌱 Suelo</p>
+                  <p className="text-xs text-blue-800 mt-1">
+                    {speciesData.detailedCare.suelo}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-medium text-blue-900 text-xs">🐛 Plagas Comunes</p>
+                  <p className="text-xs text-blue-800 mt-1">
+                    {speciesData.detailedCare.plagas}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-medium text-blue-900 text-xs">✂️ Poda</p>
+                  <p className="text-xs text-blue-800 mt-1">
+                    {speciesData.detailedCare.poda}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Botones de acción */}
+            <div className="flex gap-2 pt-4">
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs h-9"
+              >
+                🌱 Guardar este árbol
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setDetailsOpen(false)}
+                className="flex-1 text-xs h-9"
+              >
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

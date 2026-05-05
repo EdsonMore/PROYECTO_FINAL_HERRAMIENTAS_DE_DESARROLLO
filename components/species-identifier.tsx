@@ -14,9 +14,24 @@ interface SpeciesResult {
   description: string;
   careInstructions?: string;
   image?: string;
+  detailedCare?: {
+    summary: string;
+    riego: string;
+    luz: string;
+    temperatura: string;
+    suelo: string;
+    plagas: string;
+    poda: string;
+  };
 }
 
-export function SpeciesIdentifier() {
+interface SpeciesIdentifierProps {
+  onSpeciesIdentified?: (result: SpeciesResult) => void;
+}
+
+export type { SpeciesResult, SpeciesIdentifierProps };
+
+export function SpeciesIdentifier({ onSpeciesIdentified }: SpeciesIdentifierProps) {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SpeciesResult | null>(null);
@@ -101,6 +116,10 @@ export function SpeciesIdentifier() {
 
       const data = await response.json();
       setResult(data);
+
+      if (onSpeciesIdentified) {
+        onSpeciesIdentified(data);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
@@ -115,6 +134,10 @@ export function SpeciesIdentifier() {
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach((track) => track.stop());
+    }
+
+    if (onSpeciesIdentified) {
+      onSpeciesIdentified(null as any);
     }
   };
 

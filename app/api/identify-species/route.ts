@@ -53,15 +53,16 @@ async function identifyWithPlantNet(imageBase64: string): Promise<any> {
     const confidence = topResult.score || 0;
 
     // Información adicional basada en la especie identificada
-    const careInfo = getCareInstructions(scientificName, commonName);
+    const careInfo = getCareInfo(scientificName, commonName);
 
     return {
       commonName,
       scientificName,
       confidence: Math.min(confidence, 1),
       description: `Identificada con ${Math.round(confidence * 100)}% de confianza`,
-      careInstructions: careInfo,
+      careInstructions: careInfo.summary,
       image: topResult.images?.[0]?.url,
+      detailedCare: careInfo,
     };
   } catch (error) {
     console.error('Error in PlantNet identification:', error);
@@ -69,18 +70,55 @@ async function identifyWithPlantNet(imageBase64: string): Promise<any> {
   }
 }
 
-// Base de datos simple de cuidados de árboles comunes en Piura
-function getCareInstructions(scientificName: string, commonName: string): string {
-  const careDatabase: Record<string, string> = {
-    // Árboles comunes en Piura
-    'Algarrobus prosopis': 'Árbol resistente a la sequía. Riego ocasional. Tolera suelos secos. Perfecto para zonas áridas como Piura.',
-    'Prosopis pallida': 'Algarrobo blanco. Muy resistente a sequía. Requiere riego esporádico después de plantación. Excelente para reforestación.',
-    'Cercidium': 'Árbol de palo verde. Tolera climas cálidos y secos. Riega regularmente el primer año. Resiste salinidad del suelo.',
-    'Capparis': 'Matorral adaptado a desiertos. Planta nativa. Requiere riego moderado. Atrae fauna local.',
-    'Mangifera indica': 'Mango. Requiere sol directo y buen drenaje. Riega regularmente en primeras estaciones. Poda anual.',
-    'Citrus': 'Cítricos. Necesita luz solar abundante. Riego regular pero no encharcamiento. Fertiliza mensualmente.',
-    'Tabebuia': 'Árbol tropical. Prefiere climas cálidos. Riego moderado. Florece en primavera.',
-    'Schinus molle': 'Pimienta. Muy rústica. Tolera sequía. Ideal para paisajismo. Poco mantenimiento.',
+// Base de datos enriquecida de cuidados de árboles comunes en Piura
+interface TreeCareInfo {
+  summary: string;
+  riego: string;
+  luz: string;
+  temperatura: string;
+  suelo: string;
+  plagas: string;
+  poda: string;
+}
+
+function getCareInfo(scientificName: string, commonName: string): TreeCareInfo {
+  const careDatabase: Record<string, TreeCareInfo> = {
+    'Algarrobus prosopis': {
+      summary: 'Árbol resistente a la sequía, nativo de zonas áridas. Perfecto para Piura.',
+      riego: 'Ocasional. Una vez establecido, tolera sequía. En primavera-verano riego cada 2-3 semanas.',
+      luz: 'Requiere pleno sol. Mínimo 6-8 horas diarias.',
+      temperatura: 'Tolera temperaturas entre 15°C y 45°C. Ideal para clima árido.',
+      suelo: 'Prefiere suelos secos, arenosos o rocosos. Buen drenaje es esencial.',
+      plagas: 'Resistente. Ocasionalmente hormigas o trips, pero raramente afecta el árbol.',
+      poda: 'Mínima requerida. Poda solo ramas dañadas o para dar forma.',
+    },
+    'Prosopis pallida': {
+      summary: 'Algarrobo blanco. Especie nativa muy valiosa para reforestación en zonas áridas.',
+      riego: 'Mínimo. Riego esporádico el primer año. Después tolera sequía extrema.',
+      luz: 'Pleno sol obligatorio. No sobrevive en sombra.',
+      temperatura: 'Muy tolerante. De 10°C a 50°C.',
+      suelo: 'Tolera suelos pobres, salinos y compactados. Ideal para zonas degradadas.',
+      plagas: 'Muy resistente. Pocas plagas lo afectan.',
+      poda: 'No requiere poda regular. Solo elimina ramas muertas.',
+    },
+    'Mangifera indica': {
+      summary: 'Mango. Árbol frutal tropical que produce excelentes frutos.',
+      riego: 'Regular durante crecimiento. 2-3 veces por semana en verano. Reduce en seco.',
+      luz: 'Pleno sol. Mínimo 6-8 horas. Mayor luz = mejor producción de frutos.',
+      temperatura: 'Tropical. Óptimo 25-30°C. No tolera heladas.',
+      suelo: 'Fértil, bien drenado, pH 5.5-7.5. Enriquece con compost.',
+      plagas: 'Mosca de la fruta, ácaros, antracnosis. Monitorear regularmente.',
+      poda: 'Poda anual después de cosecha para dar forma y mejorar producción.',
+    },
+    'Citrus': {
+      summary: 'Cítricos (naranja, limón, etc.). Frutal muy productivo en climas cálidos.',
+      riego: 'Regular. 2-3 veces por semana en calor. Sin encharcamiento.',
+      luz: 'Pleno sol obligatorio. Mínimo 8 horas diarias.',
+      temperatura: 'Tropical-subtropical. 15-30°C. Sensible a heladas.',
+      suelo: 'Fértil, pH 6-8, buen drenaje. Enriquece mensualmente con fertilizante.',
+      plagas: 'Ácaros, cochinillas, mosca blanca. Inspecciona hojas regularmente.',
+      poda: 'Poda anual ligera. Elimina ramas cruzadas y enfermas.',
+    },
   };
 
   // Buscar coincidencias
@@ -94,7 +132,21 @@ function getCareInstructions(scientificName: string, commonName: string): string
   }
 
   // Información genérica por defecto
-  return `Árbol identificado como ${commonName}. Proporciona riego regular durante el establecimiento. Asegura buen drenaje del suelo. Expón a luz solar según su tipo. Realiza podas de mantenimiento cuando sea necesario.`;
+  return {
+    summary: `${commonName} es un árbol adaptado a diversos ambientes.`,
+    riego: 'Riego regular durante el establecimiento (primeras 2-4 semanas). Después, según condiciones de sequía local.',
+    luz: 'Requiere luz solar. La mayoría necesita mínimo 4-6 horas diarias.',
+    temperatura: 'Depende de la especie. Preferiblemente 15-30°C.',
+    suelo: 'Buen drenaje es crítico. Evita encharcamiento. Enriquece con compost.',
+    plagas: 'Inspecciona regularmente hojas, tallos y base. Actúa ante primeras plagas.',
+    poda: 'Poda de formación el primer año. Después poda de mantenimiento anual.',
+  };
+}
+
+// Función auxiliar para obtener solo el resumen (para compatibilidad anterior)
+function getCareInstructions(scientificName: string, commonName: string): string {
+  const info = getCareInfo(scientificName, commonName);
+  return info.summary;
 }
 
 export async function POST(request: NextRequest) {
