@@ -46,10 +46,18 @@ import type { Arbol } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
 // Importar MapComponent dinámicamente para evitar problemas de SSR
-const DynamicMapComponent = dynamic(() => import("@/components/map-component").then(mod => ({ default: mod.MapComponent })), {
-  ssr: false,
-  loading: () => <div className="h-[400px] w-full rounded-lg border-2 border-primary/20 bg-secondary animate-pulse" />
-});
+const DynamicMapComponent = dynamic(
+  () =>
+    import("@/components/map-component").then((mod) => ({
+      default: mod.MapComponent,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[400px] w-full rounded-lg border-2 border-primary/20 bg-secondary animate-pulse" />
+    ),
+  },
+);
 
 export default function MiArbolPage() {
   const { data: session, status } = useSession();
@@ -62,7 +70,10 @@ export default function MiArbolPage() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [isChangingLocation, setIsChangingLocation] = useState(false);
   const [showLocationConfirm, setShowLocationConfirm] = useState(false);
-  const [newCoordinates, setNewCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [newCoordinates, setNewCoordinates] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [formData, setFormData] = useState({
     nombre: "",
     especie: "",
@@ -97,10 +108,15 @@ export default function MiArbolPage() {
     }
 
     // Verificar si se está usando HTTPS (requerido en móviles)
-    if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+    if (
+      typeof window !== "undefined" &&
+      window.location.protocol !== "https:" &&
+      window.location.hostname !== "localhost"
+    ) {
       toast({
         title: "HTTPS Requerido",
-        description: "La geolocalización requiere una conexión HTTPS segura en dispositivos móviles",
+        description:
+          "La geolocalización requiere una conexión HTTPS segura en dispositivos móviles",
         variant: "destructive",
       });
       return;
@@ -123,25 +139,27 @@ export default function MiArbolPage() {
       },
       (error) => {
         console.error("Error de geolocalización:", error);
-        
+
         let errorMessage = "No pudimos detectar tu ubicación.";
         let errorTitle = "Error de ubicación";
-        
+
         // Identificar el tipo de error específico
         if (error.code === 1) {
           // PERMISSION_DENIED
           errorTitle = "Permisos denegados";
-          errorMessage = "Por favor habilita los permisos de ubicación en la configuración de tu navegador.";
+          errorMessage =
+            "Por favor habilita los permisos de ubicación en la configuración de tu navegador.";
         } else if (error.code === 2) {
           // POSITION_UNAVAILABLE
           errorTitle = "Ubicación no disponible";
-          errorMessage = "No se pudo obtener tu ubicación. Verifica que el GPS esté activado.";
+          errorMessage =
+            "No se pudo obtener tu ubicación. Verifica que el GPS esté activado.";
         } else if (error.code === 3) {
           // TIMEOUT
           errorTitle = "Tiempo agotado";
           errorMessage = "La solicitud tardó demasiado. Intenta nuevamente.";
         }
-        
+
         toast({
           title: errorTitle,
           description: errorMessage,
@@ -150,10 +168,10 @@ export default function MiArbolPage() {
         setGeoLoading(false);
       },
       {
-        enableHighAccuracy: true,  // Activa GPS en móviles
-        timeout: 15000,             // Aumentado a 15 segundos para móviles
-        maximumAge: 0               // No usar datos en caché
-      }
+        enableHighAccuracy: true, // Activa GPS en móviles
+        timeout: 15000, // Aumentado a 15 segundos para móviles
+        maximumAge: 0, // No usar datos en caché
+      },
     );
   };
 
@@ -222,7 +240,7 @@ export default function MiArbolPage() {
 
     try {
       const res = await fetch(`/api/arboles/${id}`, { method: "DELETE" });
-      
+
       if (res.ok) {
         toast({ title: "Árbol eliminado correctamente" });
         fetchArboles();
@@ -234,7 +252,10 @@ export default function MiArbolPage() {
       console.error("Error al eliminar árbol:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo eliminar el árbol",
+        description:
+          error instanceof Error
+            ? error.message
+            : "No se pudo eliminar el árbol",
         variant: "destructive",
       });
     }
@@ -338,7 +359,8 @@ export default function MiArbolPage() {
               Mis Árboles 🌳
             </h1>
             <p className="text-gray-600 text-lg">
-              Gestiona y visualiza todos tus árboles plantados. Rastrear el crecimiento es importante.
+              Gestiona y visualiza todos tus árboles plantados. Rastrear el
+              crecimiento es importante.
             </p>
           </div>
 
@@ -378,7 +400,7 @@ export default function MiArbolPage() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Sección: Información Básica */}
-                <div className="border-l-4 border-green-500 pl-4">
+                <div className="border-l-4 pl-4">
                   <h3 className="font-semibold text-sm text-green-700 mb-3 flex items-center gap-1">
                     <span className="text-base">ℹ️</span> Información Básica
                   </h3>
@@ -403,7 +425,10 @@ export default function MiArbolPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="fecha_plantacion" className="font-semibold">
+                      <Label
+                        htmlFor="fecha_plantacion"
+                        className="font-semibold"
+                      >
                         Fecha de Plantación
                       </Label>
                       <Input
@@ -426,7 +451,7 @@ export default function MiArbolPage() {
                 </div>
 
                 {/* Sección: Identificación de Especie */}
-                <div className="border-l-4 border-blue-500 pl-4">
+                <div className="border-l-4 pl-4">
                   <h3 className="font-semibold text-sm text-blue-700 mb-3 flex items-center gap-1">
                     <span className="text-base">📸</span> Foto e Identificación
                   </h3>
@@ -438,7 +463,8 @@ export default function MiArbolPage() {
                           ...formData,
                           especie: result.species,
                           foto_url: result.photo,
-                          descripcion: result.careInstructions || formData.descripcion,
+                          descripcion:
+                            result.careInstructions || formData.descripcion,
                         });
                         toast({
                           title: "✓ Foto y especie listas",
@@ -453,7 +479,12 @@ export default function MiArbolPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="especie" className="font-semibold">
-                        Especie <span className="text-red-500">*</span> {formData.especie && <span className="text-green-600 text-xs ml-1">✓ Identificada</span>}
+                        Especie <span className="text-red-500">*</span>{" "}
+                        {formData.especie && (
+                          <span className="text-green-600 text-xs ml-1">
+                            ✓ Identificada
+                          </span>
+                        )}
                       </Label>
                       <Input
                         id="especie"
@@ -479,7 +510,10 @@ export default function MiArbolPage() {
                       id="descripcion"
                       value={formData.descripcion}
                       onChange={(e) =>
-                        setFormData({ ...formData, descripcion: e.target.value })
+                        setFormData({
+                          ...formData,
+                          descripcion: e.target.value,
+                        })
                       }
                       placeholder="Describe tu árbol y cuidados especiales..."
                       rows={3}
@@ -492,10 +526,9 @@ export default function MiArbolPage() {
                 </div>
 
                 {/* Sección: Ubicación en Mapa */}
-                {/* Sección: Ubicación en Mapa */}
-                <div className="border-l-4 border-purple-500 pl-4">
+                <div className="border-l-4 pl-4">
                   <h3 className="font-semibold text-sm text-purple-700 mb-3 flex items-center gap-1">
-                    <span className="text-base">📍</span> Ubicación en el Mapa
+                    <span className="text-base"></span> Ubicación en el Mapa
                   </h3>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -529,11 +562,17 @@ export default function MiArbolPage() {
                           <Button
                             type="button"
                             size="sm"
-                            variant={isChangingLocation ? "destructive" : "outline"}
-                            onClick={() => setIsChangingLocation(!isChangingLocation)}
+                            variant={
+                              isChangingLocation ? "destructive" : "outline"
+                            }
+                            onClick={() =>
+                              setIsChangingLocation(!isChangingLocation)
+                            }
                             className="gap-2"
                           >
-                            {isChangingLocation ? "❌ Cancelar cambio" : "✏️ Cambiar ubicación"}
+                            {isChangingLocation
+                              ? "Cancelar cambio"
+                              : "Cambiar ubicación"}
                           </Button>
                         )}
                       </div>
@@ -541,9 +580,12 @@ export default function MiArbolPage() {
 
                     {editingArbol && isChangingLocation && (
                       <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3">
-                        <p className="text-yellow-900 font-semibold text-sm">⚠️ Modo cambio de ubicación</p>
+                        <p className="text-yellow-900 font-semibold text-sm">
+                          ⚠️ Modo cambio de ubicación
+                        </p>
                         <p className="text-yellow-800 text-xs mt-1">
-                          Haz clic en el mapa para seleccionar la nueva ubicación. Se te pedirá confirmación.
+                          Haz clic en el mapa para seleccionar la nueva
+                          ubicación. Se te pedirá confirmación.
                         </p>
                       </div>
                     )}
@@ -558,15 +600,19 @@ export default function MiArbolPage() {
                         if (editingArbol && !isChangingLocation) {
                           return;
                         }
-                        
+
                         if (isChangingLocation && editingArbol) {
                           setNewCoordinates({ lat, lng });
                           setShowLocationConfirm(true);
                           return;
                         }
-                        
+
                         if (!editingArbol) {
-                          setFormData({ ...formData, latitud: lat, longitud: lng });
+                          setFormData({
+                            ...formData,
+                            latitud: lat,
+                            longitud: lng,
+                          });
                           toast({
                             title: "✓ Ubicación actualizada",
                             description: `Coordenadas: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
@@ -585,20 +631,34 @@ export default function MiArbolPage() {
                           : []
                       }
                     />
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <div className="bg-blue-50 border border-blue-300 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-blue-900">📍 Ubicación guardada:</p>
+                        <p className="text-xs font-semibold text-blue-900">
+                          Ubicación guardada:
+                        </p>
                         <p className="text-xs text-blue-800 font-mono">
-                          {(Number(editingArbol?.latitud || formData.latitud) || 0).toFixed(6)}, {(Number(editingArbol?.longitud || formData.longitud) || 0).toFixed(6)}
+                          {(
+                            Number(editingArbol?.latitud || formData.latitud) ||
+                            0
+                          ).toFixed(6)}
+                          ,{" "}
+                          {(
+                            Number(
+                              editingArbol?.longitud || formData.longitud,
+                            ) || 0
+                          ).toFixed(6)}
                         </p>
                       </div>
 
                       {isChangingLocation && newCoordinates && (
                         <div className="bg-green-50 border border-green-300 rounded-lg p-3">
-                          <p className="text-xs font-semibold text-green-900">✓ Nueva ubicación:</p>
+                          <p className="text-xs font-semibold text-green-900">
+                            ✓ Nueva ubicación:
+                          </p>
                           <p className="text-xs text-green-800 font-mono">
-                            {newCoordinates.lat.toFixed(6)}, {newCoordinates.lng.toFixed(6)}
+                            {newCoordinates.lat.toFixed(6)},{" "}
+                            {newCoordinates.lng.toFixed(6)}
                           </p>
                         </div>
                       )}
@@ -606,13 +666,14 @@ export default function MiArbolPage() {
 
                     {!editingArbol && (
                       <p className="text-xs text-muted-foreground italic">
-                        💡 Haz clic en el mapa o usa "Mi ubicación"
+                        Haz clic en el mapa o usa "Mi ubicación"
                       </p>
                     )}
-                    
+
                     {editingArbol && !isChangingLocation && (
                       <p className="text-xs text-muted-foreground italic">
-                        🔒 Ubicación protegida. Presiona "Cambiar ubicación" para modificarla.
+                        Ubicación protegida. Presiona "Cambiar ubicación" para
+                        modificarla.
                       </p>
                     )}
                   </div>
@@ -630,7 +691,7 @@ export default function MiArbolPage() {
                       ✕ Cancelar
                     </Button>
                     <Button type="submit" className="min-w-[120px]">
-                      {editingArbol ? "💾 Actualizar" : "✓ Registrar"}
+                      {editingArbol ? "Actualizar" : "Registrar"}
                     </Button>
                   </div>
                 </div>
@@ -649,7 +710,8 @@ export default function MiArbolPage() {
                 ¡Comienza tu viaje verde! 🌱
               </h3>
               <p className="text-gray-600 mb-8 max-w-sm mx-auto">
-                Aún no tienes árboles registrados. Registra tu primer árbol y comienza a rastrear su crecimiento.
+                Aún no tienes árboles registrados. Registra tu primer árbol y
+                comienza a rastrear su crecimiento.
               </p>
               <Button
                 onClick={() => setDialogOpen(true)}
@@ -707,19 +769,23 @@ export default function MiArbolPage() {
 
                     {arbol.fecha_plantacion && (
                       <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
-                        <span>📅</span>
-                        {new Date(arbol.fecha_plantacion).toLocaleDateString("es-ES", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        <span></span>
+                        {new Date(arbol.fecha_plantacion).toLocaleDateString(
+                          "es-ES",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          },
+                        )}
                       </p>
                     )}
 
                     <div className="flex items-center gap-1 text-xs text-gray-600 mb-4 bg-gray-50 p-2 rounded line-clamp-2 font-mono border border-gray-200">
                       <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-purple-600" />
                       <span className="truncate">
-                        {Number(arbol.latitud).toFixed(4)}, {Number(arbol.longitud).toFixed(4)}
+                        {Number(arbol.latitud).toFixed(4)},{" "}
+                        {Number(arbol.longitud).toFixed(4)}
                       </span>
                     </div>
 
@@ -746,7 +812,7 @@ export default function MiArbolPage() {
                 </Card>
               ))}
             </div>
-
+            {/*}
             <Card className="overflow-hidden border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-500 text-white pb-3">
                 <CardTitle className="flex items-center gap-2">
@@ -769,49 +835,74 @@ export default function MiArbolPage() {
                     lat: a.latitud,
                     lng: a.longitud,
                     popup: `<div class="font-semibold text-sm text-gray-900">${a.nombre}</div>${
-                      a.especie ? `<div class="text-xs text-gray-600">🌿 ${a.especie}</div>` : ""
+                      a.especie
+                        ? `<div class="text-xs text-gray-600">🌿 ${a.especie}</div>`
+                        : ""
                     }`,
                   }))}
                 />
               </CardContent>
-            </Card>
+            </Card>*/}
           </>
         )}
       </main>
 
-      <AlertDialog open={showLocationConfirm} onOpenChange={setShowLocationConfirm}>
+      <AlertDialog
+        open={showLocationConfirm}
+        onOpenChange={setShowLocationConfirm}
+      >
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-lg">
               <span className="text-2xl">⚠️</span> Confirmar Traslado del Árbol
             </AlertDialogTitle>
             <AlertDialogDescription className="mt-4 space-y-3">
-              <p className="font-semibold text-foreground">¿Estás seguro de trasladar este árbol?</p>
-              
+              <p className="font-semibold text-foreground">
+                ¿Estás seguro de trasladar este árbol?
+              </p>
+
               <div className="bg-red-50 p-3 rounded-lg border border-red-200 space-y-1">
-                <p className="text-xs font-semibold text-red-900">📍 Ubicación Actual:</p>
+                <p className="text-xs font-semibold text-red-900">
+                  Ubicación Actual:
+                </p>
                 <p className="text-sm text-red-800 font-mono">
-                  {editingArbol ? Number(editingArbol.latitud).toFixed(6) : "N/A"}, {editingArbol ? Number(editingArbol.longitud).toFixed(6) : "N/A"}
+                  {editingArbol
+                    ? Number(editingArbol.latitud).toFixed(6)
+                    : "N/A"}
+                  ,{" "}
+                  {editingArbol
+                    ? Number(editingArbol.longitud).toFixed(6)
+                    : "N/A"}
                 </p>
               </div>
 
               <div className="bg-green-50 p-3 rounded-lg border border-green-200 space-y-1">
-                <p className="text-xs font-semibold text-green-900">🎯 Nueva Ubicación:</p>
+                <p className="text-xs font-semibold text-green-900">
+                  Nueva Ubicación:
+                </p>
                 <p className="text-sm text-green-800 font-mono">
-                  {newCoordinates?.lat.toFixed(6)}, {newCoordinates?.lng.toFixed(6)}
+                  {newCoordinates?.lat.toFixed(6)},{" "}
+                  {newCoordinates?.lng.toFixed(6)}
                 </p>
               </div>
 
               <p className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
-                ⚡ Esta acción no se puede deshacer fácilmente. Asegúrate de que las coordenadas sean correctas.
+                Esta acción no se puede deshacer fácilmente. Asegúrate de que
+                las coordenadas sean correctas.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-3 justify-end mt-6">
-            <AlertDialogCancel onClick={cancelLocationChange} className="min-w-[120px]">
+            <AlertDialogCancel
+              onClick={cancelLocationChange}
+              className="min-w-[120px]"
+            >
               ✕ Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmLocationChange} className="min-w-[120px] bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
+            <AlertDialogAction
+              onClick={confirmLocationChange}
+              className="min-w-[120px] bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+            >
               ✓ Confirmar
             </AlertDialogAction>
           </div>
