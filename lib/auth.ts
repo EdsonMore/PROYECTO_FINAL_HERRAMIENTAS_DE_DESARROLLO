@@ -89,13 +89,29 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, account }) {
+      // Tiempo actual en segundos
+      const now = Math.floor(Date.now() / 1000);
+
       if (user) {
         token.id = user.id;
-        // Guardar el user_id aquí para evitar búsquedas en las APIs
+        token.email = user.email;
+        // Campos de expiración JWT
+        token.iat = now;
+        // Access token válido por 15 minutos (900 segundos)
+        token.exp = now + (15 * 60);
       }
+
       if (account) {
         token.provider = account.provider;
       }
+
+      // Si el token existe y está próximo a expirar (menos de 1 minuto)
+      // y el usuario tiene una sesión activa, renovarlo automáticamente
+      if (token.exp && token.exp - now < 60 && user) {
+        token.iat = now;
+        token.exp = now + (15 * 60); // Renovar por otros 15 minutos
+      }
+
       return token;
     },
     async session({ session, token }) {
