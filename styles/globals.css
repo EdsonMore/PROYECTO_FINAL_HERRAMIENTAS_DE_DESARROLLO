@@ -123,3 +123,304 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .animated-letter {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(24px) rotateX(6deg);
+    will-change: transform, opacity;
+    transition-property: transform, opacity;
+    transition-duration: 600ms;
+    transition-timing-function: cubic-bezier(.2,.8,.2,1);
+    /* escalonar la transición por letra */
+    transition-delay: calc(var(--i) * 48ms);
+    /* asegurar que las letras hereden el tamaño de línea */
+    font-size: inherit !important;
+  }
+  
+  @keyframes letterIn {
+    0% { opacity: 0; transform: translateY(24px) rotateX(6deg); }
+    60% { opacity: 1; transform: translateY(-8px) rotateX(0); }
+    100% { opacity: 1; transform: translateY(0) rotateX(0); }
+  }
+
+  /* Cuando el heading tenga data-mounted=true, aplicamos el estado final */
+  h1[data-mounted="true"] .animated-letter {
+    animation: letterIn 700ms cubic-bezier(.2,.8,.2,1) both;
+    animation-delay: calc(var(--i) * 48ms);
+  }
+
+  .animated-letter:hover {
+    transform: translateY(-4px) rotateX(0);
+    transition-duration: 160ms;
+  }
+
+  /* Estilos del hero heading similar al mockup */
+  .hero-heading {
+    font-weight: 800 !important;
+    line-height: 0.95 !important;
+    letter-spacing: -0.02em !important;
+    -webkit-font-smoothing: antialiased;
+    text-wrap: balance;
+    display: block;
+    font-size: clamp(1.75rem, 6vw, 4.75rem) !important;
+    color: var(--foreground) !important;
+  }
+
+  /* Líneas del heading: separadas para controlar tamaño y color exactamente */
+  .hero-heading .heading-line {
+    display: block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: visible;
+  }
+
+  .hero-heading .line-main { 
+    font-size: clamp(2.1rem, 5.5vw, 5rem) !important;
+    color: var(--foreground) !important;
+    font-weight: 900 !important;
+    line-height: 0.95 !important;
+  }
+
+  .hero-heading .line-highlight {
+    font-size: clamp(2.2rem, 6.2vw, 5.6rem) !important;
+    color: var(--primary) !important;
+    font-weight: 900 !important;
+    margin-top: -6px !important;
+    line-height: 0.92 !important;
+  }
+
+  /* Alineación vertical del bloque izquierdo junto a la imagen */
+  .hero-left { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; position: relative; z-index: 30; }
+
+  /* Tipografía y estilo más elegante para el hero heading */
+  .hero-heading {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .hero-heading .line-main {
+    color: #0f1720 !important;
+    text-shadow: 0 2px 0 rgba(255,255,255,0.02);
+    letter-spacing: -0.02em !important;
+  }
+
+  /* Aplicar gradiente verde sutil a la segunda línea */
+  .hero-heading .line-highlight {
+    background: linear-gradient(90deg, #155e2f 0%, #2b9b4a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    filter: drop-shadow(0 6px 12px rgba(27,70,42,0.08));
+  }
+
+  /* Reducir ancho del texto para que quede compacto al lado de la imagen */
+  .hero-left .heading-line { max-width: 680px; }
+
+  @media (min-width: 1024px) {
+    .hero-left { padding-right: 1rem; }
+    .hero-left .heading-line { max-width: 520px; }
+  }
+
+  /* Hacer que la parte resaltada vaya en una línea separada y más grande */
+  .hero-heading > .text-primary,
+  .hero-heading .text-primary {
+    display: block !important;
+    color: var(--primary) !important;
+    font-weight: 900 !important;
+    margin-top: -8px !important;
+    font-size: clamp(1.9rem, 6.8vw, 5.25rem) !important;
+    line-height: 0.92 !important;
+  }
+
+  @media (min-width: 768px) {
+    .hero-heading { font-size: 3.25rem; }
+    .hero-heading > .text-primary,
+    .hero-heading .text-primary { font-size: 3.5rem; }
+  }
+
+  @media (min-width: 1024px) {
+    .hero-heading { font-size: 4rem; }
+    .hero-heading > .text-primary,
+    .hero-heading .text-primary { font-size: 4.5rem; }
+  }
+
+  /* Hero image wrapper */
+  .hero-image-wrapper {
+    width: 320px !important;
+    aspect-ratio: 1.1/1;
+    border-radius: 1rem;
+    overflow: hidden;
+    position: relative;
+    display: inline-block;
+    transform-origin: center right;
+    max-width: 320px !important;
+  }
+
+  .hero-image {
+    width: auto !important;
+    height: auto !important;
+    max-width: 320px !important;
+    max-height: 300px !important;
+    object-fit: cover;
+    border-radius: 1rem;
+    box-shadow: 0 20px 40px rgba(15,23,42,0.12);
+    transform: translateY(8px) scale(1);
+    transition: transform 700ms cubic-bezier(.2,.8,.2,1), box-shadow 300ms;
+    display: block !important;
+  }
+
+  .hero-image-wrapper:hover .hero-image {
+    transform: translateY(0) scale(1.02) rotate(-0.6deg);
+    box-shadow: 0 30px 60px rgba(15,23,42,0.18);
+  }
+
+  /* Estilos específicos para la imagen mini-arbol */
+  #mini-arbol {
+    border: 6px solid rgba(255,255,255,0.85);
+    padding: 2px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.4));
+    transform-origin: center right;
+  }
+
+  /* Hero section look & feel */
+  .hero-section {
+    background: linear-gradient(180deg, rgba(248,249,245,0.98), rgba(251,249,245,0.98));
+    position: relative;
+    overflow: visible;
+    padding-top: 0.75rem;
+    padding-bottom: 0rem;
+  }
+
+  .hero-frame {
+    position: relative;
+    width: 320px !important;
+    max-width: 320px !important;
+    height: auto;
+    margin-left: auto; /* push to the right column */
+  }
+
+  /* Grid control: más espacio al texto, ancho fijo para la columna de imagen en desktop */
+  .hero-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: center; }
+  @media (min-width: 1024px) {
+    .hero-grid { grid-template-columns: 1fr 320px !important; gap: 1.5rem; }
+  }
+
+  /* refuerza la columna de la imagen para no crecer más */
+  .hero-grid > :last-child { justify-self: end; }
+
+  /* Forzar que la columna de la imagen no crezca y se mantenga a la derecha */
+  @media (min-width: 1024px) {
+    .hero-image-wrapper { flex: 0 0 360px !important; }
+  }
+
+  .hero-frame-ring {
+    position: absolute;
+    right: -20px;
+    top: -8px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255,255,255,0.9), rgba(255,255,255,0.6));
+    box-shadow: 0 30px 60px rgba(2,6,23,0.06);
+    transform: translateZ(0);
+    z-index: 1;
+  }
+  .hero-frame-circle {
+    position: relative;
+    width: clamp(220px, 36vw, 360px);
+    height: clamp(220px, 36vw, 360px);
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    z-index: 2;
+    box-shadow: 0 25px 50px rgba(2,6,23,0.12);
+    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
+  }
+
+  .hero-frame-circle .hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: translateY(2%) scale(1);
+    transition: transform 500ms cubic-bezier(.2,.8,.2,1);
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .hero-section .hero-stat-card {
+    right: 16px;
+    bottom: 12px;
+    min-width: 200px;
+    z-index: 10;
+  }
+
+  .hero-section .container { padding-top: 1rem; padding-bottom: 1.5rem; }
+
+  .hero-wave { position: absolute; left: 0; right: 0; bottom: -1px; height: 120px; }
+
+  /* Onda más pronunciada y blanca con sombra para separar secciones */
+  .hero-wave { height: 100px; bottom: -6px; pointer-events: none; }
+  .hero-wave svg { display: block; width: 100%; height: 100px; }
+  .hero-wave svg path { fill: #ffffff; }
+  .hero-wave { filter: drop-shadow(0 -10px 24px rgba(2,6,23,0.06)); }
+
+  .hero-stat-card {
+    position: absolute;
+    right: -18px;
+    bottom: -18px;
+    background: white;
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(2,6,23,0.08);
+    min-width: 180px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-image { transition: transform 700ms cubic-bezier(.2,.8,.2,1); }
+  }
+}
+
+  /* Reglas finales y muy específicas para forzar tamaño lateral pequeño de la imagen */
+  section.hero-section .container .hero-grid > div:last-child,
+  section.hero-section .hero-image-wrapper,
+  section.hero-section .hero-frame,
+  section.hero-section .hero-frame-circle {
+    width: 320px !important;
+    max-width: 320px !important;
+  }
+
+  section.hero-section .hero-frame-circle {
+    height: 320px !important;
+    max-height: 320px !important;
+    overflow: hidden !important;
+    border-radius: 50% !important;
+  }
+
+  section.hero-section .hero-image {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 320px !important;
+    max-height: 320px !important;
+    object-fit: cover !important;
+    display: block !important;
+  }
+
+  /* Asegurar que la grid tenga columna fija a la derecha */
+  @media (min-width: 1024px) {
+    section.hero-section .hero-grid { grid-template-columns: 1fr 320px !important; }
+  }
+
+  /* Ajustes para reducir espacios extra y centrar mejor el contenido */
+  .hero-section .container { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+  @media (min-width: 768px) {
+    .hero-section { padding-top: 2rem; }
+  }
+
+  /* Seguridad extra: si algo aplica tamaños automáticos, forzamos overflow y posicionamiento */
+  section.hero-section .hero-image-wrapper { overflow: hidden !important; }
+
