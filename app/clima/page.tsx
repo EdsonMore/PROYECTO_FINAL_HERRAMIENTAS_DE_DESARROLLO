@@ -1,9 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Droplets,
   Thermometer,
@@ -13,32 +23,92 @@ import {
   AlertCircle,
   CheckCircle,
   Cloud,
+  MapPin,
+  Loader2,
 } from "lucide-react";
+import type { Arbol } from "@/types";
 
 export default function ClimaPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [arboles, setArboles] = useState<Arbol[]>([]);
+  const [selectedArbol, setSelectedArbol] = useState<Arbol | null>(null);
   const [weather, setWeather] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [weatherLoading, setWeatherLoading] = useState(false);
   const [error, setError] = useState("");
+  const [arbolesLoading, setArbolesLoading] = useState(true);
 
+  // Verificar autenticación
   useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        const res = await fetch("/api-clima");
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  // Cargar árboles del usuario
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchArboles();
+    }
+  }, [status]);
+
+  const fetchArboles = async () => {
+    try {
+      const res = await fetch("/api/arboles?mode=geo");
+      if (res.ok) {
         const data = await res.json();
-
-        if (!data.main) {
-          throw new Error(data.message || "Error en API");
+        setArboles(data);
+        // Seleccionar el primer árbol automáticamente
+        if (data.length > 0) {
+          setSelectedArbol(data[0]);
         }
-
-        setWeather(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error al cargar árboles:", error);
+    } finally {
+      setArbolesLoading(false);
+    }
+  };
 
-    fetchWeather();
+  // Obtener clima para ubicación específica
+  const fetchWeatherForArbol = async (arbol: Arbol) => {
+    setWeatherLoading(true);
+    setError("");
+    setWeather(null);
+
+    try {
+      const lat = +arbol.latitud;
+      const lon = +arbol.longitud;
+      const res = await fetch(`/api-clima?lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+
+      if (!data.main) {
+        throw new Error(data.message || "Error en API");
+      }
+
+      setWeather(data);
+    } catch (err: any) {
+      setError(err.message || "Error al obtener clima");
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
+
+  // Cuando se selecciona un árbol, obtener su clima
+  const handleArbolChange = (arbolId: string) => {
+    const arbol = arboles.find((a) => a.id === parseInt(arbolId));
+    if (arbol) {
+      setSelectedArbol(arbol);
+      fetchWeatherForArbol(arbol);
+    }
+  };
+
+  // Cargar clima cuando la página carga (para el primer árbol si existe)
+  useEffect(() => {
+    if (selectedArbol && !weather && !weatherLoading) {
+      fetchWeatherForArbol(selectedArbol);
+    }
   }, []);
 
   const getDetailedAdvice = (
@@ -109,12 +179,113 @@ export default function ClimaPage() {
                 <span>Monitoreo Climático en Tiempo Real</span>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-blue-900">
-                Clima Actual de tu Zona
+                Clima de tu Árbol
               </h1>
               <p className="text-lg text-blue-700 max-w-2xl mx-auto">
-                Consulta las condiciones climáticas y obtén recomendaciones
-                personalizadas para el cuidado óptimo de tu árbol
+                Consulta las condiciones climáticas en la ubicación de tu árbol
+                y obtén recomendaciones personalizadas para su cuidado óptimo
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Árbol Selection Section */}
+        <section className="py-8 px-4 bg-white border-b">
+          <div className="container mx-auto max-w-4xl">
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-gray-800">
+                Selecciona un Árbol
+              </h2>
+
+              {arbolesLoading ? (
+                <div className="flex items-center justify-center h-12">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : arboles.length === 0 ? (
+                <Card className="border-yellow-200 bg-yellow-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-6 w-6 text-yellow-600" />
+                      <div>
+                        <p className="text-yellow-800 font-medium">
+                          No tienes árboles registrados
+                        </p>
+                        <p className="text-sm text-yellow-700">
+                          Registra tu primer árbol en "Mi Árbol" para ver el
+                          clima de su ubicación.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-3 items-end">
+                  <div className="flex-1">
+                    <Select
+                      value={selectedArbol?.id.toString() || ""}
+                      onValueChange={handleArbolChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecciona un árbol..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {arboles.map((arbol) => (
+                          <SelectItem
+                            key={arbol.id}
+                            value={arbol.id.toString()}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>🌳 {arbol.nombre}</span>
+                              {arbol.especie && (
+                                <span className="text-xs text-gray-500">
+                                  ({arbol.especie})
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    onClick={() =>
+                      selectedArbol && fetchWeatherForArbol(selectedArbol)
+                    }
+                    disabled={!selectedArbol || weatherLoading}
+                    className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                  >
+                    {weatherLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Cargando...
+                      </>
+                    ) : (
+                      <>
+                        <Cloud className="mr-2 h-4 w-4" />
+                        Verificar Clima
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {selectedArbol && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 text-blue-800">
+                      <MapPin className="h-4 w-4" />
+                      <span className="text-sm">
+                        <strong>{selectedArbol.nombre}</strong>
+                        {selectedArbol.especie && ` (${selectedArbol.especie})`}
+                        {" · "}
+                        Lat: {(+selectedArbol.latitud).toFixed(4)}, Lon:{" "}
+                        {(+selectedArbol.longitud).toFixed(4)}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </section>
@@ -122,9 +293,10 @@ export default function ClimaPage() {
         {/* Content Section */}
         <section className="py-12 px-4">
           <div className="container mx-auto max-w-4xl">
-            {loading && (
-              <div className="flex items-center justify-center h-64">
+            {weatherLoading && (
+              <div className="flex flex-col items-center justify-center h-64 gap-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                <p className="text-gray-600">Obteniendo datos climáticos...</p>
               </div>
             )}
 
@@ -139,7 +311,7 @@ export default function ClimaPage() {
               </Card>
             )}
 
-            {!loading && weather && (
+            {!weatherLoading && weather && selectedArbol && (
               <div className="space-y-8">
                 {/* Weather Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -232,9 +404,12 @@ export default function ClimaPage() {
                   <CardContent className="pt-6">
                     <div className="text-center space-y-2">
                       <h2 className="text-2xl font-bold text-gray-800">
-                        📍 {weather.name}, {weather.sys?.country}
+                        🌳 {selectedArbol.nombre}
                       </h2>
-                      <div className="flex items-center justify-center gap-3">
+                      <p className="text-sm text-gray-600">
+                        📍 {weather.name}, {weather.sys?.country}
+                      </p>
+                      <div className="flex items-center justify-center gap-3 mt-4">
                         <Cloud className="h-8 w-8 text-gray-400" />
                         <p className="text-xl text-gray-600 capitalize">
                           {weather.weather?.[0]?.description}
@@ -302,6 +477,20 @@ export default function ClimaPage() {
                   </CardContent>
                 </Card>
               </div>
+            )}
+
+            {!weatherLoading && !error && !weather && !arbolesLoading && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <Cloud className="h-6 w-6 text-blue-600" />
+                    <p className="text-blue-700 font-medium">
+                      Selecciona un árbol y haz clic en "Verificar Clima" para
+                      ver las condiciones actuales
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         </section>
