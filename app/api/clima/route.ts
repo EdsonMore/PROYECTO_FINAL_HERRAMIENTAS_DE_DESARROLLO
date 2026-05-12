@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
-import { HEALTH_STATUS } from "@/lib/health-utils";
 
 interface WeatherData {
   temperature?: number;
@@ -61,75 +59,39 @@ function getWeatherDescription(code: number): string {
   return weatherCodes[code] || "Desconocido";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const result = await query(
-      `SELECT DISTINCT ON (a.id)
-        a.id,
-        a.nombre,
-        a.especie,
-        a.latitud,
-        a.longitud,
-        a.foto_url,
-        (SELECT s.salud FROM seguimientos s WHERE s.arbol_id = a.id ORDER BY s.fecha_seguimiento DESC LIMIT 1) as estado_salud
-       FROM arboles a
-       ORDER BY a.id`
-    );
+    const { searchParams } = new URL(request.url);
+    const lat = searchParams.get("lat");
+    const lng = searchParams.get("lng");
 
-    const arboles = result.rows.map((arbol) => {
-      const health = arbol.estado_salud || "sin-datos";
-      const colorInfo =
-        HEALTH_STATUS[health as keyof typeof HEALTH_STATUS] || {
-          color: "#94a3b8",
-          emoji: "❓",
-          label: "Sin datos",
-        };
+    if (!lat || !lng) {
+      return NextResponse.json(
+        { error: "Parámetros lat y lng requeridos" },
+        { status: 400 }
+      );
+    }
 
-      return {
-        id: arbol.id,
-        nombre: arbol.nombre,
-        especie: arbol.especie,
-        latitud: Number(arbol.latitud),
-        longitud: Number(arbol.longitud),
-        foto_url: arbol.foto_url,
-        estado_salud: arbol.estado_salud,
-        color: colorInfo.color,
-        emoji: colorInfo.emoji,
-        label: colorInfo.label,
-        // Formato GeoJSON
-        geometry: {
-          type: "Point",
-          coordinates: [Number(arbol.longitud), Number(arbol.latitud)],
-        },
-        properties: {
-          nombre: arbol.nombre,
-          especie: arbol.especie || "Sin especificar",
-          estado: arbol.estado_salud || "Sin datos",
-          color: colorInfo.color,
-          emoji: colorInfo.emoji,
-        },
-      };
-    });
+    const weather = await getWeatherFromOpenMeteo(Number(lat), Number(lng));
 
     return NextResponse.json({
       success: true,
-      total: arboles.length,
       timestamp: new Date().toISOString(),
-      arboles: arboles,
-      // Formato GeoJSON FeatureCollection
-      geojson: {
-        type: "FeatureCollection",
-        features: arboles.map((arbol) => ({
-          type: "Feature",
-          geometry: arbol.geometry,
-          properties: arbol.properties,
-        })),
+      coordinates: {
+        latitude: Number(lat),
+        longitude: Number(lng),
+      },
+      clima: {
+        temperatura: weather.temperature,
+        humedad: weather.humidity,
+        precipitacion: weather.precipitation,
+        descripcion: weather.weather_description,
       },
     });
   } catch (error) {
-    console.error("Error en API arboles-mapa:", error);
+    console.error("Error en API clima:", error);
     return NextResponse.json(
-      { error: "Error al obtener árboles para el mapa" },
+      { error: "Error al obtener datos climáticos" },
       { status: 500 }
     );
   }

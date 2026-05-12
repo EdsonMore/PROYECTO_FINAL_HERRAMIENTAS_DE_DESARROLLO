@@ -40,6 +40,7 @@ export function Navbar() {
     { href: "/dashboard", label: "Dashboard", protected: true },
     { href: "/mi-arbol", label: "Mi Árbol", protected: true },
     { href: "/geolocalizacion", label: "Geolocalización", protected: true },
+    { href: "/mostrar-arboles", label: "Ver Árboles", protected: true },
     { href: "/seguimientos", label: "Seguimientos", protected: true },
     { href: "/clima", label: "Clima", protected: true },
     { href: "/identificador", label: "Identificador IA", protected: true },
