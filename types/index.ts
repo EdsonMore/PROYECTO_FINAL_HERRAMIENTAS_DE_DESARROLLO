@@ -16,6 +16,7 @@ export interface Arbol {
   fecha_plantacion?: Date
   descripcion?: string
   foto_url?: string
+  estado_salud?: string
   creado_en: Date
   actualizado_en: Date
 }

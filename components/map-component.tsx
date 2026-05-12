@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
+import { getHealthColor } from "@/lib/health-utils"
 
 // Fix para los iconos de Leaflet en Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -28,7 +29,7 @@ const createCustomMarkerIcon = (color: string = "blue") => {
 interface MapComponentProps {
   center: [number, number]
   zoom?: number
-  markers?: Array<{ lat: number; lng: number; popup?: string }>
+  markers?: Array<{ lat: number; lng: number; popup?: string; healthStatus?: string }>
   onLocationSelect?: (lat: number, lng: number) => void
   className?: string
 }
@@ -155,8 +156,9 @@ export function MapComponent({
       markers.forEach((marker, index) => {
         try {
           const isFirstMarker = index === 0
+          const markerColor = marker.healthStatus ? getHealthColor(marker.healthStatus) : (isFirstMarker ? "#22c55e" : "#3b82f6")
           const leafletMarker = L.marker([marker.lat, marker.lng], {
-            icon: createCustomMarkerIcon(isFirstMarker ? "#22c55e" : "#3b82f6"),
+            icon: createCustomMarkerIcon(markerColor),
           })
           if (marker.popup) {
             leafletMarker.bindPopup(marker.popup).openPopup()

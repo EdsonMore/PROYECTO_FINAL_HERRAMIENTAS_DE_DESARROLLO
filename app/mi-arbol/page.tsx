@@ -44,6 +44,7 @@ import { TreePhotoForm } from "@/components/tree-photo-form";
 import { ChatbotPanel } from "@/components/chatbot-panel";
 import type { Arbol } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { getHealthStyles, getHealthLabel, getHealthEmoji } from "@/lib/health-utils";
 
 // Importar MapComponent dinámicamente para evitar problemas de SSR
 const DynamicMapComponent = dynamic(
@@ -761,6 +762,12 @@ export default function MiArbolPage() {
                       )}
                     </div>
 
+                    {arbol.estado_salud && (
+                      <div className={`px-3 py-2 rounded-lg text-xs font-medium mb-4 border ${getHealthStyles(arbol.estado_salud).bgColor} ${getHealthStyles(arbol.estado_salud).textColor} ${getHealthStyles(arbol.estado_salud).borderColor}`}>
+                        <span>{getHealthEmoji(arbol.estado_salud)} Estado: {getHealthLabel(arbol.estado_salud)}</span>
+                      </div>
+                    )}
+
                     {arbol.descripcion && (
                       <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
                         {arbol.descripcion}
@@ -812,7 +819,6 @@ export default function MiArbolPage() {
                 </Card>
               ))}
             </div>
-            {/*}
             <Card className="overflow-hidden border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-500 text-white pb-3">
                 <CardTitle className="flex items-center gap-2">
@@ -834,15 +840,20 @@ export default function MiArbolPage() {
                   markers={arboles.map((a) => ({
                     lat: a.latitud,
                     lng: a.longitud,
+                    healthStatus: a.estado_salud,
                     popup: `<div class="font-semibold text-sm text-gray-900">${a.nombre}</div>${
                       a.especie
                         ? `<div class="text-xs text-gray-600">🌿 ${a.especie}</div>`
+                        : ""
+                    }${
+                      a.estado_salud
+                        ? `<div class="text-xs text-gray-600 mt-1">Estado: ${getHealthLabel(a.estado_salud)}</div>`
                         : ""
                     }`,
                   }))}
                 />
               </CardContent>
-            </Card>*/}
+            </Card>
           </>
         )}
       </main>
