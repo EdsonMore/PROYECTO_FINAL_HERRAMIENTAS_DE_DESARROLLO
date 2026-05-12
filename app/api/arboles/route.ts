@@ -7,12 +7,15 @@ import { query } from "@/lib/db"
 type ArbolQueryMode = "full" | "summary" | "geo"
 
 const ARBOLES_SELECTS: Record<ArbolQueryMode, string> = {
-  full: `SELECT id, usuario_id, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, creado_en, actualizado_en
-         FROM arboles`,
-  summary: `SELECT id, nombre, especie, foto_url, creado_en
-            FROM arboles`,
-  geo: `SELECT id, nombre, especie, latitud, longitud, foto_url, creado_en
-        FROM arboles`,
+  full: `SELECT a.id, a.usuario_id, a.nombre, a.especie, a.latitud, a.longitud, a.fecha_plantacion, a.descripcion, a.foto_url, a.creado_en, a.actualizado_en,
+         (SELECT s.salud FROM seguimientos s WHERE s.arbol_id = a.id ORDER BY s.fecha_seguimiento DESC LIMIT 1) as estado_salud
+         FROM arboles a`,
+  summary: `SELECT a.id, a.nombre, a.especie, a.foto_url, a.creado_en,
+            (SELECT s.salud FROM seguimientos s WHERE s.arbol_id = a.id ORDER BY s.fecha_seguimiento DESC LIMIT 1) as estado_salud
+            FROM arboles a`,
+  geo: `SELECT a.id, a.nombre, a.especie, a.latitud, a.longitud, a.foto_url, a.creado_en,
+        (SELECT s.salud FROM seguimientos s WHERE s.arbol_id = a.id ORDER BY s.fecha_seguimiento DESC LIMIT 1) as estado_salud
+        FROM arboles a`,
 }
 
 function parseOptionalPositiveInt(value: string | null) {
@@ -38,7 +41,7 @@ export async function GET(request: NextRequest) {
     const limit = parseOptionalPositiveInt(searchParams.get("limit"))
     const offset = parseOptionalPositiveInt(searchParams.get("offset"))
 
-    let queryText = `${selectedQuery} WHERE usuario_id = $1 ORDER BY creado_en DESC`
+    let queryText = `${selectedQuery} WHERE a.usuario_id = $1 ORDER BY a.creado_en DESC`
     const queryParams: Array<number> = [userId]
 
     if (limit !== null) {
