@@ -32,6 +32,12 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Usuario no encontrado");
           }
 
+          console.log("🔍 DEBUG LOGIN:", {
+            email: user.email,
+            password_hash_existe: !!user.password_hash,
+            password_hash_length: user.password_hash?.length,
+          });
+
           // Verificar contraseña
           const isValidPassword = await bcrypt.compare(
             credentials.password,
@@ -42,12 +48,13 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Contraseña incorrecta");
           }
 
-          // Retornar usuario sin el hash de contraseña
+          // Retornar usuario sin el hash de contraseña ni avatar grande
           return {
             id: user.id.toString(),
             email: user.email,
             name: user.nombre,
-            image: user.avatar_url,
+            // NO incluir image aquí para evitar cookies gigantes
+            // Se recupera en session callback si es necesario
           };
         } catch (error) {
           console.error("Error en autenticación:", error);
@@ -81,7 +88,7 @@ export const authOptions: NextAuthOptions = {
 
           return true;
         } catch (error) {
-          console.error("Error al registrar usuario de Google:", error);
+          console.error("❌ Error al registrar usuario de Google:", error);
           return false;
         }
       }
@@ -95,6 +102,9 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        // NO guardar image en JWT porque puede ser muy grande
+        // Eso se recupera en session callback si es necesario
+        
         // Campos de expiración JWT
         token.iat = now;
         // Access token válido por 15 minutos (900 segundos)
@@ -117,7 +127,24 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        
+        // Recuperar imagen desde BD si está en session
+        if (token.id) {
+          try {
+            const userResult = await query(
+              "SELECT avatar_url FROM usuarios WHERE id = $1 LIMIT 1",
+              [parseInt(token.id as string)]
+            );
+            if (userResult.rows[0]?.avatar_url) {
+              session.user.image = userResult.rows[0].avatar_url;
+            }
+          } catch (error) {
+            console.error("⚠️ Error recuperando avatar en session:", error);
+            // Continuar sin avatar si hay error
+          }
+        }
       }
+      
       return session;
     },
     async redirect({ url, baseUrl }) {
