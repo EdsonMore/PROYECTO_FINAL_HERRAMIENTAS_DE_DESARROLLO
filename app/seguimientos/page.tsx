@@ -218,7 +218,27 @@ export default function SeguimientosPage() {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-1 container mx-auto px-4 py-8">
-          <Skeleton className="h-10 w-64 mb-8" />
+          <div className="mb-8">
+            <Skeleton className="h-10 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => (
+              <Card key={i} className="overflow-hidden">
+                <Skeleton className="h-[140px] w-full rounded-none" />
+                <CardContent className="p-3 space-y-2">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-32" />
+                  <div className="flex gap-1.5 pt-2">
+                    <Skeleton className="h-7 flex-1" />
+                    <Skeleton className="h-7 flex-1" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </main>
         <Footer />
       </div>
@@ -451,88 +471,91 @@ export default function SeguimientosPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {seguimientos.map((seg) => (
               <Card
                 key={seg.id}
-                className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group h-full flex flex-col"
+                className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer group h-full flex flex-col border border-gray-200 hover:border-blue-300"
                 onClick={() => openDetailModal(seg)}
               >
-                <div className="h-[240px] bg-gradient-to-br from-secondary to-secondary/50 relative overflow-hidden flex-shrink-0">
+                {/* Imagen Compacta */}
+                <div className="h-[140px] bg-gradient-to-br from-secondary to-secondary/50 relative overflow-hidden flex-shrink-0">
                   {seg.foto_url ? (
                     <img
                       src={seg.foto_url || "/placeholder.svg"}
                       alt={seg.titulo}
-                      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                      className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full group-hover:bg-secondary/80 transition-colors">
-                      <Camera className="h-16 w-16 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <div className="flex items-center justify-center h-full bg-gradient-to-br from-blue-100 to-blue-50">
+                      <Camera className="h-8 w-8 text-blue-300 opacity-40" />
                     </div>
                   )}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
-                    <div className="bg-white/90 text-foreground px-4 py-2 rounded-lg text-sm font-semibold">
-                      Ver detalles
-                    </div>
-                  </div>
                 </div>
 
-                <CardContent className="pt-4 flex-1 flex flex-col">
-                  <div className="mb-2">
-                    <h3 className="font-semibold text-lg mb-1 line-clamp-1">{seg.titulo}</h3>
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-1">{seg.arbol_nombre}</p>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded whitespace-nowrap">
-                        {new Date(seg.fecha_seguimiento).toLocaleDateString("es-ES", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </div>
+                {/* Contenido Condensado */}
+                <CardContent className="p-3 flex-1 flex flex-col gap-2">
+                  {/* Título y Árbol */}
+                  <div className="min-h-[2rem]">
+                    <h3 className="font-bold text-sm leading-tight line-clamp-2 text-gray-900 group-hover:text-blue-700 transition-colors">
+                      {seg.titulo}
+                    </h3>
+                    <p className="text-xs text-blue-600 font-medium line-clamp-1">
+                      🌳 {seg.arbol_nombre}
+                    </p>
                   </div>
 
+                  {/* Fecha - Compacta */}
+                  <p className="text-xs text-gray-500">
+                    📅 {new Date(seg.fecha_seguimiento).toLocaleDateString("es-ES", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+
+                  {/* Descripción - 1 línea */}
                   {seg.descripcion && (
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{seg.descripcion}</p>
+                    <p className="text-xs text-gray-600 line-clamp-1">
+                      {seg.descripcion}
+                    </p>
                   )}
 
-                  <div className="space-y-1 text-xs text-muted-foreground mb-4 pb-3 border-b">
+                  {/* Stats Inline */}
+                  <div className="space-y-1 text-xs text-gray-600">
                     {seg.altura_cm && (
-                      <div className="flex justify-between">
-                        <span>📏 Altura:</span>
-                        <span className="font-semibold text-foreground">{seg.altura_cm} cm</span>
-                      </div>
+                      <p className="line-clamp-1">📏 {seg.altura_cm} cm</p>
                     )}
                     {seg.salud && (
-                      <div className="flex justify-between">
-                        <span>
-                          {seg.salud === "excelente" && "🟢"}
-                          {seg.salud === "bueno" && "🟢"}
-                          {seg.salud === "regular" && "🟡"}
-                          {seg.salud === "malo" && "🔴"} Estado:
-                        </span>
-                        <span className="font-semibold text-foreground capitalize">{seg.salud}</span>
-                      </div>
+                      <p className="line-clamp-1">
+                        {seg.salud === "excelente" && "🟢"}
+                        {seg.salud === "bueno" && "🟢"}
+                        {seg.salud === "regular" && "🟡"}
+                        {seg.salud === "malo" && "🔴"} {seg.salud}
+                      </p>
                     )}
                   </div>
 
-                  <div className="flex gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
+                  {/* Botones en Hover */}
+                  <div 
+                    className="flex gap-1.5 mt-auto pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="flex-1 gap-2 hover:bg-primary hover:text-primary-foreground"
+                      variant="ghost"
+                      className="flex-1 h-7 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium"
                       onClick={() => openEditDialog(seg)}
                     >
-                      <Edit className="h-3 w-3" />
+                      <Edit className="h-3 w-3 mr-1" />
                       Editar
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      variant="ghost"
+                      className="flex-1 h-7 text-xs bg-red-50 hover:bg-red-100 text-red-600 font-medium"
                       onClick={() => openDeleteConfirm(seg.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </CardContent>
