@@ -128,19 +128,21 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         
-        // Recuperar imagen desde BD si está en session
+        // Recuperar nombre y avatar desde BD (datos actualizados)
         if (token.id) {
           try {
             const userResult = await query(
-              "SELECT avatar_url FROM usuarios WHERE id = $1 LIMIT 1",
+              "SELECT nombre, avatar_url FROM usuarios WHERE id = $1 LIMIT 1",
               [parseInt(token.id as string)]
             );
-            if (userResult.rows[0]?.avatar_url) {
-              session.user.image = userResult.rows[0].avatar_url;
+            if (userResult.rows[0]) {
+              session.user.name = userResult.rows[0].nombre;
+              if (userResult.rows[0].avatar_url) {
+                session.user.image = userResult.rows[0].avatar_url;
+              }
             }
           } catch (error) {
-            console.error("⚠️ Error recuperando avatar en session:", error);
-            // Continuar sin avatar si hay error
+            console.error("⚠️ Error recuperando datos en session:", error);
           }
         }
       }
