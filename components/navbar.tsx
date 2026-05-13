@@ -103,7 +103,6 @@ export function Navbar() {
                   className="flex items-center gap-2 rounded-full hover:bg-white/10 px-2 py-1 transition"
                 >
                   <NavbarAvatar
-                    email={session.user?.email ?? undefined}
                     userName={session.user?.name ?? undefined}
                     size={35}
                   />

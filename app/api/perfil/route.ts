@@ -53,21 +53,25 @@ export async function PUT(request: NextRequest) {
     }
 
     // Actualizar avatar si se proporciona
-    if (avatar_url !== undefined && avatar_url !== "") {
-      // Validar que sea una URL válida o base64
-      if (
-        !avatar_url.startsWith("http") &&
-        !avatar_url.startsWith("data:image")
-      ) {
-        return NextResponse.json(
-          { error: "URL de imagen inválida" },
-          { status: 400 }
-        );
+    if (avatar_url !== undefined) {
+      // Si es null o vacío, eliminar avatar
+      if (avatar_url === null || avatar_url === "") {
+        updateFields.push(`avatar_url = NULL`);
+      } else {
+        // Validar que sea una URL válida o base64
+        if (
+          !avatar_url.startsWith("http") &&
+          !avatar_url.startsWith("data:image")
+        ) {
+          return NextResponse.json(
+            { error: "URL de imagen inválida" },
+            { status: 400 }
+          );
+        }
+        updateFields.push(`avatar_url = $${paramCount}`);
+        queryParams.push(avatar_url);
+        paramCount++;
       }
-
-      updateFields.push(`avatar_url = $${paramCount}`);
-      queryParams.push(avatar_url);
-      paramCount++;
     }
 
     // Actualizar contraseña si se proporciona

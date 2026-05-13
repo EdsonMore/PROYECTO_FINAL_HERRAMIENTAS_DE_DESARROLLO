@@ -15,6 +15,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import {
   User,
@@ -65,6 +74,8 @@ export default function PerfilPage() {
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -134,10 +145,23 @@ export default function PerfilPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: value,
+      };
+      checkForChanges(updated);
+      return updated;
+    });
+  };
+
+  const checkForChanges = (data: typeof formData) => {
+    const changed =
+      data.nombre !== userProfile?.nombre ||
+      data.avatar_url !== (userProfile?.avatar_url || "") ||
+      data.password_actual !== "" ||
+      data.nueva_password !== "";
+    setHasChanges(changed);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -170,7 +194,7 @@ export default function PerfilPage() {
 
       const updateData: any = {
         nombre: formData.nombre,
-        avatar_url: formData.avatar_url,
+        avatar_url: formData.avatar_url || null,
       };
 
       // Solo incluir campos de contraseña si se están cambiando
@@ -195,16 +219,6 @@ export default function PerfilPage() {
           description: "Perfil actualizado correctamente",
         });
 
-        // Actualizar la sesión con los nuevos datos (sin incluir el avatar grande)
-        await update({
-          ...session,
-          user: {
-            ...session?.user,
-            name: result.usuario.nombre,
-            // No incluir image para evitar headers demasiado grandes
-          },
-        });
-
         // Actualizar el perfil local
         setUserProfile(result.usuario);
         setPreviewUrl(null);
@@ -216,6 +230,15 @@ export default function PerfilPage() {
           nueva_password: "",
           confirmar_password: "",
         }));
+
+        // Pequeño delay para asegurar que BD está actualizada, luego refrescar sesión
+        setTimeout(() => {
+          // Actualizar sesión con el nombre nuevo
+          update({ name: result.usuario.nombre });
+          // Disparar evento para que navbar refresque el avatar
+          window.dispatchEvent(new Event("avatarUpdated"));
+          setHasChanges(false);
+        }, 500);
       } else {
         toast({
           title: "Error",
@@ -270,10 +293,14 @@ export default function PerfilPage() {
       reader.onload = async (event) => {
         const base64 = event.target?.result as string;
         setPreviewUrl(base64);
-        setFormData((prev) => ({
-          ...prev,
-          avatar_url: base64,
-        }));
+        setFormData((prev) => {
+          const updated = {
+            ...prev,
+            avatar_url: base64,
+          };
+          checkForChanges(updated);
+          return updated;
+        });
         toast({
           title: "Imagen cargada",
           description: "Haz clic en 'Guardar Cambios' para confirmar",
@@ -290,6 +317,23 @@ export default function PerfilPage() {
       });
       setUploadingImage(false);
     }
+  };
+
+  const handleConfirmDelete = () => {
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        avatar_url: "",
+      };
+      checkForChanges(updated);
+      return updated;
+    });
+    setPreviewUrl(null);
+    setShowDeleteConfirm(false);
+    toast({
+      title: "Avatar eliminado",
+      description: "Se volverá a la foto por defecto al guardar",
+    });
   };
 
   if (status === "loading" || loading) {
@@ -507,6 +551,16 @@ export default function PerfilPage() {
                             </>
                           )}
                         </Button>
+                        {formData.avatar_url && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setShowDeleteConfirm(true)}
+                          >
+                            Eliminar
+                          </Button>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Sube una imagen JPG, PNG o WebP (máx. 5MB)
@@ -642,7 +696,7 @@ export default function PerfilPage() {
                   <div className="flex gap-4 pt-4">
                     <Button
                       type="submit"
-                      disabled={updating}
+                      disabled={updating || !hasChanges}
                       className="flex items-center gap-2"
                     >
                       <Save className="h-4 w-4" />
@@ -664,6 +718,27 @@ export default function PerfilPage() {
             </Card>
           </div>
         </div>
+
+        {/* Modal de confirmación para eliminar avatar */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar foto de perfil?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer. Tu foto de perfil volverá a la imagen por defecto.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex gap-4 justify-end">
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
 
       <Footer />
