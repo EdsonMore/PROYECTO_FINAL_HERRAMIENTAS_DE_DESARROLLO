@@ -59,14 +59,18 @@ export default function LoginPage() {
         redirect: false,
       });
 
+      console.log("🔐 signIn result:", result);
+
       if (result?.error) {
         setIsLoading(false);
+        console.error("❌ signIn error:", result.error);
         toast({
           title: "Error al iniciar sesión",
           description: "Email o contraseña incorrectos",
           variant: "destructive",
         });
       } else if (result?.ok) {
+        console.log("✅ signIn exitoso, redirigiendo...");
         toast({
           title: "¡Bienvenido!",
           description: "Has iniciado sesión correctamente",
@@ -77,12 +81,22 @@ export default function LoginPage() {
         
         // Obtener la URL de redirección del callback
         const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+        console.log("📍 Redirigiendo a:", callbackUrl);
         
         // Redirigir inmediatamente sin esperar más
         window.location.href = callbackUrl;
+      } else {
+        console.warn("⚠️ result no tiene ok ni error:", result);
+        setIsLoading(false);
+        toast({
+          title: "Error",
+          description: "Respuesta inesperada del servidor",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       setIsLoading(false);
+      console.error("❌ Excepción en signIn:", error);
       toast({
         title: "Error",
         description: "Ocurrió un error al iniciar sesión",
