@@ -1,7 +1,6 @@
 // app/api/arboles/route.ts
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { protectRoute } from "@/lib/route-guards"
 import { query } from "@/lib/db"
 
 type ArbolQueryMode = "full" | "summary" | "geo"
@@ -28,13 +27,8 @@ function parseOptionalPositiveInt(value: string | null) {
 // GET - Obtener todos los árboles del usuario
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
-
-    const userId = parseInt(session.user.id)
+    const { error, userId } = await protectRoute()
+    if (error) return error
     const { searchParams } = new URL(request.url)
     const mode = (searchParams.get("mode") as ArbolQueryMode) || "full"
     const selectedQuery = ARBOLES_SELECTS[mode] ?? ARBOLES_SELECTS.full
@@ -66,11 +60,8 @@ export async function GET(request: NextRequest) {
 // POST - Crear un nuevo árbol
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { error, userId } = await protectRoute()
+    if (error) return error
 
     const body = await request.json()
     const { nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url } = body
@@ -79,14 +70,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
 
-    const usuarioId = parseInt(session.user.id)
-
     // Insertar el árbol
     const result = await query(
       `INSERT INTO arboles (usuario_id, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [usuarioId, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url],
+      [userId, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url],
     )
 
     return NextResponse.json(result.rows[0], { status: 201 })
