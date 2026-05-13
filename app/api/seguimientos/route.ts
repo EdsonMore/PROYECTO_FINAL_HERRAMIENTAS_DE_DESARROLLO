@@ -1,19 +1,14 @@
 // app/api/seguimientos/route.ts
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { protectRoute, validateResourceOwnership } from "@/lib/route-guards"
 import { query } from "@/lib/db"
 
 // GET - Obtener seguimientos (todos o de un árbol específico)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const { error, userId } = await protectRoute()
+    if (error) return error
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
-
-    const userId = parseInt(session.user.id)
     const { searchParams } = new URL(request.url)
     const arbolId = searchParams.get("arbol_id")
 
@@ -48,11 +43,8 @@ export async function GET(request: NextRequest) {
 // POST - Crear un nuevo seguimiento
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { error, userId } = await protectRoute()
+    if (error) return error
 
     const body = await request.json()
     const { arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento } = body
@@ -61,21 +53,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
 
-    const usuarioId = parseInt(session.user.id)
-
-    // Verificar que el árbol pertenece al usuario - una sola consulta
-    const arbolResult = await query("SELECT id FROM arboles WHERE id = $1 AND usuario_id = $2", [arbol_id, usuarioId])
-
-    if (arbolResult.rows.length === 0) {
-      return NextResponse.json({ error: "Árbol no encontrado" }, { status: 404 })
-    }
+    // Verificar que el árbol pertenece al usuario
+    const { error: ownershipError } = await validateResourceOwnership("arboles", arbol_id, userId)
+    if (ownershipError) return ownershipError
 
     // Insertar el seguimiento
     const result = await query(
       `INSERT INTO seguimientos (arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [arbol_id, usuarioId, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento || new Date()],
+      [arbol_id, userId, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento || new Date()],
     )
 
     return NextResponse.json(result.rows[0], { status: 201 })
