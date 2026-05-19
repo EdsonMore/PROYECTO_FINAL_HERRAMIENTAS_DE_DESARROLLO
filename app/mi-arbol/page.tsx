@@ -44,6 +44,11 @@ import { TreePhotoForm } from "@/components/tree-photo-form";
 import { ChatbotPanel } from "@/components/chatbot-panel";
 import type { Arbol } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import {
+  getHealthStyles,
+  getHealthLabel,
+  getHealthEmoji,
+} from "@/lib/health-utils";
 
 // Importar MapComponent dinámicamente para evitar problemas de SSR
 const DynamicMapComponent = dynamic(
@@ -328,15 +333,19 @@ export default function MiArbolPage() {
             </div>
 
             {/* Grid skeleton */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(3)].map((_, i) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {[...Array(5)].map((_, i) => (
                 <Card key={i} className="overflow-hidden">
-                  <Skeleton className="h-[240px] w-full rounded-none" />
-                  <CardContent className="pt-4 space-y-3">
-                    <Skeleton className="h-5 w-40" />
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-[140px] w-full rounded-none" />
+                  <CardContent className="p-3 space-y-2">
                     <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-32" />
+                    <div className="flex gap-1.5 pt-2">
+                      <Skeleton className="h-7 flex-1" />
+                      <Skeleton className="h-7 flex-1" />
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -725,124 +734,98 @@ export default function MiArbolPage() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
               {arboles.map((arbol) => (
                 <Card
                   key={arbol.id}
-                  className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-gray-200 hover:border-green-400 group"
+                  className="overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col border border-gray-200 hover:border-green-300 group"
                 >
-                  <div className="h-[240px] bg-gradient-to-br from-green-100 to-emerald-100 relative flex-shrink-0 overflow-hidden">
+                  {/* Imagen Compacta */}
+                  <div className="h-[140px] bg-gradient-to-br from-green-100 to-emerald-100 relative flex-shrink-0 overflow-hidden">
                     {arbol.foto_url ? (
                       <img
                         src={arbol.foto_url || "/placeholder.svg"}
                         alt={arbol.nombre}
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full bg-gradient-to-br from-green-100 to-emerald-100">
-                        <TreePine className="h-20 w-20 text-green-300 opacity-50" />
+                        <TreePine className="h-12 w-12 text-green-300 opacity-40" />
                       </div>
                     )}
                     {arbol.especie && (
-                      <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2.5 py-1.5 rounded-full font-semibold shadow-md">
+                      <div className="absolute top-1.5 right-1.5 bg-green-600 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-md">
                         {arbol.especie.split(" ")[0]}
                       </div>
                     )}
                   </div>
-                  <CardContent className="pt-5 flex-1 flex flex-col">
-                    <div className="mb-2">
-                      <h3 className="font-bold text-lg mb-1 line-clamp-1 text-gray-900 group-hover:text-green-700 transition-colors">
+
+                  {/* Contenido Condensado */}
+                  <CardContent className="p-3 flex-1 flex flex-col gap-2">
+                    {/* Nombre y Especie */}
+                    <div className="min-h-[2.5rem]">
+                      <h3 className="font-bold text-sm leading-tight line-clamp-2 text-gray-900 group-hover:text-green-700 transition-colors">
                         {arbol.nombre}
                       </h3>
-                      {arbol.especie && (
-                        <p className="text-xs font-medium text-green-700 line-clamp-1">
-                          🌿 {arbol.especie}
-                        </p>
-                      )}
                     </div>
 
+                    {/* Estado de Salud - Badge Compacto */}
+                    {arbol.estado_salud && (
+                      <div
+                        className={`px-2 py-1 rounded text-xs font-medium border ${getHealthStyles(arbol.estado_salud).bgColor} ${getHealthStyles(arbol.estado_salud).textColor} ${getHealthStyles(arbol.estado_salud).borderColor}`}
+                      >
+                        {getHealthEmoji(arbol.estado_salud)} {getHealthLabel(arbol.estado_salud)}
+                      </div>
+                    )}
+
+                    {/* Descripción Opcional - 1 línea */}
                     {arbol.descripcion && (
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-gray-600 line-clamp-1">
                         {arbol.descripcion}
                       </p>
                     )}
 
-                    {arbol.fecha_plantacion && (
-                      <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
-                        <span></span>
-                        {new Date(arbol.fecha_plantacion).toLocaleDateString(
-                          "es-ES",
-                          {
-                            year: "numeric",
-                            month: "long",
+                    {/* Fecha y Ubicación - Inline Compacto */}
+                    <div className="space-y-1 text-xs text-gray-500">
+                      {arbol.fecha_plantacion && (
+                        <p className="line-clamp-1">
+                          📅 {new Date(arbol.fecha_plantacion).toLocaleDateString("es-ES", {
+                            month: "short",
                             day: "numeric",
-                          },
-                        )}
+                            year: "numeric",
+                          })}
+                        </p>
+                      )}
+                      <p className="line-clamp-1 font-mono text-gray-600 flex items-center gap-1">
+                        <MapPin className="h-3 w-3 flex-shrink-0 text-purple-600" />
+                        {Number(arbol.latitud).toFixed(4)}, {Number(arbol.longitud).toFixed(4)}
                       </p>
-                    )}
-
-                    <div className="flex items-center gap-1 text-xs text-gray-600 mb-4 bg-gray-50 p-2 rounded line-clamp-2 font-mono border border-gray-200">
-                      <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-purple-600" />
-                      <span className="truncate">
-                        {Number(arbol.latitud).toFixed(4)},{" "}
-                        {Number(arbol.longitud).toFixed(4)}
-                      </span>
                     </div>
 
-                    <div className="flex gap-2 mt-auto">
+                    {/* Botones Compactos */}
+                    <div className="flex gap-1.5 mt-auto pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="flex-1 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:border-blue-400 text-blue-700 font-medium"
+                        variant="ghost"
+                        className="flex-1 h-7 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium"
                         onClick={() => openEditDialog(arbol)}
                       >
-                        <Edit className="h-3.5 w-3.5 mr-1.5" />
+                        <Edit className="h-3 w-3 mr-1" />
                         Editar
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="text-red-600 hover:bg-red-50 hover:border-red-400 border-red-200 bg-transparent font-medium"
+                        variant="ghost"
+                        className="flex-1 h-7 text-xs bg-red-50 hover:bg-red-100 text-red-600 font-medium"
                         onClick={() => handleDelete(arbol.id)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-            {/*}
-            <Card className="overflow-hidden border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-              <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-500 text-white pb-3">
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Mapa de Todos los Árboles
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <p className="text-xs text-gray-600 mb-3">
-                  📍 Visualiza la ubicación de todos tus árboles plantados
-                </p>
-                <DynamicMapComponent
-                  center={
-                    arboles.length > 0
-                      ? [arboles[0].latitud, arboles[0].longitud]
-                      : [-5.1946, -80.6307]
-                  }
-                  zoom={11}
-                  markers={arboles.map((a) => ({
-                    lat: a.latitud,
-                    lng: a.longitud,
-                    popup: `<div class="font-semibold text-sm text-gray-900">${a.nombre}</div>${
-                      a.especie
-                        ? `<div class="text-xs text-gray-600">🌿 ${a.especie}</div>`
-                        : ""
-                    }`,
-                  }))}
-                />
-              </CardContent>
-            </Card>*/}
           </>
         )}
       </main>

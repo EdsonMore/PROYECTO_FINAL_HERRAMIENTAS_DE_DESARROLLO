@@ -1,13 +1,16 @@
 # 🌳 EcoDataAI — Especificación General del Sistema
 
 ## 🎯 1. Objetivo del Sistema
+
 Desarrollar una plataforma web inteligente para el registro, monitoreo y análisis de árboles en la ciudad de Piura, integrando tecnologías de **minería de datos, análisis ambiental e inteligencia artificial**.
 
 El sistema permitirá:
-* Registrar árboles geolocalizados
-* Analizar condiciones ambientales reales
-* Predecir la supervivencia de árboles
-* Generar recomendaciones inteligentes de cuidado
+
+- Registrar árboles geolocalizados
+- Analizar condiciones ambientales reales
+- Predecir la supervivencia de árboles
+- Generar recomendaciones inteligentes de cuidado
+
 ---
 
 ## 🌍 2. Alcance del Proyecto
@@ -22,107 +25,111 @@ El sistema final debe ser:
 ---
 
 ## 🧠 3. Enfoque Tecnológico
+
 El sistema se basa en:
-* 📊 **Minería de datos:** análisis de datos climáticos y ambientales
-* 🤖 **Inteligencia artificial:** predicción de supervivencia y recomendaciones
-* 🌐 **APIs externas:** clima (Open-Meteo), identificación de especies
-* 🗄️ **Base de datos:** almacenamiento estructurado de árboles y seguimientos
+
+- 📊 **Minería de datos:** análisis de datos climáticos y ambientales
+- 🤖 **Inteligencia artificial:** predicción de supervivencia y recomendaciones
+- 🌐 **APIs externas:** clima (Open-Meteo), identificación de especies
+- 🗄️ **Base de datos:** almacenamiento estructurado de árboles y seguimientos
 
 ---
 
 ## 📊 4. MÓDULOS FINALES (El sistema se compone de módulos desacoplados)
+
     1. Gestión de Árboles
-*       Registrar árbol
-*       Editar
-*       Eliminar
-*       Ver lista
-*       Registro con ubicación geográfica
-*       Integración con datos ambientales
 
-    2. Análisis Ambiental (Clima)
-*       Obtener datos climáticos
-*       Autocompletar
-*       Mostrar datos ambientales
-*       Consumo de API climática
-*       Procesamiento de temperatura, humedad, etc.
-*       Autocompletado inteligente
+-       Registrar árbol
+-       Editar
+-       Eliminar
+-       Ver lista
+-       Registro con ubicación geográfica
+-       Integración con datos ambientales
 
-    3. Inteligencia del Sistema
-*       Predicción de supervivencia
-*       Recomendaciones:
+  2. Análisis Ambiental (Clima)
+
+-       Obtener datos climáticos
+-       Autocompletar
+-       Mostrar datos ambientales
+-       Consumo de API climática
+-       Procesamiento de temperatura, humedad, etc.
+-       Autocompletado inteligente
+
+  3. Inteligencia del Sistema
+
+-       Predicción de supervivencia
+-       Recomendaciones:
             frecuencia de riego
             exposición al sol
-*       Análisis basado en datos
+-       Análisis basado en datos
 
-    4. Geolocalización y Mapa
-*       Seleccionar ubicación
-*       Mostrar mapa
-*       Visualizar árboles
-*       Mapa interactivo
+  4. Geolocalización y Mapa
 
-    
-    5. Frontend/UI
+-       Seleccionar ubicación
+-       Mostrar mapa
+-       Visualizar árboles
+-       Mapa interactivo
+
+  5. Frontend/UI
 
 ---
-
 
 ## 📊 5. Funcionalidades Finales del Sistema
 
 ### 🌳 Gestión de Árboles
 
-* Registrar árbol
-* Editar árbol
-* Eliminar árbol
-* Visualizar árboles
+- Registrar árbol
+- Editar árbol
+- Eliminar árbol
+- Visualizar árboles
 
 ---
 
 ### 🌍 Datos Ambientales
 
-* Autocompletado por ubicación
-* Datos reales de clima:
-
-  * temperatura
-  * humedad
-  * precipitación
-* Visualización en interfaz
+- Autocompletado por ubicación
+- Datos reales de clima:
+  - temperatura
+  - humedad
+  - precipitación
+- Visualización en interfaz
 
 ---
 
 ### 🤖 Inteligencia Artificial
 
-* Predicción de supervivencia (%)
-* Recomendaciones:
+- Predicción de supervivencia (%)
+- Recomendaciones:
+  - frecuencia de riego
+  - exposición al sol
 
-  * frecuencia de riego
-  * exposición al sol
-* Análisis basado en datos
+- Análisis basado en datos
 
 ---
 
 ### 🗺️ Mapa
 
-* Selección de ubicación
-* Visualización de árboles
-* Interacción con marcadores
+- Selección de ubicación
+- Visualización de árboles
+- Interacción con marcadores
 
 ---
 
 ### 📊 Análisis (Insights)
 
-* Estadísticas:
+- Estadísticas:
+  - cantidad de árboles
+  - estado de salud
 
-  * cantidad de árboles
-  * estado de salud
-* Gráficos de crecimiento
+- Gráficos de crecimiento
 
 ---
 
 ### 📸 Identificación de especies
 
-* Subir imagen
-* IA identifica especie
-* Sugerencias automáticas
+- Subir imagen
+- IA identifica especie
+- Sugerencias automáticas
 
 ---
 
@@ -143,9 +150,9 @@ El sistema se basa en:
 
 El sistema utiliza:
 
-* Datos históricos climáticos
-* Variables ambientales
-* Análisis de patrones
+- Datos históricos climáticos
+- Variables ambientales
+- Análisis de patrones
 
 Objetivo:
 
@@ -157,9 +164,9 @@ Objetivo:
 
 El sistema debe ser capaz de:
 
-* Analizar condiciones del entorno
-* Detectar riesgo de supervivencia
-* Recomendar acciones
+- Analizar condiciones del entorno
+- Detectar riesgo de supervivencia
+- Recomendar acciones
 
 Ejemplo:
 
@@ -192,14 +199,13 @@ Un sistema capaz de:
 
 ---
 
-
 ## 📌 11. Metadatos del Proyecto
 
-* Nombre: EcoData IA
-* Tipo: Sistema Web Inteligente
-* Enfoque: Data-driven + IA
-* Tecnologías: Next.js, PostgreSQL, APIs externas
-* Dominio: Medio ambiente / Smart Cities
-* Nivel: Académico – Profesional
+- Nombre: EcoData IA
+- Tipo: Sistema Web Inteligente
+- Enfoque: Data-driven + IA
+- Tecnologías: Next.js, PostgreSQL, APIs externas
+- Dominio: Medio ambiente / Smart Cities
+- Nivel: Académico – Profesional
 
 ---

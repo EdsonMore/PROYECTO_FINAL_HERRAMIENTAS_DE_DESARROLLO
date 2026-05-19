@@ -1,9 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Droplets,
   Thermometer,
@@ -13,32 +23,172 @@ import {
   AlertCircle,
   CheckCircle,
   Cloud,
+  MapPin,
+  Loader2,
+  Clock,
+  Trash2,
 } from "lucide-react";
+import type { Arbol } from "@/types";
+
+interface WeatherHistory {
+  id: string;
+  arbolNombre: string;
+  arbolEspecie?: string;
+  arbolFoto?: string;
+  clima: any;
+  timestamp: Date;
+  timestampFormato: string;
+}
 
 export default function ClimaPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [arboles, setArboles] = useState<Arbol[]>([]);
+  const [selectedArbol, setSelectedArbol] = useState<Arbol | null>(null);
   const [weather, setWeather] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [weatherLoading, setWeatherLoading] = useState(false);
   const [error, setError] = useState("");
+  const [arbolesLoading, setArbolesLoading] = useState(true);
+  const [weatherHistory, setWeatherHistory] = useState<WeatherHistory[]>([]);
 
+  // Verificar autenticación
   useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        const res = await fetch("/api-clima");
-        const data = await res.json();
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
 
-        if (!data.main) {
-          throw new Error(data.message || "Error en API");
-        }
+  // Cargar árboles del usuario y historial de clima
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchArboles();
+      loadWeatherHistory();
+    }
+  }, [status]);
 
-        setWeather(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  // Cargar historial de localStorage
+  const loadWeatherHistory = () => {
+    try {
+      const saved = localStorage.getItem("weatherHistory");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setWeatherHistory(
+          parsed.map((item: any) => ({
+            ...item,
+            timestamp: new Date(item.timestamp),
+          })),
+        );
       }
-    };
+    } catch (err) {
+      console.error("Error cargando historial:", err);
+    }
+  };
 
-    fetchWeather();
+  // Guardar historial en localStorage
+  const saveWeatherHistory = (history: WeatherHistory[]) => {
+    try {
+      localStorage.setItem("weatherHistory", JSON.stringify(history));
+    } catch (err) {
+      console.error("Error guardando historial:", err);
+    }
+  };
+
+  const fetchArboles = async () => {
+    try {
+      const res = await fetch("/api/arboles?mode=geo");
+      if (res.ok) {
+        const data = await res.json();
+        setArboles(data);
+        // Seleccionar el primer árbol automáticamente
+        if (data.length > 0) {
+          setSelectedArbol(data[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Error al cargar árboles:", error);
+    } finally {
+      setArbolesLoading(false);
+    }
+  };
+
+  // Obtener clima para ubicación específica
+  const fetchWeatherForArbol = async (arbol: Arbol) => {
+    setWeatherLoading(true);
+    setError("");
+    setWeather(null);
+
+    try {
+      const lat = +arbol.latitud;
+      const lon = +arbol.longitud;
+      const res = await fetch(`/api-clima?lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+
+      if (!data.main) {
+        throw new Error(data.message || "Error en API");
+      }
+
+      setWeather(data);
+
+      // Crear registro del historial
+      const now = new Date();
+      const timestampFormato = now.toLocaleString("es-ES", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+
+      const newHistoryEntry: WeatherHistory = {
+        id: Date.now().toString(),
+        arbolNombre: arbol.nombre,
+        arbolEspecie: arbol.especie,
+        arbolFoto: arbol.foto_url,
+        clima: data,
+        timestamp: now,
+        timestampFormato: timestampFormato,
+      };
+
+      // Agregar al inicio del historial (más reciente primero)
+      const updatedHistory = [newHistoryEntry, ...weatherHistory];
+      setWeatherHistory(updatedHistory);
+      saveWeatherHistory(updatedHistory);
+    } catch (err: any) {
+      setError(err.message || "Error al obtener clima");
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
+
+  // Cuando se selecciona un árbol, obtener su clima
+  const handleArbolChange = (arbolId: string) => {
+    const arbol = arboles.find((a) => a.id === parseInt(arbolId));
+    if (arbol) {
+      setSelectedArbol(arbol);
+      fetchWeatherForArbol(arbol);
+    }
+  };
+
+  // Eliminar un registro del historial
+  const deleteHistoryEntry = (id: string) => {
+    const updatedHistory = weatherHistory.filter((item) => item.id !== id);
+    setWeatherHistory(updatedHistory);
+    saveWeatherHistory(updatedHistory);
+  };
+
+  // Limpiar todo el historial
+  const clearHistory = () => {
+    setWeatherHistory([]);
+    saveWeatherHistory([]);
+  };
+
+  // Cargar clima cuando la página carga (para el primer árbol si existe)
+  useEffect(() => {
+    if (selectedArbol && !weather && !weatherLoading) {
+      fetchWeatherForArbol(selectedArbol);
+    }
   }, []);
 
   const getDetailedAdvice = (
@@ -109,12 +259,113 @@ export default function ClimaPage() {
                 <span>Monitoreo Climático en Tiempo Real</span>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-blue-900">
-                Clima Actual de tu Zona
+                Clima de tu Árbol
               </h1>
               <p className="text-lg text-blue-700 max-w-2xl mx-auto">
-                Consulta las condiciones climáticas y obtén recomendaciones
-                personalizadas para el cuidado óptimo de tu árbol
+                Consulta las condiciones climáticas en la ubicación de tu árbol
+                y obtén recomendaciones personalizadas para su cuidado óptimo
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Árbol Selection Section */}
+        <section className="py-8 px-4 bg-white border-b">
+          <div className="container mx-auto max-w-4xl">
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-gray-800">
+                Selecciona un Árbol
+              </h2>
+
+              {arbolesLoading ? (
+                <div className="flex items-center justify-center h-12">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : arboles.length === 0 ? (
+                <Card className="border-yellow-200 bg-yellow-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-6 w-6 text-yellow-600" />
+                      <div>
+                        <p className="text-yellow-800 font-medium">
+                          No tienes árboles registrados
+                        </p>
+                        <p className="text-sm text-yellow-700">
+                          Registra tu primer árbol en "Mi Árbol" para ver el
+                          clima de su ubicación.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-3 items-end">
+                  <div className="flex-1">
+                    <Select
+                      value={selectedArbol?.id.toString() || ""}
+                      onValueChange={handleArbolChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecciona un árbol..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {arboles.map((arbol) => (
+                          <SelectItem
+                            key={arbol.id}
+                            value={arbol.id.toString()}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>🌳 {arbol.nombre}</span>
+                              {arbol.especie && (
+                                <span className="text-xs text-gray-500">
+                                  ({arbol.especie})
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    onClick={() =>
+                      selectedArbol && fetchWeatherForArbol(selectedArbol)
+                    }
+                    disabled={!selectedArbol || weatherLoading}
+                    className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                  >
+                    {weatherLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Cargando...
+                      </>
+                    ) : (
+                      <>
+                        <Cloud className="mr-2 h-4 w-4" />
+                        Verificar Clima
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {selectedArbol && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 text-blue-800">
+                      <MapPin className="h-4 w-4" />
+                      <span className="text-sm">
+                        <strong>{selectedArbol.nombre}</strong>
+                        {selectedArbol.especie && ` (${selectedArbol.especie})`}
+                        {" · "}
+                        Lat: {(+selectedArbol.latitud).toFixed(4)}, Lon:{" "}
+                        {(+selectedArbol.longitud).toFixed(4)}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </section>
@@ -122,9 +373,10 @@ export default function ClimaPage() {
         {/* Content Section */}
         <section className="py-12 px-4">
           <div className="container mx-auto max-w-4xl">
-            {loading && (
-              <div className="flex items-center justify-center h-64">
+            {weatherLoading && (
+              <div className="flex flex-col items-center justify-center h-64 gap-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                <p className="text-gray-600">Obteniendo datos climáticos...</p>
               </div>
             )}
 
@@ -139,7 +391,7 @@ export default function ClimaPage() {
               </Card>
             )}
 
-            {!loading && weather && (
+            {!weatherLoading && weather && selectedArbol && (
               <div className="space-y-8">
                 {/* Weather Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -227,26 +479,67 @@ export default function ClimaPage() {
                   </Card>
                 </div>
 
-                {/* Current Weather Description */}
-                <Card className="bg-white border-2 border-blue-200">
-                  <CardContent className="pt-6">
-                    <div className="text-center space-y-2">
-                      <h2 className="text-2xl font-bold text-gray-800">
-                        📍 {weather.name}, {weather.sys?.country}
-                      </h2>
-                      <div className="flex items-center justify-center gap-3">
-                        <Cloud className="h-8 w-8 text-gray-400" />
-                        <p className="text-xl text-gray-600 capitalize">
-                          {weather.weather?.[0]?.description}
-                        </p>
+                {/* Current Weather Description with Tree Image */}
+                <Card className="bg-white border-2 border-blue-200 overflow-hidden">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Tree Image */}
+                    {selectedArbol?.foto_url && (
+                      <div className="md:col-span-1 relative h-64 md:h-auto">
+                        <img
+                          src={selectedArbol.foto_url}
+                          alt={selectedArbol.nombre}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=400&h=400&fit=crop";
+                          }}
+                        />
                       </div>
-                      {weather.clouds && (
-                        <p className="text-sm text-gray-500">
-                          Nubosidad: {weather.clouds?.all}%
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
+                    )}
+
+                    {/* Weather Info */}
+                    <CardContent
+                      className={`pt-6 ${selectedArbol?.foto_url ? "md:col-span-2" : "md:col-span-3"}`}
+                    >
+                      <div className="space-y-4">
+                        <div>
+                          <h2 className="text-2xl font-bold text-gray-800">
+                            🌳 {selectedArbol.nombre}
+                          </h2>
+                          <p className="text-sm text-gray-600 mt-1">
+                            📍 {weather.name}, {weather.sys?.country}
+                          </p>
+                          {selectedArbol.especie && (
+                            <p className="text-sm text-gray-500">
+                              Especie: {selectedArbol.especie}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 text-blue-600">
+                            <Clock className="h-5 w-5" />
+                            <span className="text-sm font-medium">
+                              Consulta realizada a las{" "}
+                              {new Date().toLocaleTimeString("es-ES")}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-start gap-3 mt-4">
+                          <Cloud className="h-8 w-8 text-gray-400" />
+                          <p className="text-xl text-gray-600 capitalize">
+                            {weather.weather?.[0]?.description}
+                          </p>
+                        </div>
+                        {weather.clouds && (
+                          <p className="text-sm text-gray-500">
+                            Nubosidad: {weather.clouds?.all}%
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </div>
                 </Card>
 
                 {/* Recommendations Section */}
@@ -303,6 +596,151 @@ export default function ClimaPage() {
                 </Card>
               </div>
             )}
+
+            {!weatherLoading && !error && !weather && !arbolesLoading && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <Cloud className="h-6 w-6 text-blue-600" />
+                    <p className="text-blue-700 font-medium">
+                      Selecciona un árbol y haz clic en "Verificar Clima" para
+                      ver las condiciones actuales
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </section>
+
+        {/* Weather History Section */}
+        <section className="py-12 px-4 bg-gray-50 border-t">
+          <div className="container mx-auto max-w-4xl">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  📋 Historial de Consultas Climáticas
+                </h2>
+                {weatherHistory.length > 0 && (
+                  <Button
+                    onClick={clearHistory}
+                    variant="outline"
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpiar historial
+                  </Button>
+                )}
+              </div>
+
+              {weatherHistory.length === 0 ? (
+                <Card className="border-gray-200 bg-white">
+                  <CardContent className="pt-6 text-center">
+                    <Cloud className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-600">
+                      No hay consultas climáticas registradas. ¡Realiza tu
+                      primera consulta!
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {weatherHistory.map((entry) => (
+                    <Card
+                      key={entry.id}
+                      className="border-gray-200 hover:shadow-md transition-shadow"
+                    >
+                      <CardContent className="pt-4">
+                        <div className="flex flex-col md:flex-row gap-4">
+                          {/* Tree Image Thumbnail */}
+                          {entry.arbolFoto && (
+                            <div className="md:w-20 md:h-20 w-full h-32">
+                              <img
+                                src={entry.arbolFoto}
+                                alt={entry.arbolNombre}
+                                className="w-full h-full object-cover rounded-lg"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src =
+                                    "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=80&h=80&fit=crop";
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          {/* History Info */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h3 className="text-lg font-bold text-gray-800">
+                                  🌳 {entry.arbolNombre}
+                                </h3>
+                                {entry.arbolEspecie && (
+                                  <p className="text-xs text-gray-500">
+                                    {entry.arbolEspecie}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                onClick={() => deleteHistoryEntry(entry.id)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-500 hover:text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {/* Timestamp */}
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                              <Clock className="h-4 w-4" />
+                              <span>{entry.timestampFormato}</span>
+                            </div>
+
+                            {/* Weather Summary Grid */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                              <div className="bg-orange-50 rounded p-2">
+                                <p className="text-xs text-gray-600">
+                                  Temperatura
+                                </p>
+                                <p className="text-sm font-bold text-orange-600">
+                                  {entry.clima.main?.temp?.toFixed(1)}°C
+                                </p>
+                              </div>
+                              <div className="bg-blue-50 rounded p-2">
+                                <p className="text-xs text-gray-600">Humedad</p>
+                                <p className="text-sm font-bold text-blue-600">
+                                  {entry.clima.main?.humidity}%
+                                </p>
+                              </div>
+                              <div className="bg-teal-50 rounded p-2">
+                                <p className="text-xs text-gray-600">Viento</p>
+                                <p className="text-sm font-bold text-teal-600">
+                                  {entry.clima.wind?.speed?.toFixed(1)} m/s
+                                </p>
+                              </div>
+                              <div className="bg-purple-50 rounded p-2">
+                                <p className="text-xs text-gray-600">Presión</p>
+                                <p className="text-sm font-bold text-purple-600">
+                                  {entry.clima.main?.pressure} hPa
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Weather Description */}
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              <Cloud className="h-4 w-4 text-gray-400" />
+                              <span className="capitalize">
+                                {entry.clima.weather?.[0]?.description}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </section>
       </main>

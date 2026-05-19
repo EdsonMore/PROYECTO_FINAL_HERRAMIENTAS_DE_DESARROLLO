@@ -39,6 +39,7 @@ export function Navbar() {
     { href: "/", label: "Inicio", protected: false },
     { href: "/dashboard", label: "Dashboard", protected: true },
     { href: "/mi-arbol", label: "Mi Árbol", protected: true },
+    { href: "/geolocalizacion", label: "Geolocalización", protected: true },
     { href: "/seguimientos", label: "Seguimientos", protected: true },
     { href: "/clima", label: "Clima", protected: true },
     { href: "/identificador", label: "Identificador IA", protected: true },
@@ -102,7 +103,6 @@ export function Navbar() {
                   className="flex items-center gap-2 rounded-full hover:bg-white/10 px-2 py-1 transition"
                 >
                   <NavbarAvatar
-                    email={session.user?.email ?? undefined}
                     userName={session.user?.name ?? undefined}
                     size={35}
                   />

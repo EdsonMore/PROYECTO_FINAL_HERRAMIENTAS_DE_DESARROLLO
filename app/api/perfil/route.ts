@@ -1,23 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { protectRoute } from "@/lib/route-guards";
 import { query } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 // GET - Obtener datos completos del perfil
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error, userId } = await protectRoute()
+    if (error) return error
 
     const result = await query(
       `SELECT id, nombre, email, avatar_url, fecha_registro 
        FROM usuarios WHERE id = $1`,
-      [parseInt(session.user.id)]
-    );
+      [userId]
+    )
 
     if (result.rows.length === 0) {
       return NextResponse.json(
@@ -39,13 +35,9 @@ export async function GET(request: NextRequest) {
 // PUT - Actualizar perfil
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const { error, userId } = await protectRoute()
+    if (error) return error
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    const userId = parseInt(session.user.id);
     const body = await request.json();
     const { nombre, avatar_url, password_actual, nueva_password } = body;
 
@@ -61,21 +53,25 @@ export async function PUT(request: NextRequest) {
     }
 
     // Actualizar avatar si se proporciona
-    if (avatar_url !== undefined && avatar_url !== "") {
-      // Validar que sea una URL válida o base64
-      if (
-        !avatar_url.startsWith("http") &&
-        !avatar_url.startsWith("data:image")
-      ) {
-        return NextResponse.json(
-          { error: "URL de imagen inválida" },
-          { status: 400 }
-        );
+    if (avatar_url !== undefined) {
+      // Si es null o vacío, eliminar avatar
+      if (avatar_url === null || avatar_url === "") {
+        updateFields.push(`avatar_url = NULL`);
+      } else {
+        // Validar que sea una URL válida o base64
+        if (
+          !avatar_url.startsWith("http") &&
+          !avatar_url.startsWith("data:image")
+        ) {
+          return NextResponse.json(
+            { error: "URL de imagen inválida" },
+            { status: 400 }
+          );
+        }
+        updateFields.push(`avatar_url = $${paramCount}`);
+        queryParams.push(avatar_url);
+        paramCount++;
       }
-
-      updateFields.push(`avatar_url = $${paramCount}`);
-      queryParams.push(avatar_url);
-      paramCount++;
     }
 
     // Actualizar contraseña si se proporciona

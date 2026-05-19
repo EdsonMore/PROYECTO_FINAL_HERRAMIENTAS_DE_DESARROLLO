@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Leaf, MessageCircle, X } from "lucide-react";
+import { Leaf, MessageCircle, X, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,13 @@ import type { SpeciesResult } from "./species-identifier";
 
 interface ChatbotPanelProps {
   speciesData?: SpeciesResult | null;
+}
+
+interface ChatMessage {
+  id: string;
+  texto: string;
+  esUsuario: boolean;
+  timestamp: number;
 }
 
 const welcomeMessages = [
@@ -29,9 +36,78 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [messageIndex, setMessageIndex] = useState(0);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleNextMessage = () => {
     setMessageIndex((prev) => (prev + 1) % welcomeMessages.length);
+  };
+
+  // Scroll automático al último mensaje
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  // Enviar mensaje al chatbot
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      texto: inputValue,
+      esUsuario: true,
+      timestamp: Date.now(),
+    };
+
+    setChatMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mensaje: inputValue,
+          contexto: speciesData
+            ? {
+                especie: speciesData.commonName,
+                nombreCientifico: speciesData.scientificName,
+              }
+            : {},
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al conectar con el servidor");
+      }
+
+      const data = await response.json();
+
+      const botMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        texto: data.respuesta,
+        esUsuario: false,
+        timestamp: Date.now(),
+      };
+
+      setChatMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        texto: "❌ Error: No puedo conectar con el servidor de IA. Verifica que el servidor esté activo.",
+        esUsuario: false,
+        timestamp: Date.now(),
+      };
+      setChatMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) {
@@ -153,6 +229,83 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
                 </p>
               </div>
 
+              {/* Chat con el bot */}
+              <div className="bg-white rounded-lg border border-green-200 overflow-hidden flex flex-col h-72">
+                {/* Header del chat */}
+                <div className="bg-green-600 text-white px-3 py-2 text-xs font-semibold">
+                  💬 Pregunta sobre tu {speciesData.commonName}
+                </div>
+
+                {/* Mensajes */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gradient-to-b from-green-50 to-white">
+                  {chatMessages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-xs text-gray-500 text-center">
+                        👋 ¡Hola! Soy EcoAssistant. <br />
+                        Pregunta sobre el cuidado de tu árbol.
+                      </p>
+                    </div>
+                  ) : (
+                    chatMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${
+                          msg.esUsuario ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <div
+                          className={`max-w-xs px-3 py-2 rounded-lg text-xs leading-relaxed ${
+                            msg.esUsuario
+                              ? "bg-green-600 text-white rounded-br-none"
+                              : "bg-gray-100 text-gray-800 rounded-bl-none"
+                          }`}
+                        >
+                          {msg.texto}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {loading && (
+                    <div className="flex justify-start">
+                      <div className="bg-gray-200 px-3 py-2 rounded-lg rounded-bl-none">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" />
+                          <div
+                            className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.2s" }}
+                          />
+                          <div
+                            className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.4s" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input */}
+                <div className="border-t border-green-200 bg-white p-2 flex gap-2">
+                  <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                    placeholder="Escribe tu pregunta..."
+                    className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-green-600"
+                    disabled={loading}
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={loading || !inputValue.trim()}
+                    className="h-auto p-1.5 bg-green-600 hover:bg-green-700 text-white text-xs"
+                  >
+                    <Send className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
               {/* Acciones */}
               <div className="space-y-2">
                 <Button className="w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8">
@@ -186,10 +339,6 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
                   <MessageCircle className="w-3 h-3 mr-1" />
                   Ver más consejos
                 </Button>
-
-                <div className="text-center text-xs text-gray-500 py-2">
-                  💡 <strong>Próximamente:</strong> Chat inteligente con IA
-                </div>
 
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-800">
                   <p className="font-semibold mb-1">✨ ¿Cómo funciona?</p>
