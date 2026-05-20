@@ -12,13 +12,13 @@ export default function HomePage() {
 
       <main className="flex-1">
         {/* Hero Section: imagen de fondo con texto superpuesto */}
-        <section className="relative h-[48vh] md:h-[58vh] flex items-center">
+        <section className="relative h-[60vh] md:h-[72vh] flex items-center">
           <div className="absolute inset-0 z-0">
             <img
               src="/img/EcoDataIA (2).png"
               alt="EcoData IA - árbol"
               className="w-full h-full object-cover"
-              style={{ objectPosition: "center 50%" }}
+              style={{ objectPosition: "center 60%" }}
             />
             <div className="absolute inset-0 bg-black/30" />
           </div>
@@ -42,8 +42,8 @@ export default function HomePage() {
         </section>
 
         <section className="hero-section relative py-12 md:py-24 px-4">
-          <div className="container mx-auto max-w-6xl">
-            <div className="hero-grid grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-center">
+          <div className="w-full px-6 lg:px-12">
+            <div className="hero-grid grid grid-cols-1 lg:grid-cols-[1fr_520px] gap-6 items-center">
               <div className="text-center lg:text-left hero-left flex flex-col justify-center lg:pr-12 lg:pl-4">
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
                   <Sprout className="h-4 w-4" />
@@ -82,6 +82,50 @@ export default function HomePage() {
                     </Button>
                   </Link>
                 </div>
+                {/* Estadísticas compactas: mini-tarjetas debajo de los botones */}
+                <div className="mt-6 w-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-2xl shadow-md p-4 flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-lg bg-emerald-50 flex items-center justify-center">
+                        <Sprout className="h-6 w-6 text-emerald-700" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-semibold text-emerald-700">+12,540</div>
+                        <div className="text-xs text-muted-foreground">Árboles plantados</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-md p-4 flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-lg bg-emerald-50 flex items-center justify-center">
+                        <User className="h-6 w-6 text-emerald-700" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-semibold text-emerald-700">8,920</div>
+                        <div className="text-xs text-muted-foreground">Usuarios activos</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-md p-4 flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-lg bg-emerald-50 flex items-center justify-center">
+                        <Camera className="h-6 w-6 text-emerald-700" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-semibold text-emerald-700">25,600</div>
+                        <div className="text-xs text-muted-foreground">Fotos compartidas</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-md p-4 flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-lg bg-emerald-50 flex items-center justify-center">
+                        <Leaf className="h-6 w-6 text-emerald-700" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-semibold text-emerald-700">18.5 ton</div>
+                        <div className="text-xs text-muted-foreground">CO₂ absorbido</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="relative flex justify-center lg:justify-end">
@@ -90,18 +134,7 @@ export default function HomePage() {
                     <img src="/img/mini-arbol.png" alt="mini-arbol" id="mini-arbol" className="hero-image" />
                   </div>
 
-                  <div className="hero-stat-card">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-full bg-emerald-50 p-2 flex items-center justify-center">
-                        <Sprout className="h-5 w-5 text-emerald-700" />
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Creciendo juntos</div>
-                        <div className="text-base font-semibold text-emerald-700">+12,540 árboles</div>
-                        <div className="text-xs text-muted-foreground">plantados por la comunidad</div>
-                      </div>
-                    </div>
-                  </div>
+                  {/* hero-stat-card removed from right panel (moved to left) */}
                 </div>
               </div>
             </div>
@@ -118,20 +151,19 @@ export default function HomePage() {
         {/* Features Section */}
         <section className="py-20 px-4 bg-background">
           <div className="container mx-auto">
-            <div className="text-center space-y-4 mb-2">
-                <h2 className="text-3xl md:text-4xl font-bold relative z-30">
+            <div className="text-center space-y-4 mb-12 relative z-30">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold relative z-30">
                 Todo lo que necesitas para cuidar tu árbol
               </h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                Herramientas simples y efectivas para documentar y mejorar el
-                cuidado de tus árboles
+              <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto leading-relaxed opacity-90 mb-6">
+                Herramientas simples y efectivas para documentar y mejorar el cuidado de tus árboles
               </p>
             </div>
 
-            <div className="-mt-12 md:-mt-16 lg:-mt-20">
-              <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-md p-3 md:p-4 relative z-10">
-                <div className="flex flex-col md:flex-row items-stretch divide-y md:divide-y-0 md:divide-x divide-gray-100">
-                  <div className="flex-1 flex items-start gap-4 py-4 px-4">
+            <div className="mt-6 md:mt-8 lg:mt-10">
+              <div className="w-full mx-auto bg-white rounded-3xl shadow-2xl p-6 md:p-8 relative z-10 max-w-none px-6 lg:px-20">
+                <div className="flex flex-col md:flex-row items-stretch gap-6 md:gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+                  <div className="flex-1 flex items-start gap-4 py-6 px-6 bg-white rounded-lg hover:shadow-lg transition-shadow feature-card delay-0" style={{ animationDelay: '80ms', animationName: 'fadeUp', animationDuration: '700ms', animationTimingFunction: 'cubic-bezier(.2,.8,.2,1)', animationFillMode: 'both' }}>
                     <div className="h-12 w-12 rounded-xl bg-emerald-50 flex items-center justify-center">
                       <Sprout className="h-6 w-6 text-emerald-700" />
                     </div>
@@ -141,7 +173,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="flex-1 flex items-start gap-4 py-4 px-4">
+                  <div className="flex-1 flex items-start gap-4 py-6 px-6 bg-white rounded-lg hover:shadow-lg transition-shadow feature-card delay-1" style={{ animationDelay: '200ms', animationName: 'fadeUp', animationDuration: '700ms', animationTimingFunction: 'cubic-bezier(.2,.8,.2,1)', animationFillMode: 'both' }}>
                     <div className="h-12 w-12 rounded-xl bg-sky-50 flex items-center justify-center">
                       <Camera className="h-6 w-6 text-sky-600" />
                     </div>
@@ -151,7 +183,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="flex-1 flex items-start gap-4 py-4 px-4">
+                  <div className="flex-1 flex items-start gap-4 py-6 px-6 bg-white rounded-lg hover:shadow-lg transition-shadow feature-card delay-2" style={{ animationDelay: '320ms', animationName: 'fadeUp', animationDuration: '700ms', animationTimingFunction: 'cubic-bezier(.2,.8,.2,1)', animationFillMode: 'both' }}>
                     <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center">
                       <BarChart className="h-6 w-6 text-indigo-600" />
                     </div>
@@ -161,7 +193,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="flex-1 flex items-start gap-4 py-4 px-4">
+                  <div className="flex-1 flex items-start gap-4 py-6 px-6 bg-white rounded-lg hover:shadow-lg transition-shadow feature-card delay-3" style={{ animationDelay: '440ms', animationName: 'fadeUp', animationDuration: '700ms', animationTimingFunction: 'cubic-bezier(.2,.8,.2,1)', animationFillMode: 'both' }}>
                     <div className="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center">
                       <Heart className="h-6 w-6 text-amber-600" />
                     </div>

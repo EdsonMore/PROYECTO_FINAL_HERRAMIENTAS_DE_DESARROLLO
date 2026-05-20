@@ -216,11 +216,11 @@
   }
 
   /* Reducir ancho del texto para que quede compacto al lado de la imagen */
-  .hero-left .heading-line { max-width: 680px; }
+  .hero-left .heading-line { max-width: 720px; }
 
   @media (min-width: 1024px) {
     .hero-left { padding-right: 1rem; }
-    .hero-left .heading-line { max-width: 520px; }
+    .hero-left .heading-line { max-width: 720px; }
   }
 
   /* Hacer que la parte resaltada vaya en una línea separada y más grande */
@@ -248,21 +248,21 @@
 
   /* Hero image wrapper */
   .hero-image-wrapper {
-    width: 320px !important;
+    width: 520px !important;
     aspect-ratio: 1.1/1;
     border-radius: 1rem;
     overflow: hidden;
     position: relative;
     display: inline-block;
     transform-origin: center right;
-    max-width: 320px !important;
+    max-width: 520px !important;
   }
 
   .hero-image {
     width: auto !important;
     height: auto !important;
-    max-width: 320px !important;
-    max-height: 300px !important;
+    max-width: 520px !important;
+    max-height: 520px !important;
     object-fit: cover;
     border-radius: 1rem;
     box-shadow: 0 20px 40px rgba(15,23,42,0.12);
@@ -295,8 +295,8 @@
 
   .hero-frame {
     position: relative;
-    width: 320px !important;
-    max-width: 320px !important;
+    width: 520px !important;
+    max-width: 520px !important;
     height: auto;
     margin-left: auto; /* push to the right column */
   }
@@ -304,7 +304,7 @@
   /* Grid control: más espacio al texto, ancho fijo para la columna de imagen en desktop */
   .hero-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: center; }
   @media (min-width: 1024px) {
-    .hero-grid { grid-template-columns: 1fr 320px !important; gap: 1.5rem; }
+    .hero-grid { grid-template-columns: 1fr 520px !important; gap: 1.75rem; }
   }
 
   /* refuerza la columna de la imagen para no crecer más */
@@ -312,7 +312,7 @@
 
   /* Forzar que la columna de la imagen no crezca y se mantenga a la derecha */
   @media (min-width: 1024px) {
-    .hero-image-wrapper { flex: 0 0 360px !important; }
+    .hero-image-wrapper { flex: 0 0 520px !important; }
   }
 
   .hero-frame-ring {
@@ -384,35 +384,56 @@
     .hero-image { transition: transform 700ms cubic-bezier(.2,.8,.2,1); }
   }
 }
-
-  /* Reglas finales y muy específicas para forzar tamaño lateral pequeño de la imagen */
-  section.hero-section .container .hero-grid > div:last-child,
-  section.hero-section .hero-image-wrapper,
-  section.hero-section .hero-frame,
-  section.hero-section .hero-frame-circle {
-    width: 320px !important;
-    max-width: 320px !important;
+@layer utilities {
+  @keyframes fadeUp {
+    0% { opacity: 0; transform: translateY(14px); }
+    60% { opacity: 1; transform: translateY(-6px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
-  section.hero-section .hero-frame-circle {
-    height: 320px !important;
-    max-height: 320px !important;
-    overflow: hidden !important;
+  .feature-card {
+    opacity: 0;
+    transform: translateY(14px);
+    will-change: transform, opacity;
+    animation: fadeUp 700ms cubic-bezier(.2,.8,.2,1) both !important;
+    transition: box-shadow 220ms ease, transform 220ms ease;
+  }
+
+  .feature-card:hover { transform: translateY(-6px) scale(1.01); box-shadow: 0 18px 40px rgba(2,6,23,0.08); }
+  .feature-card.delay-0 { animation-delay: 80ms !important; }
+  .feature-card.delay-1 { animation-delay: 200ms !important; }
+  .feature-card.delay-2 { animation-delay: 320ms !important; }
+  .feature-card.delay-3 { animation-delay: 440ms !important; }
+}
+
+/* Reglas finales y muy específicas para forzar tamaño lateral pequeño de la imagen */
+section.hero-section .container .hero-grid > div:last-child,
+section.hero-section .hero-image-wrapper,
+section.hero-section .hero-frame,
+section.hero-section .hero-frame-circle {
+  width: 520px !important;
+  max-width: 520px !important;
+}
+
+section.hero-section .hero-frame-circle {
+  height: 520px !important;
+  max-height: 520px !important;
+  overflow: hidden !important;
     border-radius: 50% !important;
   }
 
   section.hero-section .hero-image {
     width: 100% !important;
     height: 100% !important;
-    max-width: 320px !important;
-    max-height: 320px !important;
+    max-width: 520px !important;
+    max-height: 520px !important;
     object-fit: cover !important;
     display: block !important;
   }
 
   /* Asegurar que la grid tenga columna fija a la derecha */
   @media (min-width: 1024px) {
-    section.hero-section .hero-grid { grid-template-columns: 1fr 320px !important; }
+    section.hero-section .hero-grid { grid-template-columns: 1fr 520px !important; }
   }
 
   /* Ajustes para reducir espacios extra y centrar mejor el contenido */
@@ -424,3 +445,24 @@
   /* Seguridad extra: si algo aplica tamaños automáticos, forzamos overflow y posicionamiento */
   section.hero-section .hero-image-wrapper { overflow: hidden !important; }
 
+  /* --- Re-aplicar: ocultar la superposición de desarrollo de Next.js/Turbopack --- */
+  /* Se usan múltiples selectores para cubrir distintas versiones y presentaciones (botón flotante, panel, overlays). */
+  :where(#__next_devtools, #__next_dev_overlay, .next-devtools, .next-dev-overlay, .nextjs-dev-overlay, .nextjs-debug, .next-overlay, .next-dev-button, .next-dev-circle, [data-nextjs-devtools], [data-nextjs-route], [data-nextjs-debug], [data-nextjs]) {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
+
+  /* Selector adicional para botones flotantes con letra 'N' o con aria/title que contengan "Next" */
+  :where(button[aria-label*="Next"], button[title*="Next"], button[class*="next"], button[id*="next"], div[class*="next"] > button[class*="dev"], div[class*="turbopack"]) {
+    display: none !important;
+  }
+
+  /* Cubrir posibles toasts/panels desplegables */
+  .next-devtools-panel, .next-devtools-overlay, .next-overlay-panel, .turbopack-panel {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  
