@@ -1,0 +1,3 @@
+allowBuilds:
+  libpq: true
+  sharp: true
