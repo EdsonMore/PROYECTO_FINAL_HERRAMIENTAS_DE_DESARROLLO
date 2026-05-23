@@ -22,7 +22,7 @@ export const authOptions: NextAuthOptions = {
         try {
           // Buscar usuario en la base de datos - seleccionar solo campos necesarios
           const result = await query(
-            "SELECT id, email, password_hash, nombre, avatar_url FROM usuarios WHERE email = $1",
+            "SELECT id, email, password_hash, nombre, avatar_url, rol FROM usuarios WHERE email = $1",
             [credentials.email]
           );
 
@@ -36,6 +36,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             password_hash_existe: !!user.password_hash,
             password_hash_length: user.password_hash?.length,
+            rol: user.rol,
           });
 
           // Verificar contraseña
@@ -53,6 +54,7 @@ export const authOptions: NextAuthOptions = {
             id: user.id.toString(),
             email: user.email,
             name: user.nombre,
+            role: user.rol || 'USER',
             // NO incluir image aquí para evitar cookies gigantes
             // Se recupera en session callback si es necesario
           };
@@ -102,6 +104,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        token.role = (user as any).role || 'USER';
         // NO guardar image en JWT porque puede ser muy grande
         // Eso se recupera en session callback si es necesario
         
@@ -127,16 +130,18 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.role = token.role as string;
         
-        // Recuperar nombre y avatar desde BD (datos actualizados)
+        // Recuperar nombre, avatar y rol actualizados desde BD
         if (token.id) {
           try {
             const userResult = await query(
-              "SELECT nombre, avatar_url FROM usuarios WHERE id = $1 LIMIT 1",
+              "SELECT nombre, avatar_url, rol FROM usuarios WHERE id = $1 LIMIT 1",
               [parseInt(token.id as string)]
             );
             if (userResult.rows[0]) {
               session.user.name = userResult.rows[0].nombre;
+              session.user.role = userResult.rows[0].rol || 'USER';
               if (userResult.rows[0].avatar_url) {
                 session.user.image = userResult.rows[0].avatar_url;
               }
