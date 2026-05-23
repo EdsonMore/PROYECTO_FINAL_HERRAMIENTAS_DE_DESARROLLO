@@ -1,17 +1,13 @@
 // app/api/arboles/[id]/route.ts
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { protectRoute, validateResourceOwnership } from "@/lib/route-guards"
 import { query } from "@/lib/db"
 
 // GET - Obtener un árbol específico
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { error: authError, userId } = await protectRoute()
+    if (authError) return authError
 
     const { id } = await params
     const treeId = parseInt(id, 10)
@@ -19,19 +15,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
-    const userId = parseInt(session.user.id)
-    const result = await query(
-      `SELECT id, usuario_id, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, creado_en, actualizado_en
-       FROM arboles
-       WHERE id = $1 AND usuario_id = $2`,
-      [treeId, userId],
+    const { error, resource } = await validateResourceOwnership(
+      "arboles",
+      treeId,
+      userId,
+      "id, usuario_id, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, creado_en, actualizado_en"
     )
 
-    if (result.rows.length === 0) {
-      return NextResponse.json({ error: "Árbol no encontrado" }, { status: 404 })
-    }
-
-    return NextResponse.json(result.rows[0])
+    if (error) return error
+    return NextResponse.json(resource)
   } catch (error) {
     console.error("Error al obtener árbol:", error)
     return NextResponse.json({ error: "Error al obtener árbol" }, { status: 500 })
@@ -41,11 +33,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 // PUT - Actualizar un árbol
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { error: authError, userId } = await protectRoute()
+    if (authError) return authError
 
     const { id } = await params
     const treeId = parseInt(id, 10)
@@ -56,7 +45,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json()
     const { nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url } = body
 
-    const userId = parseInt(session.user.id)
+    // Validar que el usuario es propietario del árbol
+    const { error: ownershipError } = await validateResourceOwnership("arboles", treeId, userId)
+    if (ownershipError) return ownershipError
+
     const result = await query(
       `UPDATE arboles
        SET nombre = $1, especie = $2, latitud = $3, longitud = $4, 
@@ -80,11 +72,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 // DELETE - Eliminar un árbol
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { error: authError, userId } = await protectRoute()
+    if (authError) return authError
 
     const { id } = await params
     const treeId = parseInt(id, 10)
@@ -92,7 +81,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
-    const userId = parseInt(session.user.id)
+    // Validar que el usuario es propietario del árbol
+    const { error: ownershipError } = await validateResourceOwnership("arboles", treeId, userId)
+    if (ownershipError) return ownershipError
+
     const result = await query(
       `DELETE FROM arboles
        WHERE id = $1 AND usuario_id = $2

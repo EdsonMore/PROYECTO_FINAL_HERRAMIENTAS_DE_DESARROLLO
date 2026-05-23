@@ -22,7 +22,7 @@ export const authOptions: NextAuthOptions = {
         try {
           // Buscar usuario en la base de datos - seleccionar solo campos necesarios
           const result = await query(
-            "SELECT id, email, password_hash, nombre, avatar_url FROM usuarios WHERE email = $1",
+            "SELECT id, email, password_hash, nombre, avatar_url, rol FROM usuarios WHERE email = $1",
             [credentials.email]
           );
 
@@ -31,6 +31,13 @@ export const authOptions: NextAuthOptions = {
           if (!user) {
             throw new Error("Usuario no encontrado");
           }
+
+          console.log("🔍 DEBUG LOGIN:", {
+            email: user.email,
+            password_hash_existe: !!user.password_hash,
+            password_hash_length: user.password_hash?.length,
+            rol: user.rol,
+          });
 
           // Verificar contraseña
           const isValidPassword = await bcrypt.compare(
@@ -42,12 +49,14 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Contraseña incorrecta");
           }
 
-          // Retornar usuario sin el hash de contraseña
+          // Retornar usuario sin el hash de contraseña ni avatar grande
           return {
             id: user.id.toString(),
             email: user.email,
             name: user.nombre,
-            image: user.avatar_url,
+            role: user.rol || 'USER',
+            // NO incluir image aquí para evitar cookies gigantes
+            // Se recupera en session callback si es necesario
           };
         } catch (error) {
           console.error("Error en autenticación:", error);
@@ -81,7 +90,7 @@ export const authOptions: NextAuthOptions = {
 
           return true;
         } catch (error) {
-          console.error("Error al registrar usuario de Google:", error);
+          console.error("❌ Error al registrar usuario de Google:", error);
           return false;
         }
       }
@@ -95,6 +104,10 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        token.role = (user as any).role || 'USER';
+        // NO guardar image en JWT porque puede ser muy grande
+        // Eso se recupera en session callback si es necesario
+        
         // Campos de expiración JWT
         token.iat = now;
         // Access token válido por 15 minutos (900 segundos)
@@ -117,7 +130,28 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        
+        // Recuperar nombre, avatar y rol actualizados desde BD
+        if (token.id) {
+          try {
+            const userResult = await query(
+              "SELECT nombre, avatar_url, rol FROM usuarios WHERE id = $1 LIMIT 1",
+              [parseInt(token.id as string)]
+            );
+            if (userResult.rows[0]) {
+              session.user.name = userResult.rows[0].nombre;
+              session.user.role = userResult.rows[0].rol || 'USER';
+              if (userResult.rows[0].avatar_url) {
+                session.user.image = userResult.rows[0].avatar_url;
+              }
+            }
+          } catch (error) {
+            console.error("⚠️ Error recuperando datos en session:", error);
+          }
+        }
       }
+      
       return session;
     },
     async redirect({ url, baseUrl }) {

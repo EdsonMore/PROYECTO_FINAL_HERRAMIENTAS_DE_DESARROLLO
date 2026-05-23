@@ -191,6 +191,106 @@ export default function ClimaPage() {
     }
   }, []);
 
+  // Detectar anomalías climáticas
+  const detectAnomalies = (currentWeather: any, history: WeatherHistory[]) => {
+    const anomalies: {
+      type: string;
+      severity: "critical" | "warning" | "info";
+      message: string;
+    }[] = [];
+    const currentTemp = currentWeather?.main?.temp;
+    const currentHumidity = currentWeather?.main?.humidity;
+    const currentWindSpeed = currentWeather?.wind?.speed;
+
+    // Detectar onda de calor (temperatura muy alta de manera prolongada)
+    const recentTemps = history
+      .slice(0, 5)
+      .map((h) => h.clima?.main?.temp || 0);
+    const avgTemp =
+      recentTemps.reduce((a, b) => a + b, 0) / Math.max(recentTemps.length, 1);
+
+    if (currentTemp > 38) {
+      anomalies.push({
+        type: "heat_wave",
+        severity: "critical",
+        message: `🔥 ¡ONDA DE CALOR EXTREMA! Temperatura de ${currentTemp}°C detectada. Riego urgente requerido.`,
+      });
+    } else if (currentTemp > 35 && avgTemp > 32) {
+      anomalies.push({
+        type: "heat_wave",
+        severity: "warning",
+        message: `🌡️ Onda de calor prolongada detectada. Temperatura actual: ${currentTemp}°C. Promedio reciente: ${avgTemp.toFixed(1)}°C.`,
+      });
+    }
+
+    // Detectar posible lluvia (humedad muy alta + presión baja)
+    const pressure = currentWeather?.main?.pressure;
+    if (currentHumidity > 80 && pressure < 1013) {
+      anomalies.push({
+        type: "rain_alert",
+        severity: "warning",
+        message: `🌧️ Alerta de lluvia: Humedad al ${currentHumidity}% y presión baja (${pressure} hPa). Lluvia probable.`,
+      });
+    }
+
+    // Detectar cambios significativos vs histórico
+    if (history.length > 0) {
+      const lastWeather = history[0]?.clima?.main;
+      if (lastWeather) {
+        const tempDiff = Math.abs(currentTemp - lastWeather.temp);
+        const humidityDiff = Math.abs(currentHumidity - lastWeather.humidity);
+
+        if (tempDiff > 5) {
+          anomalies.push({
+            type: "temp_change",
+            severity: "info",
+            message: `📊 Cambio significativo de temperatura: ${tempDiff.toFixed(1)}°C desde la última consulta. (${lastWeather.temp?.toFixed(1)}°C → ${currentTemp?.toFixed(1)}°C)`,
+          });
+        }
+
+        if (humidityDiff > 20) {
+          anomalies.push({
+            type: "humidity_change",
+            severity: "info",
+            message: `💨 Cambio importante en humedad: ${humidityDiff.toFixed(0)}%. (${lastWeather.humidity}% → ${currentHumidity}%)`,
+          });
+        }
+      }
+    }
+
+    return anomalies;
+  };
+
+  // Comparar clima actual vs histórico
+  const getClimaticComparison = (history: WeatherHistory[]) => {
+    if (history.length < 2) return null;
+
+    const current = history[0]?.clima?.main;
+    const previousRecords = history.slice(1, 6);
+
+    if (!current || previousRecords.length === 0) return null;
+
+    const avgHistoricTemp =
+      previousRecords.reduce((sum, h) => sum + (h.clima?.main?.temp || 0), 0) /
+      previousRecords.length;
+    const avgHistoricHumidity =
+      previousRecords.reduce(
+        (sum, h) => sum + (h.clima?.main?.humidity || 0),
+        0,
+      ) / previousRecords.length;
+
+    const tempDiffFromAvg = current.temp - avgHistoricTemp;
+    const humidityDiffFromAvg = current.humidity - avgHistoricHumidity;
+
+    return {
+      avgHistoricTemp: avgHistoricTemp.toFixed(1),
+      avgHistoricHumidity: avgHistoricHumidity.toFixed(0),
+      tempDiff: tempDiffFromAvg.toFixed(1),
+      humidityDiff: humidityDiffFromAvg.toFixed(0),
+      samplesCount: previousRecords.length,
+    };
+  };
+
   const getDetailedAdvice = (
     temp: number,
     humidity: number,
@@ -393,6 +493,44 @@ export default function ClimaPage() {
 
             {!weatherLoading && weather && selectedArbol && (
               <div className="space-y-8">
+                {/* Alertas Climáticas Automáticas */}
+                {detectAnomalies(weather, weatherHistory).length > 0 && (
+                  <div className="space-y-3">
+                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                      <AlertCircle className="h-7 w-7 text-red-600" />
+                      🚨 Alertas Climáticas Automáticas
+                    </h2>
+                    {detectAnomalies(weather, weatherHistory).map(
+                      (alert, index) => (
+                        <Card
+                          key={index}
+                          className={`border-2 ${
+                            alert.severity === "critical"
+                              ? "border-red-500 bg-red-50"
+                              : alert.severity === "warning"
+                                ? "border-yellow-500 bg-yellow-50"
+                                : "border-blue-500 bg-blue-50"
+                          }`}
+                        >
+                          <CardContent className="pt-4">
+                            <p
+                              className={`font-semibold ${
+                                alert.severity === "critical"
+                                  ? "text-red-700"
+                                  : alert.severity === "warning"
+                                    ? "text-yellow-700"
+                                    : "text-blue-700"
+                              }`}
+                            >
+                              {alert.message}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ),
+                    )}
+                  </div>
+                )}
+
                 {/* Weather Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Temperature Card */}
@@ -541,6 +679,115 @@ export default function ClimaPage() {
                     </CardContent>
                   </div>
                 </Card>
+
+                {/* Comparación Climática Histórica */}
+                {getClimaticComparison(weatherHistory) && (
+                  <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300">
+                    <CardContent className="pt-6">
+                      <h3 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                        📊 Comparación: Clima Actual vs Histórico
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Temperatura Comparison */}
+                        <div className="bg-white rounded-lg p-4 border border-indigo-200">
+                          <p className="text-sm text-gray-600 mb-2">
+                            🌡️ Temperatura
+                          </p>
+                          <div className="space-y-1">
+                            <p className="text-lg font-bold text-orange-600">
+                              {weather.main?.temp?.toFixed(1)}°C (Actual)
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Promedio histórico:{" "}
+                              {
+                                getClimaticComparison(weatherHistory)
+                                  ?.avgHistoricTemp
+                              }
+                              °C
+                            </p>
+                            <p
+                              className={`text-sm font-semibold ${
+                                parseFloat(
+                                  getClimaticComparison(weatherHistory)
+                                    ?.tempDiff || "0",
+                                ) > 0
+                                  ? "text-red-600"
+                                  : "text-blue-600"
+                              }`}
+                            >
+                              {parseFloat(
+                                getClimaticComparison(weatherHistory)
+                                  ?.tempDiff || "0",
+                              ) > 0
+                                ? "+"
+                                : ""}
+                              {getClimaticComparison(weatherHistory)?.tempDiff}
+                              °C vs promedio
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              (Basado en últimas{" "}
+                              {
+                                getClimaticComparison(weatherHistory)
+                                  ?.samplesCount
+                              }{" "}
+                              consultas)
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Humedad Comparison */}
+                        <div className="bg-white rounded-lg p-4 border border-indigo-200">
+                          <p className="text-sm text-gray-600 mb-2">
+                            💧 Humedad
+                          </p>
+                          <div className="space-y-1">
+                            <p className="text-lg font-bold text-blue-600">
+                              {weather.main?.humidity}% (Actual)
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Promedio histórico:{" "}
+                              {
+                                getClimaticComparison(weatherHistory)
+                                  ?.avgHistoricHumidity
+                              }
+                              %
+                            </p>
+                            <p
+                              className={`text-sm font-semibold ${
+                                parseFloat(
+                                  getClimaticComparison(weatherHistory)
+                                    ?.humidityDiff || "0",
+                                ) > 0
+                                  ? "text-blue-600"
+                                  : "text-orange-600"
+                              }`}
+                            >
+                              {parseFloat(
+                                getClimaticComparison(weatherHistory)
+                                  ?.humidityDiff || "0",
+                              ) > 0
+                                ? "+"
+                                : ""}
+                              {
+                                getClimaticComparison(weatherHistory)
+                                  ?.humidityDiff
+                              }
+                              % vs promedio
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              (Basado en últimas{" "}
+                              {
+                                getClimaticComparison(weatherHistory)
+                                  ?.samplesCount
+                              }{" "}
+                              consultas)
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Recommendations Section */}
                 <div className="space-y-4">
