@@ -37,17 +37,6 @@ export function Navbar() {
   };
 
   const navLinks = [
-<<<<<<< HEAD
-    { href: "/", label: "Inicio", protected: false },
-    { href: "/dashboard", label: "Dashboard", protected: true },
-    { href: "/mi-arbol", label: "Mi Árbol", protected: true },
-    { href: "/geolocalizacion", label: "Geolocalización", protected: true },
-    { href: "/mostrar-arboles", label: "Ver Árboles", protected: true },
-    { href: "/seguimientos", label: "Seguimientos", protected: true },
-    { href: "/clima", label: "Clima", protected: true },
-    { href: "/identificador", label: "Identificador IA", protected: true },
-    { href: "/beneficios", label: "Beneficios", protected: false },
-=======
     { href: "/", label: "Inicio", protected: false, roles: ["USER", "ADMIN"] },
     { href: "/dashboard", label: "Dashboard", protected: true, roles: ["USER"] },
     { href: "/mi-arbol", label: "Mi Árbol", protected: true, roles: ["USER"] },
@@ -56,7 +45,6 @@ export function Navbar() {
     { href: "/clima", label: "Clima", protected: true, roles: ["USER", "ADMIN"] },
     { href: "/identificador", label: "Identificador IA", protected: true, roles: ["USER", "ADMIN"] },
     { href: "/beneficios", label: "Beneficios", protected: false, roles: ["USER"] },
->>>>>>> 412ff14670fe38d500e7bc467dc659ebf4f41a43
   ];
 
   const isActive = (href: string) => pathname === href;
