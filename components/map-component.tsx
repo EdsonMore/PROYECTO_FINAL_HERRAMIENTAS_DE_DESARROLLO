@@ -13,13 +13,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 })
 
-// Crear icono personalizado para el marcador de ubicación actual
+// Crear icono personalizado para el marcador
 const createCustomMarkerIcon = (color: string = "blue") => {
   return L.divIcon({
     html: `
-      <div class="flex items-center justify-center w-8 h-8 rounded-full border-2 border-white shadow-lg" style="background-color: ${color};">
-        <div class="w-3 h-3 bg-white rounded-full"></div>
-      </div>
+      <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="12" fill="${color}" stroke="white" stroke-width="2"/>
+      </svg>
     `,
     iconSize: [32, 32],
     className: "custom-marker",

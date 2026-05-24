@@ -8,6 +8,7 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      role?: string; // 'USER' | 'ADMIN'
     };
   }
 }
@@ -17,6 +18,7 @@ declare module "next-auth/jwt" {
     id: string;
     email?: string;
     image?: string;
+    role?: string; // 'USER' | 'ADMIN'
     // Campos de expiración
     iat: number;
     exp: number;

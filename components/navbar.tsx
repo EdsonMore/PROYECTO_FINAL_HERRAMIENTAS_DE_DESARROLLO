@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import { NavbarAvatar } from "@/components/navbar-avatar";
+import { AdminNav } from "@/components/admin-nav";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -36,17 +37,23 @@ export function Navbar() {
   };
 
   const navLinks = [
-    { href: "/", label: "Inicio", protected: false },
-    { href: "/dashboard", label: "Dashboard", protected: true },
-    { href: "/mi-arbol", label: "Mi Árbol", protected: true },
-    { href: "/geolocalizacion", label: "Geolocalización", protected: true },
-    { href: "/seguimientos", label: "Seguimientos", protected: true },
-    { href: "/clima", label: "Clima", protected: true },
-    { href: "/identificador", label: "Identificador IA", protected: true },
-    { href: "/beneficios", label: "Beneficios", protected: false },
+    { href: "/", label: "Inicio", protected: false, roles: ["USER", "ADMIN"] },
+    { href: "/dashboard", label: "Dashboard", protected: true, roles: ["USER"] },
+    { href: "/mi-arbol", label: "Mi Árbol", protected: true, roles: ["USER"] },
+    { href: "/geolocalizacion", label: "Geolocalización", protected: true, roles: ["USER", "ADMIN"] },
+    { href: "/seguimientos", label: "Seguimientos", protected: true, roles: ["USER"] },
+    { href: "/clima", label: "Clima", protected: true, roles: ["USER", "ADMIN"] },
+    { href: "/identificador", label: "Identificador IA", protected: true, roles: ["USER", "ADMIN"] },
+    { href: "/beneficios", label: "Beneficios", protected: false, roles: ["USER"] },
   ];
 
   const isActive = (href: string) => pathname === href;
+
+  // Filtrar links según el rol del usuario
+  const getVisibleLinks = () => {
+    const userRole = (session?.user as any)?.role || "USER";
+    return navLinks.filter((link) => link.roles.includes(userRole));
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-[#28254D] text-white backdrop-blur-md">
@@ -72,7 +79,7 @@ export function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-4">
-            {navLinks.map((link) => {
+            {getVisibleLinks().map((link) => {
               // Mostrar links públicos siempre, links protegidos solo si está logueado
               if (link.protected && status !== "authenticated") {
                 return null;
@@ -96,8 +103,10 @@ export function Navbar() {
             })}
 
             {session ? (
-              // Avatar + dropdown
-              <div className="relative">
+              // Admin Nav + Avatar + dropdown
+              <>
+                <AdminNav />
+                <div className="relative">
                 <button
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                   className="flex items-center gap-2 rounded-full hover:bg-white/10 px-2 py-1 transition"
@@ -129,7 +138,8 @@ export function Navbar() {
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+              </>
             ) : (
               <>
                 <Link href="/login">
@@ -171,7 +181,7 @@ export function Navbar() {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 space-y-2 border-t border-white/20">
-            {navLinks.map((link) => {
+            {getVisibleLinks().map((link) => {
               // Mostrar links públicos siempre, links protegidos solo si está logueado
               if (link.protected && status !== "authenticated") {
                 return null;
@@ -200,6 +210,7 @@ export function Navbar() {
 
             {session ? (
               <>
+                <AdminNav />
                 <Link href="/perfil" onClick={() => setMobileMenuOpen(false)}>
                   <Button
                     size="sm"

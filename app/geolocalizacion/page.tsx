@@ -18,7 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FiltrosMapa } from "@/components/filtros-mapa";
+import { HealthFilter } from "@/components/health-filter";
 import { getHealthLabel } from "@/lib/health-utils";
 import type { Arbol } from "@/types";
 
@@ -51,6 +51,7 @@ export default function GeolocalizacionPage() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeHealthFilters, setActiveHealthFilters] = useState<string[]>(["excelente", "regular", "malo"]);
+  const [activeTreeFilters, setActiveTreeFilters] = useState<string[]>(["excelente", "regular", "malo"]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -108,7 +109,9 @@ export default function GeolocalizacionPage() {
 
   const fetchArboles = async () => {
     try {
-      const res = await fetch("/api/arboles?mode=geo");
+      const res = await fetch("/api/arboles?mode=geo", {
+        credentials: "include",
+      });
       if (res.ok) {
         const data = await res.json();
         setArboles(data);
@@ -175,14 +178,38 @@ export default function GeolocalizacionPage() {
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-2">
-            <Compass className="h-8 w-8 text-green-600" />
-            Geolocalización
-          </h1>
-          <p className="text-muted-foreground">
-            Visualiza tu ubicación y los árboles más cercanos
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-2">
+              <Compass className="h-8 w-8 text-green-600" />
+              Geolocalización
+            </h1>
+            <p className="text-muted-foreground">
+              Visualiza tu ubicación y los árboles más cercanos
+            </p>
+          </div>
+          <Button
+            onClick={() => {
+              setLoading(true);
+              fetchArboles();
+            }}
+            disabled={loading}
+            size="sm"
+            variant="outline"
+            className="gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Actualizando...
+              </>
+            ) : (
+              <>
+                <Navigation className="h-4 w-4" />
+                Refrescar
+              </>
+            )}
+          </Button>
         </div>
 
         {error && (
@@ -223,13 +250,53 @@ export default function GeolocalizacionPage() {
         {treeDistances.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Filtros Mapa</CardTitle>
+              <CardTitle>Filtrar por Estado de Salud</CardTitle>
             </CardHeader>
             <CardContent>
-              <FiltrosMapa
+              <HealthFilter
                 activeFilters={activeHealthFilters}
                 onFilterChange={setActiveHealthFilters}
               />
+            </CardContent>
+          </Card>
+        )}
+
+        {treeDistances.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Árboles Cercanos ({treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
+                  <div
+                    key={arbol.id}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm line-clamp-1">{arbol.nombre}</h3>
+                        {arbol.especie && (
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            🌿 {arbol.especie}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <div className="text-sm font-bold text-green-600">
+                        {arbol.distance.toFixed(2)} km
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {arbol.estado_salud ? `Estado: ${arbol.estado_salud}` : "Sin estado"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -356,34 +423,6 @@ export default function GeolocalizacionPage() {
                   <p className="text-2xl font-bold text-primary">{arboles.length}</p>
                 </div>
                 {treeDistances.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Mis Árboles Creados ({arboles.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {arboles.map((arbol) => (
-                  <div
-                    key={arbol.id}
-                    className="p-4 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
-                  >
-                    <h3 className="font-semibold text-sm mb-1">{arbol.nombre}</h3>
-                    {arbol.especie && (
-                      <p className="text-xs text-muted-foreground mb-2">🌿 {arbol.especie}</p>
-                    )}
-                    {arbol.estado_salud && (
-                      <div className="text-xs inline-block px-2 py-1 rounded bg-green-50 text-green-700 border border-green-200">
-                        {arbol.estado_salud}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {treeDistances.length > 0 && (
                   <>
                     <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                       <p className="text-xs text-green-900 font-semibold">Árbol Más Cercano</p>
@@ -403,74 +442,6 @@ export default function GeolocalizacionPage() {
             </Card>
           </div>
         </div>
-
-        {treeDistances.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Mis Árboles Creados ({arboles.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {arboles.map((arbol) => (
-                  <div
-                    key={arbol.id}
-                    className="p-4 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
-                  >
-                    <h3 className="font-semibold text-sm mb-1">{arbol.nombre}</h3>
-                    {arbol.especie && (
-                      <p className="text-xs text-muted-foreground mb-2">🌿 {arbol.especie}</p>
-                    )}
-                    {arbol.estado_salud && (
-                      <div className="text-xs inline-block px-2 py-1 rounded bg-green-50 text-green-700 border border-green-200">
-                        {arbol.estado_salud}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {treeDistances.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Árboles Cercanos ({treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
-                  <div
-                    key={arbol.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm line-clamp-1">{arbol.nombre}</h3>
-                        {arbol.especie && (
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            🌿 {arbol.especie}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <div className="text-sm font-bold text-green-600">
-                        {arbol.distance.toFixed(2)} km
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {arbol.estado_salud ? `Estado: ${arbol.estado_salud}` : "Sin estado"}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {arboles.length === 0 && !loading && (
           <Card>
