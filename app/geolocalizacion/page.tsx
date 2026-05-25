@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
@@ -20,17 +19,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { HealthFilter } from "@/components/health-filter";
 import { getHealthLabel } from "@/lib/health-utils";
+import { MapClusteringComponent } from "./modulo-geolocalizacion-clustering";
 import type { Arbol } from "@/types";
-
-const DynamicMapComponent = dynamic(
-  () => import("@/components/map-component").then((mod) => ({ default: mod.MapComponent })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[500px] w-full rounded-lg border-2 border-primary/20 bg-secondary animate-pulse" />
-    ),
-  }
-);
 
 interface UserLocation {
   lat: number;
@@ -160,6 +150,32 @@ export default function GeolocalizacionPage() {
     }
   }, [arboles]);
 
+  const mapMarkers = useMemo(() => [
+    ...(userLocation
+      ? [
+          {
+            lat: userLocation.lat,
+            lng: userLocation.lng,
+            popup: "<strong>📍 Tu ubicación actual</strong>",
+          },
+        ]
+      : []),
+    ...treeDistances
+      .filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud))
+      .map((a) => ({
+        lat: a.latitud,
+        lng: a.longitud,
+        healthStatus: a.estado_salud,
+        popup: `<div class="font-semibold text-sm text-gray-900">${a.nombre}</div>${
+          a.especie ? `<div class="text-xs text-gray-600">🌿 ${a.especie}</div>` : ""
+        }${
+          a.distance
+            ? `<div class="text-xs text-green-600 font-semibold mt-1">📏 ${a.distance.toFixed(2)} km</div>`
+            : ""
+        }`,
+      })),
+  ], [userLocation, treeDistances, activeHealthFilters]);
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -222,34 +238,6 @@ export default function GeolocalizacionPage() {
         {treeDistances.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Mis Árboles Creados ({arboles.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {arboles.map((arbol) => (
-                  <div
-                    key={arbol.id}
-                    className="p-4 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
-                  >
-                    <h3 className="font-semibold text-sm mb-1">{arbol.nombre}</h3>
-                    {arbol.especie && (
-                      <p className="text-xs text-muted-foreground mb-2">🌿 {arbol.especie}</p>
-                    )}
-                    {arbol.estado_salud && (
-                      <div className="text-xs inline-block px-2 py-1 rounded bg-green-50 text-green-700 border border-green-200">
-                        {arbol.estado_salud}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {treeDistances.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
               <CardTitle>Filtrar por Estado de Salud</CardTitle>
             </CardHeader>
             <CardContent>
@@ -257,46 +245,6 @@ export default function GeolocalizacionPage() {
                 activeFilters={activeHealthFilters}
                 onFilterChange={setActiveHealthFilters}
               />
-            </CardContent>
-          </Card>
-        )}
-
-        {treeDistances.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Árboles Cercanos ({treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
-                  <div
-                    key={arbol.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm line-clamp-1">{arbol.nombre}</h3>
-                        {arbol.especie && (
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            🌿 {arbol.especie}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <div className="text-sm font-bold text-green-600">
-                        {arbol.distance.toFixed(2)} km
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {arbol.estado_salud ? `Estado: ${arbol.estado_salud}` : "Sin estado"}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </CardContent>
           </Card>
         )}
@@ -327,38 +275,20 @@ export default function GeolocalizacionPage() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <DynamicMapComponent
+                <MapClusteringComponent
                   center={
                     userLocation
                       ? [userLocation.lat, userLocation.lng]
                       : [-5.1946, -80.6307]
                   }
                   zoom={13}
-                  markers={[
-                    ...(userLocation
-                      ? [
-                          {
-                            lat: userLocation.lat,
-                            lng: userLocation.lng,
-                            popup: "<strong>📍 Tu ubicación actual</strong>",
-                          },
-                        ]
-                      : []),
-                    ...treeDistances
-                      .filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud))
-                      .map((a) => ({
-                        lat: a.latitud,
-                        lng: a.longitud,
-                        healthStatus: a.estado_salud,
-                        popup: `<div class="font-semibold text-sm text-gray-900">${a.nombre}</div>${
-                          a.especie ? `<div class="text-xs text-gray-600">🌿 ${a.especie}</div>` : ""
-                        }${
-                          a.distance
-                            ? `<div class="text-xs text-green-600 font-semibold mt-1">📏 ${a.distance.toFixed(2)} km</div>`
-                            : ""
-                        }`,
-                      })),
-                  ]}
+                  markers={mapMarkers}
+                  clusteringConfig={{
+                    maxClusterRadius: 80,
+                    showCoverageOnHover: true,
+                    zoomToBoundsOnClick: true,
+                    disableClusteringAtZoom: 15,
+                  }}
                 />
               </CardContent>
             </Card>
@@ -442,6 +372,46 @@ export default function GeolocalizacionPage() {
             </Card>
           </div>
         </div>
+
+        {treeDistances.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Árboles Cercanos a tu Ubicación ({treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
+                  <div
+                    key={arbol.id}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm line-clamp-1">{arbol.nombre}</h3>
+                        {arbol.especie && (
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            🌿 {arbol.especie}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <div className="text-sm font-bold text-green-600">
+                        {arbol.distance.toFixed(2)} km
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {arbol.estado_salud ? `Estado: ${arbol.estado_salud}` : "Sin estado"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {arboles.length === 0 && !loading && (
           <Card>
