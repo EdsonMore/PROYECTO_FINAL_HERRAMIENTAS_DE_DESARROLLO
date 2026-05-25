@@ -4,6 +4,8 @@ export interface Usuario {
   email: string
   avatar_url?: string
   fecha_registro: Date
+  rol?: string // 'USER' | 'ADMIN'
+  estado?: string // 'ACTIVO' | 'INACTIVO' | 'SUSPENDIDO'
 }
 
 export interface Arbol {
