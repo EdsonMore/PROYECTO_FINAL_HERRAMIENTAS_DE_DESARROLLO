@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Leaf, MessageCircle, X, Send } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import {
   Dialog,
   DialogContent,
@@ -254,13 +255,57 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
                         }`}
                       >
                         <div
-                          className={`max-w-xs px-3 py-2 rounded-lg text-xs leading-relaxed ${
+                          className={`px-3 py-2 rounded-lg text-xs leading-relaxed ${
                             msg.esUsuario
-                              ? "bg-green-600 text-white rounded-br-none"
-                              : "bg-gray-100 text-gray-800 rounded-bl-none"
+                              ? "max-w-xs bg-green-600 text-white rounded-br-none"
+                              : "max-w-sm bg-gray-100 text-gray-800 rounded-bl-none"
                           }`}
                         >
-                          {msg.texto}
+                          {msg.esUsuario ? (
+                            msg.texto
+                          ) : (
+                            <ReactMarkdown
+                              components={{
+                                h2: ({ children }) => (
+                                  <h3 className="font-bold text-xs mt-2 mb-1 text-gray-900">
+                                    {children}
+                                  </h3>
+                                ),
+                                h3: ({ children }) => (
+                                  <h4 className="font-semibold text-xs mt-1.5 mb-0.5 text-gray-800">
+                                    {children}
+                                  </h4>
+                                ),
+                                strong: ({ children }) => (
+                                  <strong className="font-bold text-gray-900">
+                                    {children}
+                                  </strong>
+                                ),
+                                em: ({ children }) => (
+                                  <em className="italic text-gray-700">
+                                    {children}
+                                  </em>
+                                ),
+                                ul: ({ children }) => (
+                                  <ul className="list-disc list-inside ml-1 space-y-0.5 my-1">
+                                    {children}
+                                  </ul>
+                                ),
+                                li: ({ children }) => (
+                                  <li className="text-xs text-gray-800">
+                                    {children}
+                                  </li>
+                                ),
+                                p: ({ children }) => (
+                                  <p className="text-xs text-gray-800 mb-1">
+                                    {children}
+                                  </p>
+                                ),
+                              }}
+                            >
+                              {msg.texto}
+                            </ReactMarkdown>
+                          )}
                         </div>
                       </div>
                     ))
