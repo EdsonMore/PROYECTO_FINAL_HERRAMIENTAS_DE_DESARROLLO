@@ -42,6 +42,7 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
   const [loading, setLoading] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
   const handleNextMessage = () => {
     setMessageIndex((prev) => (prev + 1) % welcomeMessages.length);
@@ -49,8 +50,29 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
 
   // Scroll automático al último mensaje
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Preferir hacer scroll en el contenedor para evitar saltos
+    const container = messagesContainerRef.current;
+    if (container) {
+      try {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+        return;
+      } catch (e) {
+        // fallback
+      }
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [chatMessages]);
+
+  // Cuando se abre el panel, asegurar que se vea el final
+  useEffect(() => {
+    if (!isOpen) return;
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ block: "end" });
+    }
+  }, [isOpen]);
 
   // Enviar mensaje al chatbot
   const handleSendMessage = async () => {
@@ -126,10 +148,10 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 max-w-xs">
-      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 shadow-2xl overflow-hidden">
+    <div className="fixed bottom-4 sm:bottom-6 right-6 z-40 max-w-xs">
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 shadow-xl overflow-hidden rounded-2xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-green-700 to-emerald-600 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="relative">
               {/* Silueta de Árbol - Copa */}
@@ -148,8 +170,9 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-white hover:bg-green-700"
+            className="h-8 w-8 text-white hover:bg-green-700/30"
             onClick={() => setIsOpen(false)}
+            aria-label="Cerrar chat"
           >
             <X className="w-4 h-4" />
           </Button>
@@ -157,245 +180,86 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
 
         {/* Content */}
         <div className="p-4 space-y-4">
-          {/* Árbol grande decorativo - solo en bienvenida */}
+          {/* Decorativo pequeño en bienvenida (ícono) */}
           {!speciesData && (
-            <div className="flex justify-center py-4">
-              <div className="relative w-24 h-32">
-                {/* Copa del árbol - 3 capas para efecto 3D */}
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-20 h-16 bg-gradient-to-b from-green-400 to-green-500 rounded-full shadow-lg" />
-                <div className="absolute top-3 left-1/2 transform -translate-x-1/2 w-16 h-14 bg-gradient-to-b from-green-300 to-green-400 rounded-full" />
-                <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-green-300 rounded-full" />
-
-                {/* Tronco del árbol */}
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2.5 h-12 bg-gradient-to-b from-amber-600 to-amber-800 rounded-sm" />
-
-                {/* Raíces */}
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 flex gap-1">
-                  <div className="w-1 h-3 bg-amber-700 rounded-sm transform -rotate-30" />
-                  <div className="w-1 h-3 bg-amber-700 rounded-sm" />
-                  <div className="w-1 h-3 bg-amber-700 rounded-sm transform rotate-30" />
-                </div>
-
-                {/* Hojas flotantes animadas */}
-                <div className="absolute top-2 left-2 text-green-600 text-lg animate-bounce" style={{ animationDuration: "3s" }}>
-                  🍃
-                </div>
-                <div className="absolute top-4 right-1 text-green-500 text-lg animate-bounce" style={{ animationDuration: "2.5s", animationDelay: "0.5s" }}>
-                  🌿
-                </div>
+            <div className="flex justify-center py-3">
+              <div className="w-12 h-12 bg-gradient-to-b from-green-300 to-green-400 rounded-full flex items-center justify-center shadow-md">
+                <Leaf className="text-green-800 w-6 h-6" />
               </div>
             </div>
           )}
 
-          {/* Contenido: Especie Identificada o Bienvenida */}
-          {speciesData ? (
-            <>
-              {/* Información de la especie identificada */}
-              <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm space-y-3">
-                <div>
-                  <p className="text-sm font-bold text-green-900">
-                    🌳 {speciesData.commonName}
-                  </p>
-                  <p className="text-xs italic text-green-700">
-                    {speciesData.scientificName}
-                  </p>
-                </div>
+          {/* Contenido: chat único (eliminadas las tarjetas repetidas) */}
+          <>
+            <div className="bg-white border border-green-200 overflow-hidden flex flex-col min-h-0 h-64 md:h-80 rounded-lg">
+              <div className="bg-green-600 text-white px-3 py-2 text-xs font-semibold">
+                💬 {speciesData ? `Pregunta sobre tu ${speciesData.commonName}` : 'Pregunta sobre tu árbol'}
+              </div>
 
-                {/* Confianza */}
-                <div>
-                  <p className="text-xs font-medium text-gray-700 mb-1">
-                    Confianza: {Math.round(speciesData.confidence * 100)}%
-                  </p>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                    <div
-                      className="bg-green-600 h-1.5 rounded-full transition-all"
-                      style={{ width: `${speciesData.confidence * 100}%` }}
-                    />
+              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3 bg-gradient-to-b from-green-50 to-white min-h-0 chat-scroll">
+                {chatMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-gray-500 text-center">{speciesData ? `Escribe tu pregunta sobre el cuidado de tu ${speciesData.commonName}.` : '👋 ¡Hola! Soy EcoAssistant. Escribe tu pregunta.'}</p>
                   </div>
-                </div>
-
-                {/* Resumen */}
-                <div className="bg-green-50 p-2 rounded border border-green-100">
-                  <p className="text-xs text-gray-700">
-                    <strong>Resumen:</strong> {speciesData.description}
-                  </p>
-                </div>
-              </div>
-
-              {/* Cuidados Recomendados */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                <p className="text-sm font-semibold text-blue-900">💧 Cuidados Recomendados</p>
-                <p className="text-xs text-blue-800 leading-relaxed">
-                  {speciesData.careInstructions}
-                </p>
-              </div>
-
-              {/* Chat con el bot */}
-              <div className="bg-white rounded-lg border border-green-200 overflow-hidden flex flex-col h-72">
-                {/* Header del chat */}
-                <div className="bg-green-600 text-white px-3 py-2 text-xs font-semibold">
-                  💬 Pregunta sobre tu {speciesData.commonName}
-                </div>
-
-                {/* Mensajes */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gradient-to-b from-green-50 to-white">
-                  {chatMessages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-xs text-gray-500 text-center">
-                        👋 ¡Hola! Soy EcoAssistant. <br />
-                        Pregunta sobre el cuidado de tu árbol.
-                      </p>
-                    </div>
-                  ) : (
-                    chatMessages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${
-                          msg.esUsuario ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`px-3 py-2 rounded-lg text-xs leading-relaxed ${
-                            msg.esUsuario
-                              ? "max-w-xs bg-green-600 text-white rounded-br-none"
-                              : "max-w-sm bg-gray-100 text-gray-800 rounded-bl-none"
-                          }`}
-                        >
-                          {msg.esUsuario ? (
-                            msg.texto
-                          ) : (
-                            <ReactMarkdown
-                              components={{
-                                h2: ({ children }) => (
-                                  <h3 className="font-bold text-xs mt-2 mb-1 text-gray-900">
-                                    {children}
-                                  </h3>
-                                ),
-                                h3: ({ children }) => (
-                                  <h4 className="font-semibold text-xs mt-1.5 mb-0.5 text-gray-800">
-                                    {children}
-                                  </h4>
-                                ),
-                                strong: ({ children }) => (
-                                  <strong className="font-bold text-gray-900">
-                                    {children}
-                                  </strong>
-                                ),
-                                em: ({ children }) => (
-                                  <em className="italic text-gray-700">
-                                    {children}
-                                  </em>
-                                ),
-                                ul: ({ children }) => (
-                                  <ul className="list-disc list-inside ml-1 space-y-0.5 my-1">
-                                    {children}
-                                  </ul>
-                                ),
-                                li: ({ children }) => (
-                                  <li className="text-xs text-gray-800">
-                                    {children}
-                                  </li>
-                                ),
-                                p: ({ children }) => (
-                                  <p className="text-xs text-gray-800 mb-1">
-                                    {children}
-                                  </p>
-                                ),
-                              }}
-                            >
-                              {msg.texto}
-                            </ReactMarkdown>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                  {loading && (
-                    <div className="flex justify-start">
-                      <div className="bg-gray-200 px-3 py-2 rounded-lg rounded-bl-none">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" />
-                          <div
-                            className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.2s" }}
-                          />
-                          <div
-                            className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.4s" }}
-                          />
-                        </div>
+                ) : (
+                  chatMessages.map((msg) => (
+                    <div key={msg.id} className={`flex ${msg.esUsuario ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`px-4 py-2 rounded-xl text-sm leading-relaxed shadow-sm transition-all ${msg.esUsuario ? 'max-w-xs bg-green-600 text-white self-end rounded-br-2xl rounded-tl-2xl' : 'max-w-sm bg-white text-gray-800 border border-gray-100'}`}>
+                        {msg.esUsuario ? msg.texto : <ReactMarkdown>{msg.texto}</ReactMarkdown>}
                       </div>
                     </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input */}
-                <div className="border-t border-green-200 bg-white p-2 flex gap-2">
-                  <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                    placeholder="Escribe tu pregunta..."
-                    className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-green-600"
-                    disabled={loading}
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={loading || !inputValue.trim()}
-                    className="h-auto p-1.5 bg-green-600 hover:bg-green-700 text-white text-xs"
-                  >
-                    <Send className="w-3 h-3" />
-                  </Button>
-                </div>
+                  ))
+                )}
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 px-3 py-2 rounded-lg">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
+                        <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" style={{ animationDelay: '0.15s' }} />
+                        <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
 
-              {/* Acciones */}
-              <div className="space-y-2">
-                <Button className="w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8">
-                  🌱 Guardar este árbol
-                </Button>
+              <div className="border-t border-green-200 bg-white p-3 flex items-center gap-3 sticky bottom-0">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Escribe tu pregunta..."
+                  className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-green-600 placeholder-gray-400 bg-gray-50"
+                  disabled={loading}
+                  aria-label="Escribe tu pregunta"
+                />
                 <Button
-                  variant="outline"
-                  onClick={() => setDetailsOpen(true)}
-                  className="w-full border-green-300 text-green-700 text-xs h-8"
+                  onClick={handleSendMessage}
+                  disabled={loading || !inputValue.trim()}
+                  className="h-10 px-3 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 shadow-md text-white flex items-center gap-2"
+                  aria-label="Enviar pregunta"
                 >
-                  📝 Ver más detalles
+                  <Send className="w-4 h-4" />
                 </Button>
               </div>
-            </>
-          ) : (
-            <>
-              {/* Mensaje de bienvenida por defecto */}
-              <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
-                <p className="text-sm text-gray-800 font-medium leading-relaxed">
-                  {welcomeMessages[messageIndex]}
-                </p>
-              </div>
+            </div>
 
-              {/* Botones de acción */}
-              <div className="space-y-2 pt-2">
-                <Button
-                  onClick={handleNextMessage}
-                  variant="outline"
-                  className="w-full border-green-300 hover:bg-green-50 text-green-700 text-xs"
-                >
-                  <MessageCircle className="w-3 h-3 mr-1" />
-                  Ver más consejos
-                </Button>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-800">
-                  <p className="font-semibold mb-1">✨ ¿Cómo funciona?</p>
-                  <ol className="space-y-0.5 list-decimal list-inside text-amber-700">
-                    <li>Identifica tu árbol con la IA</li>
-                    <li>Pregunta aquí sobre su cuidado</li>
-                    <li>Recibe recomendaciones personalizadas</li>
-                  </ol>
-                </div>
-              </div>
-            </>
-          )}
+            {/* Acciones */}
+            <div className="space-y-2">
+              <Button className="w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8">
+                🌱 Guardar este árbol
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setDetailsOpen(true)}
+                className="w-full border-green-300 text-green-700 text-xs h-8"
+              >
+                📝 Ver más detalles
+              </Button>
+            </div>
+          </>
         </div>
 
         {/* Footer decorativo */}
