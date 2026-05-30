@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import InfographicCarousel from "@/components/infographic-carousel";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -107,47 +107,35 @@ export default function BeneficiosPage() {
         {/* Galería de imágenes destacadas */}
         <section className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
           <div className="container mx-auto max-w-6xl">
-            <div className="text-center space-y-4 mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+            <div className="text-center space-y-4 mb-12">
+              <div className="flex justify-center">
+                <div className="badge-pill">
+                  <Leaf className="h-4 w-4 text-[color:var(--cta-text)]" />
+                  <span>APRENDE · COMPARTE · TRANSFORMA</span>
+                </div>
+              </div>
+
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold gradient-green-text mt-4">
                 Infografías Educativas
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto">
                 Conoce todos los beneficios de los árboles en nuestras
                 infografías ilustradas
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 ">
-              <div className="group">
-                <div className="relative w-full aspect-[12/11] md:aspect-[16/15] overflow-hidden rounded-lg shadow-xl">
-                  <Image
-                    src="/img/arboles_2.jpg"
-                    alt="Beneficios Ambientales de los Árboles"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    priority
-                  />
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+              <div className="w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {['/Infografia1.png','/Infografia2.png','/img/arboles_1.jpg','/img/beneficios_imagen1.jpg'].map((src, idx) => (
+                    <div key={idx} className="infographic-card p-4">
+                      <div className="overflow-hidden rounded-lg">
+                        <img src={src} alt={`Infografia ${idx+1}`} className="w-full h-64 object-cover rounded-md" />
+                      </div>
+                      <div className="infographic-caption mt-4">{idx === 0 || idx === 2 ? 'Beneficios Ambientales' : 'Beneficios del Ecosistema'}</div>
+                    </div>
+                  ))}
                 </div>
-                <h3 className="text-xl font-bold text-green-900 mt-4 text-center">
-                  Beneficios Ambientales
-                </h3>
-              </div>
-
-              <div className="group">
-                <div className="relative w-full aspect-[6/5] md:aspect-[16/15] overflow-hidden rounded-lg shadow-xl">
-                  <Image
-                    src="/img/beneficios_imagen2.jpg"
-                    alt="Beneficios del Ecosistema"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    priority
-                  />
-                </div>
-                <h3 className="text-xl font-bold text-green-900 mt-4 text-center">
-                  Beneficios del Ecosistema
-                </h3>
               </div>
             </div>
           </div>
@@ -194,12 +182,12 @@ export default function BeneficiosPage() {
         </section>
 
         {/* CTA Final */}
-        <section className="py-20 px-4 bg-green-600 text-white">
+        <section className="py-20 px-4 bg-[color:var(--cta-pastel)] text-[color:var(--cta-text)]">
           <div className="container mx-auto max-w-4xl text-center space-y-8">
             <h2 className="text-4xl md:text-5xl font-bold text-balance">
               ¿Listo para hacer la diferencia?
             </h2>
-            <p className="text-xl text-green-50 max-w-2xl mx-auto">
+            <p className="text-xl text-[color:var(--cta-text)]/90 max-w-2xl mx-auto">
               Únete a nuestra comunidad y comienza a plantar árboles. Cada árbol
               cuenta, cada acción importa.
             </p>
@@ -207,7 +195,7 @@ export default function BeneficiosPage() {
               <Link href="/registro">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto bg-white text-green-600 hover:bg-green-50"
+                  className="w-full sm:w-auto bg-[color:var(--cta-text)] text-white hover:brightness-95"
                 >
                   Comenzar Ahora
                 </Button>
@@ -216,7 +204,7 @@ export default function BeneficiosPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full sm:w-auto border-white text-white hover:bg-green-700"
+                  className="w-full sm:w-auto border-[color:var(--cta-text)] text-[color:var(--cta-text)] hover:bg-[color:var(--cta-text)]/10 ring-1 ring-[color:var(--cta-text)]/15 shadow-sm"
                 >
                   Volver al Inicio
                 </Button>

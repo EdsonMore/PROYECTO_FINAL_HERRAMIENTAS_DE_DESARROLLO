@@ -33,7 +33,7 @@ export default function HomePage() {
 
             <div className="mt-6">
               <Link href="/registro">
-                <Button size="lg" className="bg-green-600/90 hover:bg-green-700">
+                <Button size="lg" className="bg-[color:var(--color-primary)] hover:bg-[color:var(--primary-700)] text-white">
                   Comienza ahora
                 </Button>
               </Link>
@@ -66,7 +66,7 @@ export default function HomePage() {
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
                   <Link href="/registro">
-                    <Button size="lg" className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg px-6 py-3 shadow-lg flex items-center gap-3">
+                    <Button size="lg" className="w-full sm:w-auto bg-[color:var(--primary-600)] hover:bg-[color:var(--primary-700)] text-white rounded-lg px-6 py-3 shadow-lg flex items-center gap-3">
                       <Sprout className="h-4 w-4" />
                       Comenzar Ahora
                     </Button>
