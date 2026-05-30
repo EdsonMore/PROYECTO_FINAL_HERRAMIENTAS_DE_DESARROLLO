@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import InfographicCarousel from "@/components/infographic-carousel";
 import { Button } from "@/components/ui/button";
@@ -77,7 +78,7 @@ const beneficios = [
   },
 ];
 
-export default function BeneficiosPage() {
+export default function BeneficiosPage() {  const { data: session } = useSession();
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -192,14 +193,16 @@ export default function BeneficiosPage() {
               cuenta, cada acción importa.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/registro">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-[color:var(--cta-text)] text-white hover:brightness-95"
-                >
-                  Comenzar Ahora
-                </Button>
-              </Link>
+              {!session && (
+                <Link href="/registro">
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto bg-[color:var(--cta-text)] text-white hover:brightness-95"
+                  >
+                    Comenzar Ahora
+                  </Button>
+                </Link>
+              )}
               <Link href="/">
                 <Button
                   size="lg"

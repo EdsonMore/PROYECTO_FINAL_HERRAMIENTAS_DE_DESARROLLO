@@ -36,6 +36,7 @@ import {
   LogOut,
   Upload,
   Loader2,
+  Phone,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "@/components/user-avatar";
@@ -43,7 +44,9 @@ import { UserAvatar } from "@/components/user-avatar";
 interface UserProfile {
   id: string;
   nombre: string;
+  apellido: string;
   email: string;
+  telefono: string;
   avatar_url: string;
   fecha_registro: string;
 }
@@ -58,6 +61,8 @@ export default function PerfilPage() {
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
+    apellido: "",
+    telefono: "",
     avatar_url: "",
     password_actual: "",
     nueva_password: "",
@@ -108,6 +113,8 @@ export default function PerfilPage() {
         setFormData((prev) => ({
           ...prev,
           nombre: profileData.nombre,
+          apellido: profileData.apellido || "",
+          telefono: profileData.telefono || "",
           avatar_url: profileData.avatar_url || "",
         }));
       }
@@ -158,6 +165,8 @@ export default function PerfilPage() {
   const checkForChanges = (data: typeof formData) => {
     const changed =
       data.nombre !== userProfile?.nombre ||
+      data.apellido !== (userProfile?.apellido || "") ||
+      data.telefono !== (userProfile?.telefono || "") ||
       data.avatar_url !== (userProfile?.avatar_url || "") ||
       data.password_actual !== "" ||
       data.nueva_password !== "";
@@ -194,6 +203,8 @@ export default function PerfilPage() {
 
       const updateData: any = {
         nombre: formData.nombre,
+        apellido: formData.apellido,
+        telefono: formData.telefono,
         avatar_url: formData.avatar_url || null,
       };
 
@@ -421,11 +432,16 @@ export default function PerfilPage() {
                   />
                 </div>
                 <h3 className="text-xl font-semibold text-center">
-                  {userProfile?.nombre || session?.user?.name}
+                  {userProfile?.nombre} {userProfile?.apellido}
                 </h3>
                 <p className="text-sm text-muted-foreground text-center">
-                  {userProfile?.email || session?.user?.email}
+                  {userProfile?.email}
                 </p>
+                {userProfile?.telefono && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    {userProfile.telefono}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground text-center mt-2">
                   Haz clic en el ícono de cámara para cambiar tu foto
                 </p>
@@ -442,6 +458,14 @@ export default function PerfilPage() {
                     {userProfile?.email || session?.user?.email}
                   </span>
                 </div>
+                {userProfile?.telefono && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {userProfile.telefono}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-3 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">
@@ -508,14 +532,37 @@ export default function PerfilPage() {
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-4">
-                    <div className="space-y-2">
+                  <div className="space-y-2">
                       <Label htmlFor="nombre">Nombre</Label>
                       <Input
                         id="nombre"
                         name="nombre"
                         value={formData.nombre}
                         onChange={handleInputChange}
-                        placeholder="Tu nombre completo"
+                        placeholder="Tu nombre"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="apellido">Apellido</Label>
+                      <Input
+                        id="apellido"
+                        name="apellido"
+                        value={formData.apellido}
+                        onChange={handleInputChange}
+                        placeholder="Tu apellido"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="telefono">Teléfono</Label>
+                      <Input
+                        id="telefono"
+                        name="telefono"
+                        type="tel"
+                        value={formData.telefono}
+                        onChange={handleInputChange}
+                        placeholder="Tu número de teléfono"
                       />
                     </div>
 
