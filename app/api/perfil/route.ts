@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     if (error) return error
 
     const result = await query(
-      `SELECT id, nombre, email, avatar_url, fecha_registro 
+      `SELECT id, nombre, apellido, email, telefono, avatar_url, fecha_registro 
        FROM usuarios WHERE id = $1`,
       [userId]
     )
@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest) {
     if (error) return error
 
     const body = await request.json();
-    const { nombre, avatar_url, password_actual, nueva_password } = body;
+    const { nombre, apellido, telefono, avatar_url, password_actual, nueva_password } = body;
 
     let updateFields = [];
     let queryParams = [];
@@ -50,6 +50,24 @@ export async function PUT(request: NextRequest) {
       updateFields.push(`nombre = $${paramCount}`);
       queryParams.push(nombre);
       paramCount++;
+    }
+
+    // Actualizar apellido si se proporciona
+    if (apellido !== undefined && apellido !== "") {
+      updateFields.push(`apellido = $${paramCount}`);
+      queryParams.push(apellido);
+      paramCount++;
+    }
+
+    // Actualizar teléfono si se proporciona
+    if (telefono !== undefined) {
+      if (telefono === "" || telefono === null) {
+        updateFields.push(`telefono = NULL`);
+      } else {
+        updateFields.push(`telefono = $${paramCount}`);
+        queryParams.push(telefono);
+        paramCount++;
+      }
     }
 
     // Actualizar avatar si se proporciona

@@ -80,7 +80,8 @@ export default function LoginPage() {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         
         // Obtener la URL de redirección del callback
-        const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+        // NO redirigir automáticamente - dejar al usuario en la página actual o ir al inicio
+        const callbackUrl = searchParams.get("callbackUrl") || "/";
         console.log("📍 Redirigiendo a:", callbackUrl);
         
         // Redirigir inmediatamente sin esperar más

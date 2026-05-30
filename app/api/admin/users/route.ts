@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     // Obtener usuarios (sin incluir password_hash)
     const usuariosResult = await query(
       `SELECT 
-        id, nombre, email, rol, estado, avatar_url, fecha_registro, actualizado_en
+        id, nombre, apellido, email, telefono, rol, estado, avatar_url, fecha_registro, actualizado_en
        FROM usuarios 
        ${whereClause}
        ORDER BY fecha_registro DESC

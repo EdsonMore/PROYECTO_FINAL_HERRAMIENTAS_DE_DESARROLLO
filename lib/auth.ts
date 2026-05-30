@@ -22,7 +22,7 @@ export const authOptions: NextAuthOptions = {
         try {
           // Buscar usuario en la base de datos - seleccionar solo campos necesarios
           const result = await query(
-            "SELECT id, email, password_hash, nombre, avatar_url, rol FROM usuarios WHERE email = $1",
+            "SELECT id, email, password_hash, nombre, avatar_url, rol, estado FROM usuarios WHERE email = $1",
             [credentials.email]
           );
 
@@ -32,11 +32,17 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Usuario no encontrado");
           }
 
+          // Verificar que el usuario esté activo
+          if (user.estado !== 'ACTIVO') {
+            throw new Error("Usuario inactivo. Contacta con un administrador");
+          }
+
           console.log("🔍 DEBUG LOGIN:", {
             email: user.email,
             password_hash_existe: !!user.password_hash,
             password_hash_length: user.password_hash?.length,
             rol: user.rol,
+            estado: user.estado,
           });
 
           // Verificar contraseña
@@ -80,13 +86,25 @@ export const authOptions: NextAuthOptions = {
           // Usar UPSERT para optimizar: una sola consulta en lugar de SELECT + INSERT/UPDATE
           const nombre = user.name || user.email?.split("@")[0] || "Usuario";
           await query(
-            `INSERT INTO usuarios (nombre, email, password_hash, avatar_url) 
-             VALUES ($1, $2, $3, $4)
+            `INSERT INTO usuarios (nombre, email, password_hash, avatar_url, estado) 
+             VALUES ($1, $2, $3, $4, 'ACTIVO')
              ON CONFLICT (email) DO UPDATE 
              SET avatar_url = COALESCE($4, avatar_url),
                  actualizado_en = NOW()`,
             [nombre, user.email, "", user.image || ""]
           );
+
+          // Verificar que el usuario esté activo antes de permitir login
+          const userResult = await query(
+            "SELECT estado FROM usuarios WHERE email = $1",
+            [user.email]
+          );
+
+          const userData = userResult.rows[0];
+          if (userData?.estado !== 'ACTIVO') {
+            console.warn(`⚠️ Intento de login de usuario inactivo: ${user.email}`);
+            return false;
+          }
 
           return true;
         } catch (error) {
@@ -165,8 +183,8 @@ export const authOptions: NextAuthOptions = {
         return `${baseUrl}${url}`;
       }
 
-      // Por defecto, ir al dashboard
-      return `${baseUrl}/dashboard`;
+      // Por defecto, ir a la página de inicio (NO al dashboard automáticamente)
+      return `${baseUrl}/`;
     },
   },
   pages: {

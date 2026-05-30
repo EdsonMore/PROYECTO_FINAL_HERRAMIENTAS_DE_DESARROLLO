@@ -1,13 +1,12 @@
-// app/api/admin/users/[id]/role/route.ts
+// app/api/admin/users/[id]/delete/route.ts
 /**
- * PUT /api/admin/users/[id]/role
- * Actualiza el rol de un usuario
+ * DELETE /api/admin/users/[id]/delete
+ * Elimina (soft delete) un usuario
  * Solo accesible para administradores
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { protectAdminRoute, logAudit, updateUserRole, getUserInfo } from '@/lib/role-guards';
-import { UserRole } from '@/types/roles';
+import { protectAdminRoute, logAudit, deleteUser, getUserInfo } from '@/lib/role-guards';
 
 interface RouteParams {
   params: Promise<{
@@ -15,7 +14,7 @@ interface RouteParams {
   }>;
 }
 
-export async function PUT(req: NextRequest, { params }: RouteParams) {
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
   // Verificar que el usuario sea admin
   const { isValid, response, context } = await protectAdminRoute(req);
   if (!isValid || !context) {
@@ -25,25 +24,23 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const userId = parseInt(id);
-    const { role } = await req.json();
 
-    // Validar que el rol sea válido
-    if (!Object.values(UserRole).includes(role)) {
+    if (isNaN(userId)) {
       return NextResponse.json(
-        { error: `Rol inválido: ${role}` },
+        { error: 'ID de usuario inválido' },
         { status: 400 }
       );
     }
 
-    // No permitir que un admin se quite su propio rol de admin
-    if (userId === context.userId && role === UserRole.USER) {
+    // No permitir que un admin se elimine a sí mismo
+    if (userId === context.userId) {
       return NextResponse.json(
-        { error: 'No puedes remover tu propio rol de administrador' },
+        { error: 'No puedes eliminar tu propia cuenta' },
         { status: 400 }
       );
     }
 
-    // Obtener usuario antes de cambiar
+    // Obtener usuario antes de eliminar
     const userBefore = await getUserInfo(userId);
     if (!userBefore) {
       return NextResponse.json(
@@ -52,38 +49,47 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Cambiar rol
-    const updatedUser = await updateUserRole(userId, role);
+    // Eliminar usuario (soft delete)
+    const deletedUser = await deleteUser(userId);
 
-    if (!updatedUser) {
-      throw new Error('Error al actualizar rol');
+    if (!deletedUser) {
+      throw new Error('Error al eliminar usuario');
     }
 
     // Registrar en auditoría
     await logAudit({
       userId: context.userId,
-      action: 'update_user_role',
+      action: 'delete_user',
       resource: 'user',
       resourceId: userId,
       ip: req.headers.get('x-forwarded-for') || 'unknown',
       userAgent: req.headers.get('user-agent') || undefined,
-      changesBefore: { role: userBefore.rol },
-      changesAfter: { role },
-      details: `Cambio de rol de ${userBefore.rol} a ${role} para usuario ${userBefore.email}`,
+      changesBefore: {
+        nombre: userBefore.nombre,
+        apellido: userBefore.apellido,
+        email: userBefore.email,
+        telefono: userBefore.telefono,
+        rol: userBefore.rol,
+        estado: userBefore.estado,
+      },
+      changesAfter: {
+        estado: 'INACTIVO',
+      },
+      details: `Usuario ${userBefore.nombre} ${userBefore.apellido} (${userBefore.email}) eliminado (soft delete - marcado como inactivo)`,
       statusCode: 200,
     });
 
     return NextResponse.json({
       success: true,
-      message: `Rol actualizado a ${role}`,
-      data: updatedUser,
+      message: 'Usuario eliminado exitosamente',
+      data: deletedUser,
     });
   } catch (error) {
-    console.error('❌ Error actualizando rol:', error);
+    console.error('❌ Error eliminando usuario:', error);
 
     await logAudit({
       userId: context.userId,
-      action: 'error_update_user_role',
+      action: 'error_delete_user',
       resource: 'user',
       resourceId: userId,
       ip: req.headers.get('x-forwarded-for') || 'unknown',
@@ -91,8 +97,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       statusCode: 500,
     });
 
+    const errorMsg = error instanceof Error ? error.message : 'Error desconocido';
     return NextResponse.json(
-      { error: 'Error actualizando rol del usuario' },
+      { error: errorMsg },
       { status: 500 }
     );
   }

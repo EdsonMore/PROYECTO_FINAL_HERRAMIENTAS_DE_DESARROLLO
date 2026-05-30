@@ -1,3 +1,6 @@
+"use client";
+
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/navbar";
@@ -6,6 +9,7 @@ import { Leaf, MapPin, Camera, Calendar, BookOpen, Sprout, User, BarChart, Heart
 import AnimatedHeading from "@/components/animated-heading";
 
 export default function HomePage() {
+  const { data: session } = useSession();
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -31,13 +35,15 @@ export default function HomePage() {
               Cuida y sigue el crecimiento de tu árbol
             </p>
 
-            <div className="mt-6">
-              <Link href="/registro">
-                <Button size="lg" className="bg-[color:var(--color-primary)] hover:bg-[color:var(--primary-700)] text-white">
-                  Comienza ahora
-                </Button>
-              </Link>
-            </div>
+            {!session && (
+              <div className="mt-6">
+                <Link href="/registro">
+                  <Button size="lg" className="bg-[color:var(--color-primary)] hover:bg-[color:var(--primary-700)] text-white">
+                    Comienza ahora
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </section>
 
@@ -64,24 +70,26 @@ export default function HomePage() {
                   cuidado.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
-                  <Link href="/registro">
-                    <Button size="lg" className="w-full sm:w-auto bg-[color:var(--primary-600)] hover:bg-[color:var(--primary-700)] text-white rounded-lg px-6 py-3 shadow-lg flex items-center gap-3">
-                      <Sprout className="h-4 w-4" />
-                      Comenzar Ahora
-                    </Button>
-                  </Link>
-                  <Link href="/login">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full sm:w-auto bg-white/80 text-slate-700 rounded-lg px-6 py-3 flex items-center gap-3"
-                    >
-                      <User className="h-4 w-4" />
-                      Iniciar Sesión
-                    </Button>
-                  </Link>
-                </div>
+                {!session ? (
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
+                    <Link href="/registro">
+                      <Button size="lg" className="w-full sm:w-auto bg-[color:var(--primary-600)] hover:bg-[color:var(--primary-700)] text-white rounded-lg px-6 py-3 shadow-lg flex items-center gap-3">
+                        <Sprout className="h-4 w-4" />
+                        Comenzar Ahora
+                      </Button>
+                    </Link>
+                    <Link href="/login">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-full sm:w-auto bg-white/80 text-slate-700 rounded-lg px-6 py-3 flex items-center gap-3"
+                      >
+                        <User className="h-4 w-4" />
+                        Iniciar Sesión
+                      </Button>
+                    </Link>
+                  </div>
+                ) : null}
                 {/* Estadísticas compactas: mini-tarjetas debajo de los botones */}
                 <div className="mt-6 w-full">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">

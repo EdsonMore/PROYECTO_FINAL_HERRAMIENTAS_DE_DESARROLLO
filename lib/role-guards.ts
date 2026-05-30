@@ -211,7 +211,7 @@ export async function validateOwnershipOrAdmin(
 export async function getUserInfo(userId: number) {
   try {
     const result = await query(
-      'SELECT id, email, nombre, rol, estado FROM usuarios WHERE id = $1 LIMIT 1',
+      'SELECT id, email, nombre, apellido, telefono, rol, estado, avatar_url FROM usuarios WHERE id = $1 LIMIT 1',
       [userId]
     );
 
@@ -255,29 +255,50 @@ export async function getAuditLogs(params: {
   offset?: number;
 }) {
   try {
-    let query_str = 'SELECT * FROM logs_auditoria WHERE 1=1';
+    // Query con JOIN para traer datos del usuario
+    let query_str = `
+      SELECT 
+        la.id, 
+        la.usuario_id, 
+        u.email as usuario_email,
+        u.nombre as usuario_nombre,
+        u.apellido as usuario_apellido,
+        la.accion, 
+        la.recurso, 
+        la.recurso_id, 
+        la.ip_address as ip, 
+        la.user_agent, 
+        la.detalles, 
+        la.estado_respuesta, 
+        la.cambios_antes, 
+        la.cambios_despues, 
+        la.fecha_creacion
+      FROM logs_auditoria la
+      LEFT JOIN usuarios u ON la.usuario_id = u.id
+      WHERE 1=1
+    `;
     const values: any[] = [];
     let paramCount = 1;
 
     if (params.userId) {
-      query_str += ` AND usuario_id = $${paramCount}`;
+      query_str += ` AND la.usuario_id = $${paramCount}`;
       values.push(params.userId);
       paramCount++;
     }
 
     if (params.action) {
-      query_str += ` AND accion ILIKE $${paramCount}`;
+      query_str += ` AND la.accion ILIKE $${paramCount}`;
       values.push(`%${params.action}%`);
       paramCount++;
     }
 
     if (params.resource) {
-      query_str += ` AND recurso = $${paramCount}`;
+      query_str += ` AND la.recurso = $${paramCount}`;
       values.push(params.resource);
       paramCount++;
     }
 
-    query_str += ' ORDER BY fecha_creacion DESC';
+    query_str += ' ORDER BY la.fecha_creacion DESC';
 
     if (params.limit) {
       query_str += ` LIMIT $${paramCount}`;
@@ -296,5 +317,269 @@ export async function getAuditLogs(params: {
   } catch (error) {
     console.error('❌ Error obteniendo logs de auditoría:', error);
     return [];
+  }
+}
+
+/**
+ * Crea un nuevo usuario (solo admin)
+ */
+export async function createUser(params: {
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono?: string;
+  contrasena: string;
+  rol?: UserRole;
+}) {
+  try {
+    // Validar que el email no exista
+    const existingUser = await query(
+      'SELECT id FROM usuarios WHERE email = $1 LIMIT 1',
+      [params.email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      throw new Error('El email ya está registrado');
+    }
+
+    // Importar la función de hash de contraseña
+    const { hashPassword } = await import('./password-utils');
+    const hashedPassword = await hashPassword(params.contrasena);
+
+    const result = await query(
+      `INSERT INTO usuarios (nombre, apellido, email, password_hash, telefono, rol, estado, fecha_registro, actualizado_en)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+       RETURNING id, nombre, apellido, email, telefono, rol, estado, fecha_registro`,
+      [params.nombre, params.apellido, params.email, hashedPassword, params.telefono || null, params.rol || UserRole.USER, 'ACTIVO']
+    );
+
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ Error creando usuario:', error);
+    throw error;
+  }
+}
+
+/**
+ * Actualiza la información de un usuario (no el rol)
+ */
+export async function updateUser(userId: number, params: {
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+  telefono?: string;
+  estado?: 'ACTIVO' | 'INACTIVO';
+}) {
+  try {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (params.nombre !== undefined) {
+      updates.push(`nombre = $${paramCount}`);
+      values.push(params.nombre);
+      paramCount++;
+    }
+
+    if (params.apellido !== undefined) {
+      updates.push(`apellido = $${paramCount}`);
+      values.push(params.apellido);
+      paramCount++;
+    }
+
+    if (params.email !== undefined) {
+      // Validar que el email no exista en otro usuario
+      const existingUser = await query(
+        'SELECT id FROM usuarios WHERE email = $1 AND id != $2 LIMIT 1',
+        [params.email, userId]
+      );
+
+      if (existingUser.rows.length > 0) {
+        throw new Error('El email ya está registrado');
+      }
+
+      updates.push(`email = $${paramCount}`);
+      values.push(params.email);
+      paramCount++;
+    }
+
+    if (params.telefono !== undefined) {
+      updates.push(`telefono = $${paramCount}`);
+      values.push(params.telefono || null);
+      paramCount++;
+    }
+
+    if (params.estado !== undefined) {
+      updates.push(`estado = $${paramCount}`);
+      values.push(params.estado);
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      throw new Error('No hay campos para actualizar');
+    }
+
+    updates.push(`actualizado_en = NOW()`);
+    values.push(userId);
+
+    const result = await query(
+      `UPDATE usuarios SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, nombre, apellido, email, telefono, rol, estado`,
+      values
+    );
+
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ Error actualizando usuario:', error);
+    throw error;
+  }
+}
+
+/**
+ * Elimina un usuario (soft delete - solo marca como inactivo)
+ */
+export async function deleteUser(userId: number) {
+  try {
+    // Soft delete: marcar como inactivo en lugar de eliminar
+    const result = await query(
+      'UPDATE usuarios SET estado = \'INACTIVO\', actualizado_en = NOW() WHERE id = $1 RETURNING id, nombre, email, estado',
+      [userId]
+    );
+
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ Error eliminando usuario:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene los roles personalizados desde la BD
+ */
+export async function getRoles() {
+  try {
+    const result = await query(
+      'SELECT id, rol, permisos, descripcion, fecha_creacion FROM role_permissions ORDER BY fecha_creacion DESC',
+      []
+    );
+
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Error obteniendo roles:', error);
+    return [];
+  }
+}
+
+/**
+ * Crea un nuevo rol con permisos
+ */
+export async function createRole(params: {
+  rol: string;
+  descripcion?: string;
+  permisos: Record<string, any>;
+}) {
+  try {
+    // Validar que el rol no exista
+    const existingRole = await query(
+      'SELECT id FROM role_permissions WHERE rol = $1 LIMIT 1',
+      [params.rol]
+    );
+
+    if (existingRole.rows.length > 0) {
+      throw new Error('El rol ya existe');
+    }
+
+    const result = await query(
+      `INSERT INTO role_permissions (rol, permisos, descripcion, fecha_creacion)
+       VALUES ($1, $2, $3, NOW())
+       RETURNING id, rol, permisos, descripcion, fecha_creacion`,
+      [params.rol, JSON.stringify(params.permisos), params.descripcion || null]
+    );
+
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ Error creando rol:', error);
+    throw error;
+  }
+}
+
+/**
+ * Actualiza un rol existente
+ */
+export async function updateRole(roleId: number, params: {
+  descripcion?: string;
+  permisos?: Record<string, any>;
+}) {
+  try {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (params.descripcion !== undefined) {
+      updates.push(`descripcion = $${paramCount}`);
+      values.push(params.descripcion);
+      paramCount++;
+    }
+
+    if (params.permisos !== undefined) {
+      updates.push(`permisos = $${paramCount}`);
+      values.push(JSON.stringify(params.permisos));
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      throw new Error('No hay campos para actualizar');
+    }
+
+    values.push(roleId);
+
+    const result = await query(
+      `UPDATE role_permissions SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, rol, permisos, descripcion`,
+      values
+    );
+
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ Error actualizando rol:', error);
+    throw error;
+  }
+}
+
+/**
+ * Elimina un rol (solo si no está asignado a ningún usuario)
+ */
+export async function deleteRole(roleId: number) {
+  try {
+    // Verificar que el rol no esté siendo usado
+    const roleInfo = await query(
+      'SELECT rol FROM role_permissions WHERE id = $1 LIMIT 1',
+      [roleId]
+    );
+
+    if (roleInfo.rows.length === 0) {
+      throw new Error('Rol no encontrado');
+    }
+
+    const roleName = roleInfo.rows[0].rol;
+
+    // Verificar que no haya usuarios con este rol
+    const usersWithRole = await query(
+      'SELECT COUNT(*) as count FROM usuarios WHERE rol = $1',
+      [roleName]
+    );
+
+    if (parseInt(usersWithRole.rows[0].count) > 0) {
+      throw new Error(`No se puede eliminar el rol, hay ${usersWithRole.rows[0].count} usuario(s) asignado(s)`);
+    }
+
+    // Eliminar el rol
+    const result = await query(
+      'DELETE FROM role_permissions WHERE id = $1 RETURNING id, rol',
+      [roleId]
+    );
+
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ Error eliminando rol:', error);
+    throw error;
   }
 }
