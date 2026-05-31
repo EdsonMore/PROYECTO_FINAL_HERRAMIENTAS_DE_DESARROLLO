@@ -269,7 +269,6 @@ export default function ClimaPage() {
     const previousRecords = history.slice(1, 6);
 
     if (!current || previousRecords.length === 0) return null;
-
     const avgHistoricTemp =
       previousRecords.reduce((sum, h) => sum + (h.clima?.main?.temp || 0), 0) /
       previousRecords.length;
