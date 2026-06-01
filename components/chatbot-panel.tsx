@@ -90,6 +90,12 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
     setLoading(true);
 
     try {
+      // Construir historial para enviar
+      const historial = chatMessages.map((msg) => ({
+        rol: msg.esUsuario ? ("usuario" as const) : ("asistente" as const),
+        contenido: msg.texto,
+      }));
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -103,6 +109,7 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
                 nombreCientifico: speciesData.scientificName,
               }
             : {},
+          historial, // Enviar historial para contexto
         }),
       });
 
