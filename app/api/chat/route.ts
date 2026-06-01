@@ -3,34 +3,36 @@ import { NextRequest, NextResponse } from "next/server";
 interface ChatRequest {
   mensaje: string;
   contexto?: Record<string, any>;
+  historial?: Array<{ rol: "usuario" | "asistente"; contenido: string }>;
 }
 
 const SYSTEM_INSTRUCTIONS = `Eres un Experto Botánico y Asistente de Seguimiento Forestal del proyecto EcoAssistant.
 Tu misión es ayudar a identificar árboles, dar consejos de riego, abono y control de plagas.
 
-IMPORTANTE - Reglas de formato para las respuestas:
-1. Usa Markdown para estructurar la respuesta
-2. Usa **texto** para negritas en títulos y conceptos clave
-3. Usa viñetas con - para listas de consejos
-4. Separa temas con subtítulos en formato ## Subtítulo
-5. Si hay múltiples puntos, úsalos con saltos de línea claros
-6. NO escribas todo en un párrafo continuo
+REGLAS CRÍTICAS:
+- NO comiences con saludos como "¡Hola! Como Experto Botánico..."
+- NO incluyas presentaciones personales en cada respuesta
+- Responde directamente a la pregunta del usuario
+- Solo si es la primera interacción, sé breve y amable
 
-Responde siempre en español, de forma profesional y educativa.
-Sé conciso pero informativo. Máximo 250 palabras.
+FORMATO DE RESPUESTAS:
+1. Usa Markdown para estructurar
+2. **negritas** para títulos y conceptos clave
+3. Viñetas con - para listas
+4. Subtítulos con ## para organizar
+5. Máximo 250 palabras
+6. Responde en español, profesional y educativo
 
-Ejemplo de formato correcto:
+Ejemplo:
 ## Recomendaciones para tu árbol
-
 **Riego:**
 - Riega cada 3 días en primavera
-- Mantén el suelo húmedo, no encharcado
-- Reduce en invierno a una vez por semana`;
+- Mantén suelo húmedo, no encharcado`;
 
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json();
-    const { mensaje, contexto = {} } = body;
+    const { mensaje, contexto = {}, historial = [] } = body;
 
     if (!mensaje?.trim()) {
       return NextResponse.json(
@@ -48,17 +50,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Construir prompt con contexto
+    // Construir prompt con contexto e historial
     let promptCompleto = SYSTEM_INSTRUCTIONS + "\n\n";
+
     if (Object.keys(contexto).length > 0) {
       const ctx = Object.entries(contexto)
         .map(([k, v]) => `${k}: ${v}`)
         .join(", ");
       promptCompleto += `Contexto actual: ${ctx}\n`;
     }
-    promptCompleto += `Usuario pregunta: ${mensaje}`;
 
-    // Llamar a Google Gemini (usando el modelo más moderno disponible)
+    // Agregar historial de conversación si existe
+    if (historial.length > 0) {
+      promptCompleto += "\nHistorial de conversación:\n";
+      historial.forEach((msg) => {
+        const rol = msg.rol === "usuario" ? "Usuario" : "Asistente";
+        promptCompleto += `${rol}: ${msg.contenido}\n`;
+      });
+      promptCompleto += "\n";
+    }
+
+    promptCompleto += `Nueva pregunta del usuario: ${mensaje}`;
+
+    // Llamar a Google Gemini
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     const payload = {
       contents: [
