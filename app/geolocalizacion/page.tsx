@@ -27,14 +27,23 @@ interface UserLocation {
   lng: number;
 }
 
+interface WeatherInfo {
+  temperatura?: number;
+  humedad?: number;
+  descripcion?: string;
+  icono?: string;
+}
+
 interface TreeDistance extends Arbol {
   distance: number;
+  weather?: WeatherInfo;
 }
 
 export default function GeolocalizacionPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [userWeather, setUserWeather] = useState<any>(null);
   const [arboles, setArboles] = useState<Arbol[]>([]);
   const [treeDistances, setTreeDistances] = useState<TreeDistance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,9 +76,23 @@ export default function GeolocalizacionPage() {
     setError(null);
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
         setUserLocation({ lat: latitude, lng: longitude });
+        
+        // Obtener clima del usuario
+        try {
+          const weatherRes = await fetch(
+            `/api/geolocalizacion/api-clima?lat=${latitude}&lon=${longitude}`
+          );
+          if (weatherRes.ok) {
+            const weatherData = await weatherRes.json();
+            setUserWeather(weatherData);
+          }
+        } catch (error) {
+          console.error("Error fetching user weather:", error);
+        }
+        
         setGeoLoading(false);
 
         // Calcular distancias
@@ -128,7 +151,7 @@ export default function GeolocalizacionPage() {
     return R * c;
   };
 
-  const calculateDistances = (location: UserLocation) => {
+  const calculateDistances = async (location: UserLocation) => {
     const distances = arboles
       .map((arbol) => ({
         ...arbol,
@@ -141,7 +164,33 @@ export default function GeolocalizacionPage() {
       }))
       .sort((a, b) => a.distance - b.distance);
 
-    setTreeDistances(distances);
+    // Obtener datos de clima para cada árbol
+    const treesWithWeather = await Promise.all(
+      distances.map(async (tree) => {
+        try {
+          const weatherRes = await fetch(
+            `/api/geolocalizacion/api-clima?lat=${tree.latitud}&lon=${tree.longitud}&species=${encodeURIComponent(tree.especie || "")}`
+          );
+          if (weatherRes.ok) {
+            const weatherData = await weatherRes.json();
+            return {
+              ...tree,
+              weather: {
+                temperatura: weatherData.current?.temperatura,
+                humedad: weatherData.current?.humedad,
+                descripcion: weatherData.current?.descripcion,
+                icono: weatherData.current?.icono,
+              },
+            };
+          }
+        } catch (error) {
+          console.error("Error fetching weather for tree:", error);
+        }
+        return tree;
+      })
+    );
+
+    setTreeDistances(treesWithWeather);
   };
 
   useEffect(() => {
@@ -162,18 +211,72 @@ export default function GeolocalizacionPage() {
       : []),
     ...treeDistances
       .filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud))
-      .map((a) => ({
-        lat: a.latitud,
-        lng: a.longitud,
-        healthStatus: a.estado_salud,
-        popup: `<div class="font-semibold text-sm text-gray-900">${a.nombre}</div>${
-          a.especie ? `<div class="text-xs text-gray-600">🌿 ${a.especie}</div>` : ""
-        }${
-          a.distance
-            ? `<div class="text-xs text-green-600 font-semibold mt-1">📏 ${a.distance.toFixed(2)} km</div>`
-            : ""
-        }`,
-      })),
+      .map((a) => {
+        let popupContent = `<div class="popup-container" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">`;
+        
+        // Nombre del árbol
+        popupContent += `<div style="font-weight: bold; color: #1f2937; font-size: 14px; margin-bottom: 6px;">🌳 ${a.nombre}</div>`;
+        
+        // Especie
+        if (a.especie) {
+          popupContent += `<div style="color: #6b7280; font-size: 12px; margin-bottom: 6px;">🌿 ${a.especie}</div>`;
+        }
+        
+        // Estado de salud
+        if (a.estado_salud) {
+          const healthColors: Record<string, string> = {
+            excelente: "#22c55e",
+            regular: "#f59e0b",
+            malo: "#ef4444",
+          };
+          const healthLabels: Record<string, string> = {
+            excelente: "✅ Excelente",
+            regular: "⚠️ Regular",
+            malo: "❌ Crítico",
+          };
+          const color = healthColors[a.estado_salud] || "#6b7280";
+          const label = healthLabels[a.estado_salud] || a.estado_salud;
+          popupContent += `<div style="background: ${color}15; border-left: 3px solid ${color}; padding: 6px 8px; margin: 6px 0; border-radius: 3px; font-size: 12px; color: ${color}; font-weight: 600;">${label}</div>`;
+        }
+        
+        // Distancia
+        if (a.distance) {
+          popupContent += `<div style="color: #16a34a; font-size: 12px; font-weight: 600; margin: 6px 0;">📏 ${a.distance.toFixed(2)} km</div>`;
+        }
+        
+        // Información climática
+        if (a.weather?.temperatura !== undefined || a.weather?.humedad !== undefined) {
+          popupContent += `<div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 8px; border-radius: 4px; margin-top: 8px;">`;
+          
+          if (a.weather.temperatura !== undefined) {
+            popupContent += `<div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #0369a1; font-weight: 600; margin-bottom: 4px;">🌡️ Temperatura: <span style="color: #ea580c; font-weight: bold;">${Math.round(a.weather.temperatura)}°C</span></div>`;
+          }
+          
+          if (a.weather.humedad !== undefined) {
+            popupContent += `<div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #0369a1; font-weight: 600;">💧 Humedad: <span style="color: #0284c7; font-weight: bold;">${Math.round(a.weather.humedad)}%</span></div>`;
+          }
+          
+          if (a.weather.descripcion) {
+            popupContent += `<div style="font-size: 11px; color: #64748b; margin-top: 4px; text-align: center;">${a.weather.icono || "🌐"} ${a.weather.descripcion}</div>`;
+          }
+          
+          popupContent += `</div>`;
+        }
+        
+        popupContent += `</div>`;
+        
+        return {
+          lat: a.latitud,
+          lng: a.longitud,
+          healthStatus: a.estado_salud,
+          popup: popupContent,
+          nombre: a.nombre,
+          especie: a.especie,
+          temperatura: a.weather?.temperatura,
+          humedad: a.weather?.humedad,
+          distance: a.distance,
+        };
+      }),
   ], [userLocation, treeDistances, activeHealthFilters]);
 
   if (status === "loading" || loading) {
@@ -342,6 +445,47 @@ export default function GeolocalizacionPage() {
                 )}
               </CardContent>
             </Card>
+
+            {userWeather && userWeather.current && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    {userWeather.current.icono} Clima Actual
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <p className="text-xs text-orange-900 font-semibold">🌡️ Temperatura</p>
+                    <p className="text-2xl font-bold text-orange-600">
+                      {Math.round(userWeather.current.temperatura)}°C
+                    </p>
+                    <p className="text-xs text-orange-700 mt-1">
+                      Sensación: {Math.round(userWeather.current.sensacion_termica)}°C
+                    </p>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs text-blue-900 font-semibold">💧 Humedad</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {Math.round(userWeather.current.humedad)}%
+                    </p>
+                  </div>
+                  <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
+                    <p className="text-xs text-sky-900 font-semibold">☁️ Condición</p>
+                    <p className="text-sm font-semibold text-sky-700">
+                      {userWeather.current.descripcion}
+                    </p>
+                  </div>
+                  {userWeather.current.velocidad_viento !== undefined && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                      <p className="text-xs text-purple-900 font-semibold">💨 Viento</p>
+                      <p className="text-sm font-semibold text-purple-700">
+                        {(userWeather.current.velocidad_viento).toFixed(1)} m/s
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
