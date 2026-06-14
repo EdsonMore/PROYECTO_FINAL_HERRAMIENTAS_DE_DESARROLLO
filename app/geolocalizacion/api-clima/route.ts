@@ -105,6 +105,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         indice_uv: calcularIndiceUV(data.main.temp, data.clouds.all),
         indice_calor: calcularIndiceCalor(data.main.temp, data.main.humidity),
         riesgo_sequedad: calcularRiesgoSequedad(data.main.humidity, data.rain?.["1h"] || 0),
+        indice_supervivencia: 0,
+        riesgo_ambiental: "bajo",
       },
     };
 
