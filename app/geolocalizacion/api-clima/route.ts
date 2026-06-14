@@ -28,6 +28,8 @@ interface WeatherData {
     indice_uv: number;
     indice_calor: string;
     riesgo_sequedad: string;
+    indice_supervivencia: number;
+    riesgo_ambiental: string;
   };
   recomendaciones_arbol?: string[];
 }
@@ -106,6 +108,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     };
 
+    // Calcular índices de supervivencia
+    const indice_uv = weatherData.indices.indice_uv;
+    weatherData.indices.indice_supervivencia = calcularIndiceSupervisencia(
+      data.main.temp,
+      data.main.humidity,
+      data.wind.speed,
+      data.rain?.["1h"] || 0,
+      indice_uv,
+      weatherData.indices.indice_calor
+    );
+    weatherData.indices.riesgo_ambiental = evaluarRiesgoAmbiental(
+      weatherData.indices.indice_supervivencia,
+      weatherData.indices.riesgo_sequedad,
+      weatherData.indices.indice_calor
+    );
+
     if (tree_species) {
       weatherData.recomendaciones_arbol = generarRecomendaciones(tree_species, weatherData.current, weatherData.indices);
     }
@@ -157,11 +175,77 @@ function calcularRiesgoSequedad(humedad: number, precipitacion: number): string 
   return "alto";
 }
 
+function calcularIndiceSupervisencia(
+  temperatura: number,
+  humedad: number,
+  velocidad_viento: number,
+  precipitacion: number,
+  indice_uv: number,
+  indice_calor: string
+): number {
+  // Score de 0-100 para supervivencia
+  let score = 100;
+
+  // Temperatura óptima 15-28°C
+  if (temperatura < 10 || temperatura > 40) score -= 25;
+  else if (temperatura < 15 || temperatura > 35) score -= 15;
+  else if (temperatura < 18 || temperatura > 30) score -= 5;
+
+  // Humedad óptima 40-80%
+  if (humedad < 25 || humedad > 95) score -= 20;
+  else if (humedad < 35 || humedad > 85) score -= 10;
+
+  // Viento excesivo
+  if (velocidad_viento > 20) score -= 20;
+  else if (velocidad_viento > 15) score -= 10;
+
+  // UV
+  if (indice_uv > 9) score -= 15;
+  else if (indice_uv > 7) score -= 8;
+
+  // Calor extremo
+  if (indice_calor === "extremo") score -= 20;
+  else if (indice_calor === "alto") score -= 10;
+
+  // Precipitación excesiva (riesgo de encharcamiento)
+  if (precipitacion > 50) score -= 15;
+  else if (precipitacion > 20) score -= 5;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function evaluarRiesgoAmbiental(
+  indice_supervivencia: number,
+  riesgo_sequedad: string,
+  indice_calor: string
+): string {
+  if (indice_supervivencia >= 80) return "bajo";
+  if (indice_supervivencia >= 60) {
+    if (riesgo_sequedad === "alto") return "moderado";
+    return "bajo";
+  }
+  if (indice_supervivencia >= 40) return "moderado";
+  if (indice_supervivencia >= 20) return "alto";
+  return "crítico";
+}
+
 function generarRecomendaciones(especie: string, clima: WeatherData["current"], indices: WeatherData["indices"]): string[] {
   const recomendaciones: string[] = [];
 
+  // Recomendaciones por riesgo ambiental
+  if (indices.riesgo_ambiental === "crítico") {
+    recomendaciones.push("🚨 RIESGO CRÍTICO: Condiciones extremas para la supervivencia del árbol");
+    recomendaciones.push("❌ Intervención urgente requerida");
+  } else if (indices.riesgo_ambiental === "alto") {
+    recomendaciones.push("⚠️ RIESGO ALTO: Condiciones desfavorables para el árbol");
+  } else if (indices.riesgo_ambiental === "moderado") {
+    recomendaciones.push("⚡ Monitoreo constante recomendado");
+  } else {
+    recomendaciones.push("✅ Condiciones favorables para la supervivencia");
+  }
+
   if (clima.humedad < 30 && indices.riesgo_sequedad === "alto") {
-    recomendaciones.push("⚠️ Riego urgente: humedad muy baja");
+    recomendaciones.push("💧 Riego urgente: humedad muy baja");
   }
 
   if (clima.temperatura > 35) {
@@ -180,5 +264,5 @@ function generarRecomendaciones(especie: string, clima: WeatherData["current"], 
     recomendaciones.push("🌧️ Drenaje adecuado después de lluvia intensa");
   }
 
-  return recomendaciones.length > 0 ? recomendaciones : ["✅ Condiciones favorables para el árbol"];
+  return recomendaciones;
 }

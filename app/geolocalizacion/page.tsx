@@ -32,6 +32,9 @@ interface WeatherInfo {
   humedad?: number;
   descripcion?: string;
   icono?: string;
+  indice_supervivencia?: number;
+  riesgo_ambiental?: string;
+  recomendaciones?: string[];
 }
 
 interface TreeDistance extends Arbol {
@@ -180,6 +183,9 @@ export default function GeolocalizacionPage() {
                 humedad: weatherData.current?.humedad,
                 descripcion: weatherData.current?.descripcion,
                 icono: weatherData.current?.icono,
+                indice_supervivencia: weatherData.indices?.indice_supervivencia,
+                riesgo_ambiental: weatherData.indices?.riesgo_ambiental,
+                recomendaciones: weatherData.recomendaciones_arbol,
               },
             };
           }
@@ -260,6 +266,48 @@ export default function GeolocalizacionPage() {
             popupContent += `<div style="font-size: 11px; color: #64748b; margin-top: 4px; text-align: center;">${a.weather.icono || "🌐"} ${a.weather.descripcion}</div>`;
           }
           
+          popupContent += `</div>`;
+        }
+        
+        // Riesgo Ambiental y Supervivencia
+        if (a.weather?.riesgo_ambiental !== undefined || a.weather?.indice_supervivencia !== undefined) {
+          const riesgoColors: Record<string, string> = {
+           bajo: "#22c55e",
+           moderado: "#f59e0b",
+           alto: "#ef4444",
+           crítico: "#7f1d1d",
+          };
+          const riesgoLabels: Record<string, string> = {
+           bajo: "✅ Bajo",
+           moderado: "⚠️ Moderado",
+           alto: "🔴 Alto",
+           crítico: "🚨 Crítico",
+          };
+          
+          const riesgoColor = riesgoColors[a.weather.riesgo_ambiental || ""] || "#6b7280";
+          const riesgoLabel = riesgoLabels[a.weather.riesgo_ambiental || ""] || "Desconocido";
+          
+          popupContent += `<div style="background: ${riesgoColor}20; border: 2px solid ${riesgoColor}; padding: 8px; border-radius: 4px; margin-top: 8px;">`;
+          popupContent += `<div style="font-weight: bold; color: ${riesgoColor}; margin-bottom: 6px; font-size: 13px;">📊 Riesgo Ambiental</div>`;
+          popupContent += `<div style="color: ${riesgoColor}; font-weight: 600; font-size: 12px; margin-bottom: 4px;">${riesgoLabel}</div>`;
+          
+          if (a.weather.indice_supervivencia !== undefined) {
+           const supervivenciaScore = Math.round(a.weather.indice_supervivencia);
+           popupContent += `<div style="font-size: 11px; color: #6b7280;">Índice de Supervivencia: <span style="font-weight: bold; color: ${riesgoColor};">${supervivenciaScore}%</span></div>`;
+          }
+          
+          popupContent += `</div>`;
+        }
+        
+        // Recomendaciones
+        if (a.weather?.recomendaciones && a.weather.recomendaciones.length > 0) {
+          popupContent += `<div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 8px; border-radius: 3px; margin-top: 8px; font-size: 11px; color: #92400e;">`;
+          a.weather.recomendaciones.slice(0, 2).forEach((rec: string) => {
+           popupContent += `<div style="margin-bottom: 3px;">${rec}</div>`;
+          });
+          if (a.weather.recomendaciones.length > 2) {
+           popupContent += `<div style="font-size: 10px; font-style: italic;">+${a.weather.recomendaciones.length - 2} más...</div>`;
+          }
           popupContent += `</div>`;
         }
         
@@ -483,6 +531,54 @@ export default function GeolocalizacionPage() {
                       </p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {userWeather && userWeather.indices && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    📊 Riesgo Ambiental para Árboles
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {(() => {
+                    const riesgo = userWeather.indices.riesgo_ambiental;
+                    const riesgoColors: Record<string, string> = {
+                      bajo: "bg-green-50 border-green-200 text-green-900",
+                      moderado: "bg-yellow-50 border-yellow-200 text-yellow-900",
+                      alto: "bg-orange-50 border-orange-200 text-orange-900",
+                      crítico: "bg-red-50 border-red-200 text-red-900",
+                    };
+                    const riesgoEmojis: Record<string, string> = {
+                      bajo: "✅",
+                      moderado: "⚠️",
+                      alto: "🔴",
+                      crítico: "🚨",
+                    };
+                    const riesgoLabels: Record<string, string> = {
+                      bajo: "Bajo - Condiciones favorables",
+                      moderado: "Moderado - Monitoreo recomendado",
+                      alto: "Alto - Intervención necesaria",
+                      crítico: "Crítico - Condiciones extremas",
+                    };
+                    return (
+                      <div className={`border-2 rounded-lg p-4 ${riesgoColors[riesgo] || riesgoColors.moderado}`}>
+                        <div className="font-bold text-lg mb-2">
+                          {riesgoEmojis[riesgo] || "❓"} {riesgoLabels[riesgo] || "Desconocido"}
+                        </div>
+                        <div className="text-sm mb-3">
+                          Índice de Supervivencia: <span className="font-bold text-lg">{Math.round(userWeather.indices.indice_supervivencia)}%</span>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <div>💧 Riesgo de Sequedad: <span className="font-semibold">{userWeather.indices.riesgo_sequedad}</span></div>
+                          <div>🌡️ Índice de Calor: <span className="font-semibold">{userWeather.indices.indice_calor}</span></div>
+                          <div>☀️ Índice UV: <span className="font-semibold">{userWeather.indices.indice_uv.toFixed(1)}</span></div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             )}
