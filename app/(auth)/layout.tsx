@@ -1,10 +1,10 @@
-import type React from "react"
-import { Providers } from "@/app/providers"
+import type React from "react";
+import { Providers } from "@/app/providers";
 
 export default function AuthLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  return <Providers>{children}</Providers>
+  return <Providers>{children}</Providers>;
 }

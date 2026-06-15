@@ -499,7 +499,10 @@ export default function MiArbolPage() {
                         id="especie"
                         value={formData.especie}
                         onChange={(e) =>
-                          setFormData({ ...formData, especie: e.target.value })
+                          setFormData({
+                            ...formData,
+                            especie: e.target.value,
+                          })
                         }
                         placeholder="Ej: Roble (auto-completada)"
                         required
@@ -774,7 +777,8 @@ export default function MiArbolPage() {
                       <div
                         className={`px-2 py-1 rounded text-xs font-medium border ${getHealthStyles(arbol.estado_salud).bgColor} ${getHealthStyles(arbol.estado_salud).textColor} ${getHealthStyles(arbol.estado_salud).borderColor}`}
                       >
-                        {getHealthEmoji(arbol.estado_salud)} {getHealthLabel(arbol.estado_salud)}
+                        {getHealthEmoji(arbol.estado_salud)}{" "}
+                        {getHealthLabel(arbol.estado_salud)}
                       </div>
                     )}
 
@@ -789,16 +793,21 @@ export default function MiArbolPage() {
                     <div className="space-y-1 text-xs text-gray-500">
                       {arbol.fecha_plantacion && (
                         <p className="line-clamp-1">
-                          📅 {new Date(arbol.fecha_plantacion).toLocaleDateString("es-ES", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+                          📅{" "}
+                          {new Date(arbol.fecha_plantacion).toLocaleDateString(
+                            "es-ES",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}
                         </p>
                       )}
                       <p className="line-clamp-1 font-mono text-gray-600 flex items-center gap-1">
                         <MapPin className="h-3 w-3 flex-shrink-0 text-purple-600" />
-                        {Number(arbol.latitud).toFixed(4)}, {Number(arbol.longitud).toFixed(4)}
+                        {Number(arbol.latitud).toFixed(4)},{" "}
+                        {Number(arbol.longitud).toFixed(4)}
                       </p>
                     </div>
 
@@ -840,15 +849,15 @@ export default function MiArbolPage() {
               <span className="text-2xl">⚠️</span> Confirmar Traslado del Árbol
             </AlertDialogTitle>
             <AlertDialogDescription className="mt-4 space-y-3">
-              <p className="font-semibold text-foreground">
+              <span className="font-semibold text-foreground block">
                 ¿Estás seguro de trasladar este árbol?
-              </p>
+              </span>
 
               <div className="bg-red-50 p-3 rounded-lg border border-red-200 space-y-1">
-                <p className="text-xs font-semibold text-red-900">
+                <span className="text-xs font-semibold text-red-900 block">
                   Ubicación Actual:
-                </p>
-                <p className="text-sm text-red-800 font-mono">
+                </span>
+                <span className="text-sm text-red-800 font-mono block">
                   {editingArbol
                     ? Number(editingArbol.latitud).toFixed(6)
                     : "N/A"}
@@ -856,23 +865,23 @@ export default function MiArbolPage() {
                   {editingArbol
                     ? Number(editingArbol.longitud).toFixed(6)
                     : "N/A"}
-                </p>
+                </span>
               </div>
 
               <div className="bg-green-50 p-3 rounded-lg border border-green-200 space-y-1">
-                <p className="text-xs font-semibold text-green-900">
+                <span className="text-xs font-semibold text-green-900 block">
                   Nueva Ubicación:
-                </p>
-                <p className="text-sm text-green-800 font-mono">
+                </span>
+                <span className="text-sm text-green-800 font-mono block">
                   {newCoordinates?.lat.toFixed(6)},{" "}
                   {newCoordinates?.lng.toFixed(6)}
-                </p>
+                </span>
               </div>
 
-              <p className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200">
+              <span className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded border border-yellow-200 block">
                 Esta acción no se puede deshacer fácilmente. Asegúrate de que
                 las coordenadas sean correctas.
-              </p>
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-3 justify-end mt-6">
