@@ -52,14 +52,12 @@ export default function ClimaPage() {
   const [arbolesLoading, setArbolesLoading] = useState(true);
   const [weatherHistory, setWeatherHistory] = useState<WeatherHistory[]>([]);
 
-  // Verificar autenticación
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
 
-  // Cargar árboles del usuario y historial de clima
   useEffect(() => {
     if (status === "authenticated") {
       fetchArboles();
@@ -67,7 +65,6 @@ export default function ClimaPage() {
     }
   }, [status]);
 
-  // Cargar historial de localStorage
   const loadWeatherHistory = () => {
     try {
       const saved = localStorage.getItem("weatherHistory");
@@ -85,7 +82,6 @@ export default function ClimaPage() {
     }
   };
 
-  // Guardar historial en localStorage
   const saveWeatherHistory = (history: WeatherHistory[]) => {
     try {
       localStorage.setItem("weatherHistory", JSON.stringify(history));
@@ -100,7 +96,6 @@ export default function ClimaPage() {
       if (res.ok) {
         const data = await res.json();
         setArboles(data);
-        // Seleccionar el primer árbol automáticamente
         if (data.length > 0) {
           setSelectedArbol(data[0]);
         }
@@ -112,7 +107,6 @@ export default function ClimaPage() {
     }
   };
 
-  // Obtener clima para ubicación específica
   const fetchWeatherForArbol = async (arbol: Arbol) => {
     setWeatherLoading(true);
     setError("");
@@ -130,7 +124,6 @@ export default function ClimaPage() {
 
       setWeather(data);
 
-      // Crear registro del historial
       const now = new Date();
       const timestampFormato = now.toLocaleString("es-ES", {
         year: "numeric",
@@ -151,7 +144,6 @@ export default function ClimaPage() {
         timestampFormato: timestampFormato,
       };
 
-      // Agregar al inicio del historial (más reciente primero)
       const updatedHistory = [newHistoryEntry, ...weatherHistory];
       setWeatherHistory(updatedHistory);
       saveWeatherHistory(updatedHistory);
@@ -162,7 +154,6 @@ export default function ClimaPage() {
     }
   };
 
-  // Cuando se selecciona un árbol, obtener su clima
   const handleArbolChange = (arbolId: string) => {
     const arbol = arboles.find((a) => a.id === parseInt(arbolId));
     if (arbol) {
@@ -171,27 +162,23 @@ export default function ClimaPage() {
     }
   };
 
-  // Eliminar un registro del historial
   const deleteHistoryEntry = (id: string) => {
     const updatedHistory = weatherHistory.filter((item) => item.id !== id);
     setWeatherHistory(updatedHistory);
     saveWeatherHistory(updatedHistory);
   };
 
-  // Limpiar todo el historial
   const clearHistory = () => {
     setWeatherHistory([]);
     saveWeatherHistory([]);
   };
 
-  // Cargar clima cuando la página carga (para el primer árbol si existe)
   useEffect(() => {
     if (selectedArbol && !weather && !weatherLoading) {
       fetchWeatherForArbol(selectedArbol);
     }
   }, []);
 
-  // Detectar anomalías climáticas
   const detectAnomalies = (currentWeather: any, history: WeatherHistory[]) => {
     const anomalies: {
       type: string;
@@ -202,7 +189,6 @@ export default function ClimaPage() {
     const currentHumidity = currentWeather?.main?.humidity;
     const currentWindSpeed = currentWeather?.wind?.speed;
 
-    // Detectar onda de calor (temperatura muy alta de manera prolongada)
     const recentTemps = history
       .slice(0, 5)
       .map((h) => h.clima?.main?.temp || 0);
@@ -223,7 +209,6 @@ export default function ClimaPage() {
       });
     }
 
-    // Detectar posible lluvia (humedad muy alta + presión baja)
     const pressure = currentWeather?.main?.pressure;
     if (currentHumidity > 80 && pressure < 1013) {
       anomalies.push({
@@ -233,7 +218,6 @@ export default function ClimaPage() {
       });
     }
 
-    // Detectar cambios significativos vs histórico
     if (history.length > 0) {
       const lastWeather = history[0]?.clima?.main;
       if (lastWeather) {
@@ -261,7 +245,6 @@ export default function ClimaPage() {
     return anomalies;
   };
 
-  // Comparar clima actual vs histórico
   const getClimaticComparison = (history: WeatherHistory[]) => {
     if (history.length < 2) return null;
 
@@ -532,7 +515,6 @@ export default function ClimaPage() {
 
                 {/* Weather Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Temperature Card */}
                   <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
@@ -553,7 +535,6 @@ export default function ClimaPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Humidity Card */}
                   <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
@@ -573,7 +554,6 @@ export default function ClimaPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Wind Speed Card */}
                   <Card className="bg-gradient-to-br from-teal-50 to-green-50 border-teal-200">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
@@ -594,7 +574,6 @@ export default function ClimaPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Pressure Card */}
                   <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
@@ -619,7 +598,6 @@ export default function ClimaPage() {
                 {/* Current Weather Description with Tree Image */}
                 <Card className="bg-white border-2 border-blue-200 overflow-hidden">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Tree Image */}
                     {selectedArbol?.foto_url && (
                       <div className="md:col-span-1 relative h-64 md:h-auto">
                         <img
@@ -633,8 +611,6 @@ export default function ClimaPage() {
                         />
                       </div>
                     )}
-
-                    {/* Weather Info */}
                     <CardContent
                       className={`pt-6 ${selectedArbol?.foto_url ? "md:col-span-2" : "md:col-span-3"}`}
                     >
@@ -652,7 +628,6 @@ export default function ClimaPage() {
                             </p>
                           )}
                         </div>
-
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-2 text-blue-600">
                             <Clock className="h-5 w-5" />
@@ -662,7 +637,6 @@ export default function ClimaPage() {
                             </span>
                           </div>
                         </div>
-
                         <div className="flex items-center justify-start gap-3 mt-4">
                           <Cloud className="h-8 w-8 text-gray-400" />
                           <p className="text-xl text-gray-600 capitalize">
@@ -681,112 +655,498 @@ export default function ClimaPage() {
 
                 {/* Comparación Climática Histórica */}
                 {getClimaticComparison(weatherHistory) && (
-                  <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300">
-                    <CardContent className="pt-6">
-                      <h3 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                  <Card className="bg-white border-2 border-indigo-200 overflow-hidden">
+                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+                      <h3 className="text-xl font-bold text-white flex items-center gap-2">
                         📊 Comparación: Clima Actual vs Histórico
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Temperatura Comparison */}
-                        <div className="bg-white rounded-lg p-4 border border-indigo-200">
-                          <p className="text-sm text-gray-600 mb-2">
-                            🌡️ Temperatura
-                          </p>
-                          <div className="space-y-1">
-                            <p className="text-lg font-bold text-orange-600">
-                              {weather.main?.temp?.toFixed(1)}°C (Actual)
+                      <p className="text-indigo-200 text-sm mt-1">
+                        Basado en las últimas{" "}
+                        {getClimaticComparison(weatherHistory)?.samplesCount}{" "}
+                        consultas registradas
+                      </p>
+                    </div>
+
+                    <CardContent className="pt-6 space-y-6">
+                      {/* Temperatura */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">🌡️</span>
+                            <span className="font-bold text-gray-800">
+                              Temperatura
+                            </span>
+                          </div>
+                          <span
+                            className={`text-xs font-bold px-3 py-1 rounded-full ${
+                              parseFloat(
+                                getClimaticComparison(weatherHistory)
+                                  ?.tempDiff || "0",
+                              ) > 3
+                                ? "bg-red-100 text-red-700"
+                                : parseFloat(
+                                      getClimaticComparison(weatherHistory)
+                                        ?.tempDiff || "0",
+                                    ) < -3
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {parseFloat(
+                              getClimaticComparison(weatherHistory)?.tempDiff ||
+                                "0",
+                            ) > 0
+                              ? "+"
+                              : ""}
+                            {getClimaticComparison(weatherHistory)?.tempDiff}°C
+                            vs promedio
+                          </span>
+                        </div>
+
+                        {/* Barra visual */}
+                        <div className="relative h-8 bg-gray-100 rounded-full overflow-hidden">
+                          {/* Promedio histórico - barra de fondo */}
+                          <div className="absolute inset-0 flex items-center px-3">
+                            <div
+                              className="h-4 bg-indigo-200 rounded-full transition-all"
+                              style={{
+                                width: `${Math.min((parseFloat(getClimaticComparison(weatherHistory)?.avgHistoricTemp || "0") / 50) * 100, 100)}%`,
+                              }}
+                            />
+                          </div>
+                          {/* Valor actual - barra encima */}
+                          <div className="absolute inset-0 flex items-center px-3">
+                            <div
+                              className={`h-6 rounded-full transition-all ${
+                                weather.main?.temp > 38
+                                  ? "bg-red-500"
+                                  : weather.main?.temp > 32
+                                    ? "bg-orange-400"
+                                    : "bg-indigo-500"
+                              }`}
+                              style={{
+                                width: `${Math.min((weather.main?.temp / 50) * 100, 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100">
+                            <p className="text-xs text-indigo-600 font-medium mb-1">
+                              📍 Temperatura Actual
                             </p>
-                            <p className="text-sm text-gray-600">
-                              Promedio histórico:{" "}
+                            <p className="text-2xl font-bold text-indigo-800">
+                              {weather.main?.temp?.toFixed(1)}°C
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {weather.main?.temp > 38
+                                ? "🔥 Extremadamente caliente"
+                                : weather.main?.temp > 32
+                                  ? "☀️ Muy caliente"
+                                  : weather.main?.temp > 20
+                                    ? "🌤️ Templado"
+                                    : "❄️ Fresco"}
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <p className="text-xs text-gray-600 font-medium mb-1">
+                              📈 Promedio Histórico
+                            </p>
+                            <p className="text-2xl font-bold text-gray-700">
                               {
                                 getClimaticComparison(weatherHistory)
                                   ?.avgHistoricTemp
                               }
                               °C
                             </p>
-                            <p
-                              className={`text-sm font-semibold ${
-                                parseFloat(
-                                  getClimaticComparison(weatherHistory)
-                                    ?.tempDiff || "0",
-                                ) > 0
-                                  ? "text-red-600"
-                                  : "text-blue-600"
-                              }`}
-                            >
-                              {parseFloat(
-                                getClimaticComparison(weatherHistory)
-                                  ?.tempDiff || "0",
-                              ) > 0
-                                ? "+"
-                                : ""}
-                              {getClimaticComparison(weatherHistory)?.tempDiff}
-                              °C vs promedio
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              (Basado en últimas{" "}
+                            <p className="text-xs text-gray-500 mt-1">
+                              Últimas{" "}
                               {
                                 getClimaticComparison(weatherHistory)
                                   ?.samplesCount
                               }{" "}
-                              consultas)
+                              consultas
                             </p>
                           </div>
                         </div>
 
-                        {/* Humedad Comparison */}
-                        <div className="bg-white rounded-lg p-4 border border-indigo-200">
-                          <p className="text-sm text-gray-600 mb-2">
-                            💧 Humedad
-                          </p>
-                          <div className="space-y-1">
-                            <p className="text-lg font-bold text-blue-600">
-                              {weather.main?.humidity}% (Actual)
+                        <div
+                          className={`rounded-lg p-3 text-sm font-medium ${
+                            parseFloat(
+                              getClimaticComparison(weatherHistory)?.tempDiff ||
+                                "0",
+                            ) > 3
+                              ? "bg-red-50 text-red-700 border border-red-200"
+                              : parseFloat(
+                                    getClimaticComparison(weatherHistory)
+                                      ?.tempDiff || "0",
+                                  ) < -3
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : "bg-green-50 text-green-700 border border-green-200"
+                          }`}
+                        >
+                          {parseFloat(
+                            getClimaticComparison(weatherHistory)?.tempDiff ||
+                              "0",
+                          ) > 3
+                            ? `🔺 La temperatura subió ${getClimaticComparison(weatherHistory)?.tempDiff}°C por encima del promedio. Tu árbol puede estar bajo estrés térmico.`
+                            : parseFloat(
+                                  getClimaticComparison(weatherHistory)
+                                    ?.tempDiff || "0",
+                                ) < -3
+                              ? `🔻 La temperatura bajó ${Math.abs(parseFloat(getClimaticComparison(weatherHistory)?.tempDiff || "0"))}°C por debajo del promedio. Condiciones más frescas de lo usual.`
+                              : `✅ La temperatura está dentro del rango normal histórico. Sin cambios significativos.`}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-100" />
+
+                      {/* Humedad */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">💧</span>
+                            <span className="font-bold text-gray-800">
+                              Humedad
+                            </span>
+                          </div>
+                          <span
+                            className={`text-xs font-bold px-3 py-1 rounded-full ${
+                              parseFloat(
+                                getClimaticComparison(weatherHistory)
+                                  ?.humidityDiff || "0",
+                              ) < -15
+                                ? "bg-red-100 text-red-700"
+                                : parseFloat(
+                                      getClimaticComparison(weatherHistory)
+                                        ?.humidityDiff || "0",
+                                    ) > 15
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {parseFloat(
+                              getClimaticComparison(weatherHistory)
+                                ?.humidityDiff || "0",
+                            ) > 0
+                              ? "+"
+                              : ""}
+                            {
+                              getClimaticComparison(weatherHistory)
+                                ?.humidityDiff
+                            }
+                            % vs promedio
+                          </span>
+                        </div>
+
+                        {/* Barra visual humedad */}
+                        <div className="relative h-8 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="absolute inset-0 flex items-center px-3">
+                            <div
+                              className="h-4 bg-blue-200 rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(parseFloat(getClimaticComparison(weatherHistory)?.avgHistoricHumidity || "0"), 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <div className="absolute inset-0 flex items-center px-3">
+                            <div
+                              className={`h-6 rounded-full transition-all ${
+                                weather.main?.humidity < 30
+                                  ? "bg-red-500"
+                                  : weather.main?.humidity < 50
+                                    ? "bg-yellow-400"
+                                    : "bg-blue-500"
+                              }`}
+                              style={{
+                                width: `${Math.min(weather.main?.humidity, 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                            <p className="text-xs text-blue-600 font-medium mb-1">
+                              📍 Humedad Actual
                             </p>
-                            <p className="text-sm text-gray-600">
-                              Promedio histórico:{" "}
+                            <p className="text-2xl font-bold text-blue-800">
+                              {weather.main?.humidity}%
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {weather.main?.humidity < 30
+                                ? "🚨 Muy seca - riesgo alto"
+                                : weather.main?.humidity < 50
+                                  ? "⚠️ Baja - monitorear"
+                                  : weather.main?.humidity < 70
+                                    ? "✅ Óptima"
+                                    : "💦 Alta - posible lluvia"}
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <p className="text-xs text-gray-600 font-medium mb-1">
+                              📈 Promedio Histórico
+                            </p>
+                            <p className="text-2xl font-bold text-gray-700">
                               {
                                 getClimaticComparison(weatherHistory)
                                   ?.avgHistoricHumidity
                               }
                               %
                             </p>
-                            <p
-                              className={`text-sm font-semibold ${
-                                parseFloat(
-                                  getClimaticComparison(weatherHistory)
-                                    ?.humidityDiff || "0",
-                                ) > 0
-                                  ? "text-blue-600"
-                                  : "text-orange-600"
-                              }`}
-                            >
-                              {parseFloat(
-                                getClimaticComparison(weatherHistory)
-                                  ?.humidityDiff || "0",
-                              ) > 0
-                                ? "+"
-                                : ""}
-                              {
-                                getClimaticComparison(weatherHistory)
-                                  ?.humidityDiff
-                              }
-                              % vs promedio
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              (Basado en últimas{" "}
+                            <p className="text-xs text-gray-500 mt-1">
+                              Últimas{" "}
                               {
                                 getClimaticComparison(weatherHistory)
                                   ?.samplesCount
                               }{" "}
-                              consultas)
+                              consultas
                             </p>
                           </div>
+                        </div>
+
+                        <div
+                          className={`rounded-lg p-3 text-sm font-medium ${
+                            parseFloat(
+                              getClimaticComparison(weatherHistory)
+                                ?.humidityDiff || "0",
+                            ) < -15
+                              ? "bg-red-50 text-red-700 border border-red-200"
+                              : parseFloat(
+                                    getClimaticComparison(weatherHistory)
+                                      ?.humidityDiff || "0",
+                                  ) > 15
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : "bg-green-50 text-green-700 border border-green-200"
+                          }`}
+                        >
+                          {parseFloat(
+                            getClimaticComparison(weatherHistory)
+                              ?.humidityDiff || "0",
+                          ) < -15
+                            ? `🔺 La humedad bajó ${Math.abs(parseFloat(getClimaticComparison(weatherHistory)?.humidityDiff || "0"))}% respecto al promedio. Mayor riesgo de estrés hídrico en tu árbol.`
+                            : parseFloat(
+                                  getClimaticComparison(weatherHistory)
+                                    ?.humidityDiff || "0",
+                                ) > 15
+                              ? `🔻 La humedad subió ${getClimaticComparison(weatherHistory)?.humidityDiff}% respecto al promedio. Condiciones más húmedas de lo habitual.`
+                              : `✅ La humedad está dentro del rango normal histórico. Sin cambios significativos.`}
+                        </div>
+                      </div>
+
+                      {/* Resumen general */}
+                      <div className="border-t border-gray-100 pt-4">
+                        <div
+                          className={`rounded-xl p-4 border-2 ${
+                            parseFloat(
+                              getClimaticComparison(weatherHistory)?.tempDiff ||
+                                "0",
+                            ) > 3 ||
+                            parseFloat(
+                              getClimaticComparison(weatherHistory)
+                                ?.humidityDiff || "0",
+                            ) < -15
+                              ? "bg-red-50 border-red-300"
+                              : parseFloat(
+                                    getClimaticComparison(weatherHistory)
+                                      ?.tempDiff || "0",
+                                  ) > 1 ||
+                                  parseFloat(
+                                    getClimaticComparison(weatherHistory)
+                                      ?.humidityDiff || "0",
+                                  ) < -5
+                                ? "bg-yellow-50 border-yellow-300"
+                                : "bg-emerald-50 border-emerald-300"
+                          }`}
+                        >
+                          <p className="font-bold text-gray-800 mb-1">
+                            🔍 Diagnóstico General
+                          </p>
+                          <p
+                            className={`text-sm ${
+                              parseFloat(
+                                getClimaticComparison(weatherHistory)
+                                  ?.tempDiff || "0",
+                              ) > 3 ||
+                              parseFloat(
+                                getClimaticComparison(weatherHistory)
+                                  ?.humidityDiff || "0",
+                              ) < -15
+                                ? "text-red-700"
+                                : parseFloat(
+                                      getClimaticComparison(weatherHistory)
+                                        ?.tempDiff || "0",
+                                    ) > 1 ||
+                                    parseFloat(
+                                      getClimaticComparison(weatherHistory)
+                                        ?.humidityDiff || "0",
+                                    ) < -5
+                                  ? "text-yellow-700"
+                                  : "text-emerald-700"
+                            }`}
+                          >
+                            {parseFloat(
+                              getClimaticComparison(weatherHistory)?.tempDiff ||
+                                "0",
+                            ) > 3 ||
+                            parseFloat(
+                              getClimaticComparison(weatherHistory)
+                                ?.humidityDiff || "0",
+                            ) < -15
+                              ? "🚨 Las condiciones actuales son significativamente peores que el promedio histórico. Tu árbol necesita atención especial."
+                              : parseFloat(
+                                    getClimaticComparison(weatherHistory)
+                                      ?.tempDiff || "0",
+                                  ) > 1 ||
+                                  parseFloat(
+                                    getClimaticComparison(weatherHistory)
+                                      ?.humidityDiff || "0",
+                                  ) < -5
+                                ? "⚠️ Las condiciones han cambiado moderadamente respecto al promedio. Mantén un monitoreo regular."
+                                : "✅ Las condiciones actuales son similares al promedio histórico. Todo marcha con normalidad."}
+                          </p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 )}
+
+                {/* ============================================ */}
+                {/* REGLAS CLIMÁTICAS - PRONÓSTICO DEL ÁRBOL    */}
+                {/* ============================================ */}
+                <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300">
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-bold text-emerald-900 flex items-center gap-2">
+                          🌿 Reglas Climáticas
+                        </h3>
+                        <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full font-medium">
+                          Análisis automático
+                        </span>
+                      </div>
+
+                      {/* Regla 1: Humedad Baja → Estrés Hídrico */}
+                      <div
+                        className={`rounded-lg p-4 border-2 ${
+                          weather.main?.humidity < 30
+                            ? "bg-red-50 border-red-400"
+                            : weather.main?.humidity < 50
+                              ? "bg-yellow-50 border-yellow-400"
+                              : "bg-green-50 border-green-300"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">💧</span>
+                          <div className="flex-1">
+                            <p className="font-bold text-sm text-gray-800">
+                              Regla 1: Humedad → Estrés Hídrico
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              Humedad actual:{" "}
+                              <strong>{weather.main?.humidity}%</strong>
+                            </p>
+                            <p
+                              className={`text-sm font-semibold mt-2 ${
+                                weather.main?.humidity < 30
+                                  ? "text-red-700"
+                                  : weather.main?.humidity < 50
+                                    ? "text-yellow-700"
+                                    : "text-green-700"
+                              }`}
+                            >
+                              {weather.main?.humidity < 30
+                                ? "🚨 CRÍTICO: Estrés hídrico severo. Tu árbol necesita riego urgente ahora."
+                                : weather.main?.humidity < 50
+                                  ? "⚠️ ALERTA: Estrés hídrico moderado. Aumenta la frecuencia de riego."
+                                  : "✅ ÓPTIMO: Humedad adecuada. Mantén el riego habitual."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Regla 2: Calor Alto → Deshidratación */}
+                      <div
+                        className={`rounded-lg p-4 border-2 ${
+                          weather.main?.temp > 38
+                            ? "bg-red-50 border-red-400"
+                            : weather.main?.temp > 32
+                              ? "bg-orange-50 border-orange-400"
+                              : "bg-green-50 border-green-300"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">🌡️</span>
+                          <div className="flex-1">
+                            <p className="font-bold text-sm text-gray-800">
+                              Regla 2: Temperatura → Riesgo de Deshidratación
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              Temperatura actual:{" "}
+                              <strong>
+                                {weather.main?.temp?.toFixed(1)}°C
+                              </strong>
+                            </p>
+                            <p
+                              className={`text-sm font-semibold mt-2 ${
+                                weather.main?.temp > 38
+                                  ? "text-red-700"
+                                  : weather.main?.temp > 32
+                                    ? "text-orange-700"
+                                    : "text-green-700"
+                              }`}
+                            >
+                              {weather.main?.temp > 38
+                                ? "🚨 CRÍTICO: Riesgo extremo de deshidratación. Riega inmediatamente y da sombra."
+                                : weather.main?.temp > 32
+                                  ? "⚠️ ALERTA: Riesgo moderado de deshidratación. Riega en la mañana y al atardecer."
+                                  : "✅ ÓPTIMO: Temperatura dentro del rango seguro para tu árbol."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Pronóstico Final Combinado */}
+                      <div
+                        className={`rounded-lg p-4 border-2 ${
+                          weather.main?.humidity < 30 || weather.main?.temp > 38
+                            ? "bg-red-100 border-red-500"
+                            : weather.main?.humidity < 50 ||
+                                weather.main?.temp > 32
+                              ? "bg-yellow-100 border-yellow-500"
+                              : "bg-emerald-100 border-emerald-400"
+                        }`}
+                      >
+                        <p className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                          <span>🌳</span> Pronóstico para{" "}
+                          <span className="text-emerald-700">
+                            {selectedArbol.nombre}
+                          </span>
+                        </p>
+                        <p
+                          className={`text-sm font-semibold ${
+                            weather.main?.humidity < 30 ||
+                            weather.main?.temp > 38
+                              ? "text-red-700"
+                              : weather.main?.humidity < 50 ||
+                                  weather.main?.temp > 32
+                                ? "text-yellow-700"
+                                : "text-emerald-700"
+                          }`}
+                        >
+                          {weather.main?.humidity < 30 ||
+                          weather.main?.temp > 38
+                            ? "🚨 ESTADO CRÍTICO: Tu árbol está en alto riesgo. Requiere atención inmediata: riego urgente, sombra y monitoreo constante."
+                            : weather.main?.humidity < 50 ||
+                                weather.main?.temp > 32
+                              ? "⚠️ ESTADO DE ALERTA: Tu árbol necesita cuidados adicionales. Aumenta el riego y revisa el suelo diariamente."
+                              : "✅ ESTADO SALUDABLE: Las condiciones climáticas son favorables. Mantén tu rutina de cuidado habitual."}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Recommendations Section */}
                 <div className="space-y-4">
@@ -794,7 +1154,6 @@ export default function ClimaPage() {
                     <CheckCircle className="h-7 w-7 text-green-600" />
                     Recomendaciones de Cuidado
                   </h2>
-
                   <div className="grid gap-3">
                     {getDetailedAdvice(
                       weather.main?.temp,
@@ -898,7 +1257,6 @@ export default function ClimaPage() {
                     >
                       <CardContent className="pt-4">
                         <div className="flex flex-col md:flex-row gap-4">
-                          {/* Tree Image Thumbnail */}
                           {entry.arbolFoto && (
                             <div className="md:w-20 md:h-20 w-full h-32">
                               <img
@@ -912,8 +1270,6 @@ export default function ClimaPage() {
                               />
                             </div>
                           )}
-
-                          {/* History Info */}
                           <div className="flex-1">
                             <div className="flex items-start justify-between mb-3">
                               <div>
@@ -935,14 +1291,10 @@ export default function ClimaPage() {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-
-                            {/* Timestamp */}
                             <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                               <Clock className="h-4 w-4" />
                               <span>{entry.timestampFormato}</span>
                             </div>
-
-                            {/* Weather Summary Grid */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                               <div className="bg-orange-50 rounded p-2">
                                 <p className="text-xs text-gray-600">
@@ -971,8 +1323,6 @@ export default function ClimaPage() {
                                 </p>
                               </div>
                             </div>
-
-                            {/* Weather Description */}
                             <div className="flex items-center gap-2 text-sm text-gray-700">
                               <Cloud className="h-4 w-4 text-gray-400" />
                               <span className="capitalize">
