@@ -89,7 +89,25 @@ export async function protectAdminRoute(req: NextRequest) {
     };
   }
 
-  if (!isAdmin(context.userRole)) {
+  let hasAdminAccess = isAdmin(context.userRole);
+
+  if (!hasAdminAccess) {
+    try {
+      const roleResult = await query(
+        `SELECT permisos
+         FROM role_permissions
+         WHERE rol = $1
+         LIMIT 1`,
+        [context.userRole]
+      );
+      const adminPermissions = roleResult.rows[0]?.permisos?.admin;
+      hasAdminAccess = Array.isArray(adminPermissions) && adminPermissions.length > 0;
+    } catch (error) {
+      console.warn('Error verificando permisos administrativos:', error);
+    }
+  }
+
+  if (!hasAdminAccess) {
     await logAudit({
       userId: context.userId,
       action: 'unauthorized_access',
@@ -225,10 +243,14 @@ export async function getUserInfo(userId: number) {
 /**
  * Actualiza el rol de un usuario (solo admin)
  */
-export async function updateUserRole(userId: number, newRole: UserRole) {
+export async function updateUserRole(userId: number, newRole: string) {
   try {
-    // Validar que el rol sea válido
-    if (!Object.values(UserRole).includes(newRole)) {
+    const roleResult = await query(
+      'SELECT rol FROM role_permissions WHERE rol = $1 LIMIT 1',
+      [newRole]
+    );
+
+    if (roleResult.rows.length === 0) {
       throw new Error(`Rol inválido: ${newRole}`);
     }
 

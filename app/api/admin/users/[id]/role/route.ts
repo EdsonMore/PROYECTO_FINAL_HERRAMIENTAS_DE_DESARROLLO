@@ -7,7 +7,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { protectAdminRoute, logAudit, updateUserRole, getUserInfo } from '@/lib/role-guards';
-import { UserRole } from '@/types/roles';
 
 interface RouteParams {
   params: Promise<{
@@ -27,8 +26,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     const userId = parseInt(id);
     const { role } = await req.json();
 
-    // Validar que el rol sea válido
-    if (!Object.values(UserRole).includes(role)) {
+    if (!role || typeof role !== 'string') {
       return NextResponse.json(
         { error: `Rol inválido: ${role}` },
         { status: 400 }
@@ -36,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     }
 
     // No permitir que un admin se quite su propio rol de admin
-    if (userId === context.userId && role === UserRole.USER) {
+    if (userId === context.userId && role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'No puedes remover tu propio rol de administrador' },
         { status: 400 }
