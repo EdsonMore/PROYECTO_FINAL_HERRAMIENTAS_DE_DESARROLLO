@@ -142,7 +142,7 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-40">
+      <div className="fixed bottom-6 right-6 z-[60]">
         <Button
           onClick={() => setIsOpen(true)}
           className="rounded-full w-16 h-16 bg-green-600 hover:bg-green-700 shadow-lg animate-pulse"
@@ -155,7 +155,7 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
   }
 
   return (
-    <div className="fixed bottom-4 sm:bottom-6 right-6 z-40 max-w-xs">
+    <div className="fixed bottom-4 sm:bottom-6 right-6 z-[60] max-w-xs">
       <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 shadow-xl overflow-hidden rounded-2xl">
         {/* Header */}
         <div className="bg-gradient-to-r from-green-700 to-emerald-600 px-4 py-3 flex items-center justify-between">
