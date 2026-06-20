@@ -11,6 +11,7 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 DROP TABLE IF EXISTS logs_auditoria CASCADE;
+DROP TABLE IF EXISTS admin_content_items CASCADE;
 DROP TABLE IF EXISTS role_permissions CASCADE;
 DROP TABLE IF EXISTS seguimientos CASCADE;
 DROP TABLE IF EXISTS arboles CASCADE;
@@ -97,6 +98,20 @@ CREATE TABLE role_permissions (
   fecha_actualizacion TIMESTAMP DEFAULT NOW()
 );
 
+-- ============================
+-- 6. TABLA: admin_content_items
+-- ============================
+CREATE TABLE admin_content_items (
+  id SERIAL PRIMARY KEY,
+  tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('especie', 'tratamiento')),
+  nombre VARCHAR(120) NOT NULL,
+  descripcion TEXT,
+  estado VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
+  fecha_creacion TIMESTAMP DEFAULT NOW(),
+  fecha_actualizacion TIMESTAMP DEFAULT NOW(),
+  UNIQUE (tipo, nombre)
+);
+
 -- ==================================
 -- 6. ÍNDICES (rendimiento)
 -- ==================================
@@ -120,6 +135,7 @@ CREATE INDEX idx_logs_auditoria_fecha ON logs_auditoria(fecha_creacion DESC);
 CREATE INDEX idx_logs_auditoria_accion ON logs_auditoria(accion);
 
 CREATE INDEX idx_role_permissions_rol ON role_permissions(rol);
+CREATE INDEX idx_admin_content_tipo ON admin_content_items(tipo, estado);
 
 -- ==================================
 -- 7. FUNCIÓN: Actualizar timestamp
