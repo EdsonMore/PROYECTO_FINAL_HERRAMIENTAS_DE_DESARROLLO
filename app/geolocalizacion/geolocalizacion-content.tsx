@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { HealthFilter } from "@/components/health-filter";
-import { getHealthLabel } from "@/lib/health-utils";
+import { getCoherentSurvivalScore, getHealthLabel } from "@/lib/health-utils";
 import { MapClusteringComponent } from "./modulo-geolocalizacion-clustering";
 import type { Arbol } from "@/types";
 
@@ -288,8 +288,14 @@ export function GeolocalizacionContent() {
           popupContent += `<div style="color: ${riesgoColor}; font-weight: 600; font-size: 12px; margin-bottom: 4px;">${riesgoLabel}</div>`;
           
           if (a.weather.indice_supervivencia !== undefined) {
-           const supervivenciaScore = Math.round(a.weather.indice_supervivencia);
-           popupContent += `<div style="font-size: 11px; color: #6b7280;">Índice de Supervivencia: <span style="font-weight: bold; color: ${riesgoColor};">${supervivenciaScore}%</span></div>`;
+            const supervivenciaScore = getCoherentSurvivalScore(
+              a.estado_salud,
+              a.weather.indice_supervivencia,
+              a.id
+            );
+            if (supervivenciaScore !== null) {
+              popupContent += `<div style="font-size: 11px; color: #6b7280;">Índice de Supervivencia: <span style="font-weight: bold; color: ${riesgoColor};">${supervivenciaScore}%</span></div>`;
+            }
           }
           
           popupContent += `</div>`;

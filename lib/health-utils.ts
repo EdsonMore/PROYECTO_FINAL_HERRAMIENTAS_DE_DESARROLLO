@@ -69,3 +69,50 @@ export const HEALTH_FILTER_OPTIONS = [
   { value: 'regular', label: 'Regular', color: '#eab308' },
   { value: 'malo', label: 'Crítico', color: '#ef4444' }
 ] as const
+
+export const SURVIVAL_STATUS_MULTIPLIERS = {
+  excelente: 0.96,
+  regular: 0.84,
+  malo: 0.70
+} as const
+
+const SURVIVAL_STATUS_BOUNDS = {
+  excelente: { min: 70, max: 100 },
+  regular: { min: 45, max: 79 },
+  malo: { min: 0, max: 49 }
+} as const
+
+function getSeedOffset(value?: string | number): number {
+  if (value === undefined || value === null) {
+    return 0
+  }
+
+  const seed = typeof value === "number"
+    ? value
+    : String(value).split("").reduce((sum, char) => sum + char.charCodeAt(0), 0)
+
+  return (seed % 7) - 3
+}
+
+export function getCoherentSurvivalScore(
+  status?: string,
+  baseScore?: number,
+  treeId?: string | number
+): number | null {
+  if (baseScore === undefined || baseScore === null) {
+    return null
+  }
+
+  const multiplier = status && status in SURVIVAL_STATUS_MULTIPLIERS
+    ? SURVIVAL_STATUS_MULTIPLIERS[status as HealthStatus]
+    : 1
+
+  const adjusted = Math.round(baseScore * multiplier) + getSeedOffset(treeId)
+
+  if (status && status in SURVIVAL_STATUS_BOUNDS) {
+    const range = SURVIVAL_STATUS_BOUNDS[status as HealthStatus]
+    return Math.max(range.min, Math.min(range.max, adjusted))
+  }
+
+  return Math.max(0, Math.min(100, adjusted))
+}
