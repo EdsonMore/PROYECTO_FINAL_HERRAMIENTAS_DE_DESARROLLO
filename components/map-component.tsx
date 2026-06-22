@@ -29,7 +29,17 @@ const createCustomMarkerIcon = (color: string = "blue") => {
 interface MapComponentProps {
   center: [number, number]
   zoom?: number
-  markers?: Array<{ lat: number; lng: number; popup?: string; healthStatus?: string }>
+  markers?: Array<{ 
+    lat: number
+    lng: number
+    popup?: string
+    healthStatus?: string
+    nombre?: string
+    especie?: string
+    temperatura?: number
+    humedad?: number
+    distance?: number
+  }>
   onLocationSelect?: (lat: number, lng: number) => void
   className?: string
 }
