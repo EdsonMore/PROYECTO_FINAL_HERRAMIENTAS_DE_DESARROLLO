@@ -118,7 +118,10 @@ export function SpeciesIdentifier({ onSpeciesIdentified }: SpeciesIdentifierProp
       setResult(data);
 
       if (onSpeciesIdentified) {
-        onSpeciesIdentified(data);
+        onSpeciesIdentified({
+          ...data,
+          image: image || data.image,
+        });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
