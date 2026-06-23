@@ -262,6 +262,8 @@ export default function SeguimientosPage() {
     },
   }))
 
+  const fotosCount = seguimientos.filter((s) => s.foto_url).length
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -431,16 +433,113 @@ export default function SeguimientosPage() {
         </div>
 
         {arboles.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Camera className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Primero registra un árbol</h3>
-              <p className="text-muted-foreground mb-6">
-                Necesitas tener al menos un árbol registrado para crear seguimientos
-              </p>
-              <Button onClick={() => router.push("/mi-arbol")}>Ir a Mis Árboles</Button>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* Estadísticas superiores */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
+              <Card className="p-4">
+                <CardContent className="flex items-center gap-4">
+                  <img src="/img/mini-arbol.png" alt="Árbol" className="w-10 h-10 object-contain" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Árboles registrados</p>
+                    <p className="text-2xl font-bold">{arboles.length}</p>
+                    <p className="text-xs text-muted-foreground">Aún no tienes árboles</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="p-4">
+                <CardContent className="flex items-center gap-4">
+                  <img src="/img/arbol_logo.webp" alt="Seguimientos" className="w-10 h-10 object-contain" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Seguimientos realizados</p>
+                    <p className="text-2xl font-bold">{seguimientos.length}</p>
+                    <p className="text-xs text-muted-foreground">Registra el crecimiento</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="p-4">
+                <CardContent className="flex items-center gap-4">
+                  <img src="/img/logo_camara.webp" alt="Fotos" className="w-10 h-10 object-contain" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Fotografías cargadas</p>
+                    <p className="text-2xl font-bold">{fotosCount}</p>
+                    <p className="text-xs text-muted-foreground">Captura su evolución</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Izquierda: Card grande con ilustración */}
+              <div className="lg:col-span-2">
+                <Card className="p-6">
+                  <CardContent className="flex flex-col md:flex-row items-center gap-6">
+                    {/* Ilustración eliminada por petición del usuario */}
+                    
+                    <div className="flex-1 text-center md:text-left">
+                    <div className="flex-1">
+                      <h2 className="text-2xl font-bold mb-2">Aún no tienes árboles registrados</h2>
+                      <p className="text-muted-foreground mb-6">
+                        Registra tu primer árbol para comenzar a documentar su crecimiento y ver su evolución a lo largo del tiempo.
+                      </p>
+                      <Button onClick={() => router.push("/mi-arbol")} className="bg-emerald-700 hover:bg-emerald-800 text-white">
+                        Ir a Mis Árboles
+                      </Button>
+                      <div className="mt-4">
+                        <a href="#" className="text-sm text-emerald-700 underline">Conoce más sobre seguimientos</a>
+                      </div>
+                    </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Derecha: Cómo funciona */}
+              <div>
+                <Card className="p-4">
+                  <CardContent>
+                    <h3 className="font-semibold mb-4">¿Cómo funciona?</h3>
+                    <ol className="space-y-4">
+                      <li className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center font-bold">1</div>
+                        <div>
+                          <p className="font-medium">Registra un árbol</p>
+                          <p className="text-sm text-muted-foreground">Agrega tu árbol y completa su información básica.</p>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center font-bold">2</div>
+                        <div>
+                          <p className="font-medium">Crea un seguimiento</p>
+                          <p className="text-sm text-muted-foreground">Registra las fechas y detalles de cada seguimiento.</p>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center font-bold">3</div>
+                        <div>
+                          <p className="font-medium">Sube fotografías</p>
+                          <p className="text-sm text-muted-foreground">Captura imágenes para ver su crecimiento.</p>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center font-bold">4</div>
+                        <div>
+                          <p className="font-medium">Observa su evolución</p>
+                          <p className="text-sm text-muted-foreground">Visualiza el progreso y genera reportes.</p>
+                        </div>
+                      </li>
+                    </ol>
+
+                    <div className="mt-6 p-3 bg-emerald-50 rounded-md">
+                      <p className="text-sm font-medium">Tip</p>
+                      <p className="text-sm text-muted-foreground">La constancia en los seguimientos te permitirá ver el crecimiento real de tu árbol.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
         ) : viewMode === "calendar" ? (
           <div className="space-y-4">
             <Card className="border-0 shadow-sm">
