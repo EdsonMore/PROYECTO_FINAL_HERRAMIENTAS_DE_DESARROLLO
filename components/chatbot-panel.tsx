@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { SpeciesResult } from "./species-identifier";
+import { useSession } from "next-auth/react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatbotPanelProps {
   speciesData?: SpeciesResult | null;
@@ -43,6 +45,147 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
   const [showChat, setShowChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const { data: session, status } = useSession();
+  const { toast } = useToast();
+  const [savingStep, setSavingStep] = useState<"waiting_for_name" | null>(null);
+
+  const handleStartSaveTree = () => {
+    if (status !== "authenticated") {
+      toast({
+        title: "Sesión requerida",
+        description: "Por favor, inicia sesión para guardar tu árbol.",
+        variant: "destructive",
+      });
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          texto: "🔒 Debes iniciar sesión para guardar tu árbol. Por favor inicia sesión en la plataforma.",
+          esUsuario: false,
+          timestamp: Date.now(),
+        },
+      ]);
+      return;
+    }
+
+    if (!speciesData) {
+      toast({
+        title: "Identificación requerida",
+        description: "Primero debes identificar un árbol con el Identificador.",
+        variant: "destructive",
+      });
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          texto: "🔍 Primero debes identificar un árbol para poder guardarlo.",
+          esUsuario: false,
+          timestamp: Date.now(),
+        },
+      ]);
+      return;
+    }
+
+    setSavingStep("waiting_for_name");
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        texto: "📝 **Vamos a registrar tu árbol.**\n\nPor favor, ingresa un nombre descriptivo para tu árbol (ej: *Mi primer Roble*):",
+        esUsuario: false,
+        timestamp: Date.now(),
+      },
+    ]);
+  };
+
+  const handleSaveTreeFlow = async (name: string) => {
+    setLoading(true);
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        texto: "📍 Obteniendo tu ubicación actual de forma automática...",
+        esUsuario: false,
+        timestamp: Date.now(),
+      },
+    ]);
+
+    // Obtener ubicación
+    let lat = -5.1946;
+    let lng = -80.6307;
+
+    const getCoords = () =>
+      new Promise<{ lat: number; lng: number }>((resolve) => {
+        if (!navigator.geolocation) {
+          resolve({ lat, lng });
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          },
+          () => {
+            resolve({ lat, lng });
+          },
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      });
+
+    const coords = await getCoords();
+
+    try {
+      const res = await fetch("/api/arboles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: name,
+          especie: speciesData?.commonName || "Especie no identificada",
+          latitud: coords.lat,
+          longitud: coords.lng,
+          fecha_plantacion: new Date().toISOString().split("T")[0],
+          descripcion: speciesData?.careInstructions || speciesData?.description || "",
+          foto_url: speciesData?.image || "",
+        }),
+      });
+
+      if (res.ok) {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            texto: `🎉 ¡Árbol registrado con éxito!\n\n**Nombre:** ${name}\n**Especie:** ${speciesData?.commonName}\n**Ubicación:** ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}\n\nYa puedes verlo en el apartado **Mi Árbol** del sistema.`,
+            esUsuario: false,
+            timestamp: Date.now(),
+          },
+        ]);
+        toast({
+          title: "¡Árbol guardado!",
+          description: `Se registró "${name}" con éxito en tu cuenta.`,
+        });
+      } else {
+        throw new Error("No se pudo registrar el árbol");
+      }
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          texto: "❌ Ocurrió un error al guardar tu árbol. Por favor, intenta de nuevo.",
+          esUsuario: false,
+          timestamp: Date.now(),
+        },
+      ]);
+      toast({
+        title: "Error al guardar",
+        description: "No se pudo registrar el árbol.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setSavingStep(null);
+    }
+  };
 
   const handleNextMessage = () => {
     setMessageIndex((prev) => (prev + 1) % welcomeMessages.length);
@@ -87,6 +230,12 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
 
     setChatMessages((prev) => [...prev, userMessage]);
     setInputValue("");
+
+    if (savingStep === "waiting_for_name") {
+      await handleSaveTreeFlow(inputValue);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -255,7 +404,10 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
 
             {/* Acciones */}
             <div className="space-y-2">
-              <Button className="w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8">
+              <Button
+                onClick={handleStartSaveTree}
+                className="w-full bg-green-600 hover:bg-green-700 text-white text-xs h-8"
+              >
                 🌱 Guardar este árbol
               </Button>
               <Button
@@ -370,6 +522,10 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
             {/* Botones de acción */}
             <div className="flex gap-2 pt-4">
               <Button
+                onClick={() => {
+                  setDetailsOpen(false);
+                  handleStartSaveTree();
+                }}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs h-9"
               >
                 🌱 Guardar este árbol

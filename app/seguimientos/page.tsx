@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { CalendarComponent } from "@/components/calendar-component"
 import { ImageUploader } from "@/components/image-uploader"
+import { CatalogCombobox } from "@/components/catalog-combobox"
 import type { ArbolResumen, Seguimiento } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 
@@ -51,6 +52,7 @@ export default function SeguimientosPage() {
     foto_url: "",
     altura_cm: "",
     salud: "",
+    tratamiento: "",
     fecha_seguimiento: new Date().toISOString().split("T")[0],
   })
 
@@ -112,6 +114,7 @@ export default function SeguimientosPage() {
           ...formData,
           arbol_id: Number.parseInt(formData.arbol_id),
           altura_cm: formData.altura_cm ? Number.parseFloat(formData.altura_cm) : null,
+          tratamiento: formData.tratamiento || null,
         }),
       })
 
@@ -163,6 +166,7 @@ export default function SeguimientosPage() {
       foto_url: "",
       altura_cm: "",
       salud: "",
+      tratamiento: "",
       fecha_seguimiento: new Date().toISOString().split("T")[0],
     })
     setEditingSeguimiento(null)
@@ -198,6 +202,7 @@ export default function SeguimientosPage() {
       foto_url: seg.foto_url || "",
       altura_cm: seg.altura_cm ? seg.altura_cm.toString() : "",
       salud: seg.salud || "",
+      tratamiento: (seg as any).tratamiento || "",
       fecha_seguimiento: fechaFormateada,
     })
     setDialogOpen(true)
@@ -376,6 +381,16 @@ export default function SeguimientosPage() {
                       </Select>
                     </div>
                   </div>
+
+                  {/* Campo Tratamiento - Combobox con catálogo */}
+                  <CatalogCombobox
+                    tipo="tratamiento"
+                    id="tratamiento"
+                    label="Tratamiento aplicado"
+                    value={formData.tratamiento}
+                    onChange={(val) => setFormData({ ...formData, tratamiento: val })}
+                    placeholder="Ej: Poda sanitaria, Fertilización..."
+                  />
                   <div className="space-y-2">
                     <Label>Foto del Seguimiento</Label>
                     <ImageUploader
