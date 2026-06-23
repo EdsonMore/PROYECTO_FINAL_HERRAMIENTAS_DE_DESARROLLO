@@ -41,6 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TreePhotoForm } from "@/components/tree-photo-form";
+import { CatalogCombobox } from "@/components/catalog-combobox";
 import { ChatbotPanel } from "@/components/chatbot-panel";
 import type { Arbol } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -486,32 +487,15 @@ export default function MiArbolPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="especie" className="font-semibold">
-                        Especie <span className="text-red-500">*</span>{" "}
-                        {formData.especie && (
-                          <span className="text-green-600 text-xs ml-1">
-                            ✓ Identificada
-                          </span>
-                        )}
-                      </Label>
-                      <Input
-                        id="especie"
-                        value={formData.especie}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            especie: e.target.value,
-                          })
-                        }
-                        placeholder="Ej: Roble (auto-completada)"
-                        required
-                        className="border-blue-200 focus:border-blue-500"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Se completa automáticamente con la foto
-                      </p>
-                    </div>
+                    <CatalogCombobox
+                      tipo="especie"
+                      id="especie"
+                      label="Especie"
+                      required
+                      value={formData.especie}
+                      onChange={(val) => setFormData({ ...formData, especie: val })}
+                      placeholder="Ej: Mango, Roble, Pino..."
+                    />
                   </div>
 
                   <div className="space-y-2">

@@ -62,6 +62,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Árbol no encontrado" }, { status: 404 })
     }
 
+    // Auto-registrar especie en catálogo si se proporcionó
+    if (especie && especie.trim().length >= 2) {
+      try {
+        await query(
+          `INSERT INTO admin_content_items (tipo, nombre, descripcion, estado)
+           VALUES ('especie', $1, 'Registrada automáticamente por usuario', 'ACTIVO')
+           ON CONFLICT (tipo, nombre) DO NOTHING`,
+          [especie.trim()]
+        );
+      } catch (e) {
+        console.warn('No se pudo auto-registrar especie en catálogo:', e);
+      }
+    }
+
     return NextResponse.json(result.rows[0])
   } catch (error) {
     console.error("Error al actualizar árbol:", error)
