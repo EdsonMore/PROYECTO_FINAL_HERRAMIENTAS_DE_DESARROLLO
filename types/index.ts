@@ -50,8 +50,10 @@ export interface Seguimiento {
   foto_url?: string
   altura_cm?: number
   salud?: string
-  fecha_seguimiento: Date
+  fecha_seguimiento: Date | string
   creado_en: Date
+  arbol_nombre?: string
+  arbol_especie?: string
 }
 
 export interface Tip {

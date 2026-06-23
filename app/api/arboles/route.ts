@@ -24,6 +24,22 @@ function parseOptionalPositiveInt(value: string | null) {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : null
 }
 
+// Helper: auto-registra especie en catálogo si no existe
+async function autoRegistrarEspecie(especie: string) {
+  if (!especie || especie.trim().length < 2) return;
+  try {
+    await query(
+      `INSERT INTO admin_content_items (tipo, nombre, descripcion, estado)
+       VALUES ('especie', $1, 'Registrada automáticamente por usuario', 'ACTIVO')
+       ON CONFLICT (tipo, nombre) DO NOTHING`,
+      [especie.trim()]
+    );
+  } catch (e) {
+    // No bloquear el flujo si falla el registro en catálogo
+    console.warn('No se pudo auto-registrar especie en catálogo:', e);
+  }
+}
+
 // GET - Obtener todos los árboles del usuario
 export async function GET(request: NextRequest) {
   try {
@@ -68,6 +84,11 @@ export async function POST(request: NextRequest) {
 
     if (!nombre || !latitud || !longitud) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
+    }
+
+    // Auto-registrar especie en catálogo si se proporcionó
+    if (especie) {
+      await autoRegistrarEspecie(especie);
     }
 
     // Insertar el árbol
