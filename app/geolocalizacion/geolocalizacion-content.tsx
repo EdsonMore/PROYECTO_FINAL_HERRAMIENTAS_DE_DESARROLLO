@@ -95,14 +95,14 @@ export function GeolocalizacionContent() {
             if (weatherRes.ok) {
               const weatherData = await weatherRes.json();
               const indice = weatherData.indices?.indice_supervivencia ?? 75;
-              const recomendaciones = weatherData.recomendaciones_arbol ?? generateLocalRecommendations(tree.especie, tree.estado_salud, indice);
-              const zoneRecs = generateZoneRecommendations(tree.latitud, tree.longitud, weatherData.indices?.riesgo_ambiental ?? null, indice, tree.especie)
+              const recomendaciones = weatherData.recomendaciones_arbol ?? generateLocalRecommendations(undefined, undefined, indice);
+              const zoneRecs = generateZoneRecommendations(latitude, longitude, weatherData.indices?.riesgo_ambiental ?? null, indice, undefined)
               const finalRecs = Array.isArray(recomendaciones) ? [...recomendaciones, ...zoneRecs] : [...zoneRecs]
               setUserWeather({
                 ...weatherData,
                 recomendaciones: finalRecs,
               });
-          }
+            }
         } catch (error) {
           console.error("Error fetching user weather:", error);
         }
