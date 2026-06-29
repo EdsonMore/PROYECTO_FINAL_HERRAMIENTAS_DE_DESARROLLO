@@ -19,7 +19,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { HealthFilter } from "@/components/health-filter";
 import { getHealthLabel } from "@/lib/health-utils";
-import { MapClusteringComponent } from "./modulo-geolocalizacion-clustering";
+import { MapClusteringComponent } from "./modulo-geolocalizacion-clustering/components/MapClusteringComponent";
 import type { Arbol } from "@/types";
 
 interface UserLocation {
