@@ -38,7 +38,9 @@ interface WeatherInfo {
 }
 
 interface TreeDistance extends Arbol {
-  distance: number;
+  recomendaciones?: string[];
+  indice_supervivencia?: number | null;
+  distance?: number | null;
   weather?: WeatherInfo;
 }
 
@@ -56,13 +58,15 @@ export function GeolocalizacionContent() {
   const [activeTreeFilters, setActiveTreeFilters] = useState<string[]>(["excelente", "regular", "malo"]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    // En desarrollo permitimos ver la página sin autenticación para facilitar pruebas.
+    if (status === "unauthenticated" && process.env.NODE_ENV === "production") {
       router.push("/login");
     }
   }, [status, router]);
 
   useEffect(() => {
-    if (status === "authenticated") {
+    // En desarrollo permitir carga como "guest" para pruebas locales
+    if (status === "authenticated" || process.env.NODE_ENV !== "production") {
       fetchArboles();
       getGeolocation();
     }
@@ -88,9 +92,16 @@ export function GeolocalizacionContent() {
           const weatherRes = await fetch(
             `/geolocalizacion/api-clima?lat=${latitude}&lon=${longitude}`
           );
-          if (weatherRes.ok) {
-            const weatherData = await weatherRes.json();
-            setUserWeather(weatherData);
+            if (weatherRes.ok) {
+              const weatherData = await weatherRes.json();
+              const indice = weatherData.indices?.indice_supervivencia ?? 75;
+              const recomendaciones = weatherData.recomendaciones_arbol ?? generateLocalRecommendations(tree.especie, tree.estado_salud, indice);
+              const zoneRecs = generateZoneRecommendations(tree.latitud, tree.longitud, weatherData.indices?.riesgo_ambiental ?? null, indice, tree.especie)
+              const finalRecs = Array.isArray(recomendaciones) ? [...recomendaciones, ...zoneRecs] : [...zoneRecs]
+              setUserWeather({
+                ...weatherData,
+                recomendaciones: finalRecs,
+              });
           }
         } catch (error) {
           console.error("Error fetching user weather:", error);
@@ -131,6 +142,47 @@ export function GeolocalizacionContent() {
       if (res.ok) {
         const data = await res.json();
         setArboles(data);
+
+        // Si no tenemos userLocation aún, igualmente intentamos obtener clima
+        // para cada árbol y poblar treeDistances para que se vean en el mapa.
+        if (!userLocation) {
+          try {
+            const treesWithWeather = await Promise.all(
+              data.map(async (tree: any) => {
+                try {
+                  const weatherRes = await fetch(
+                    `/geolocalizacion/api-clima?lat=${tree.latitud}&lon=${tree.longitud}&species=${encodeURIComponent(tree.especie || "")}`
+                  );
+                  if (weatherRes.ok) {
+                    const weatherData = await weatherRes.json();
+                    const indice = weatherData.indices?.indice_supervivencia ?? 75;
+                    const recomendaciones = weatherData.recomendaciones_arbol ?? generateLocalRecommendations(tree.especie, tree.estado_salud, indice);
+                    return {
+                      ...tree,
+                      distance: null,
+                      weather: {
+                        temperatura: weatherData.current?.temperatura,
+                        humedad: weatherData.current?.humedad,
+                        descripcion: weatherData.current?.descripcion,
+                        icono: weatherData.current?.icono,
+                        indice_supervivencia: indice,
+                        riesgo_ambiental: weatherData.indices?.riesgo_ambiental ?? 'desconocido',
+                        recomendaciones,
+                      },
+                    };
+                  }
+                } catch (err) {
+                  console.error("Error fetching weather for tree (no location):", err);
+                }
+                return { ...tree, distance: null, weather: { indice_supervivencia: 75, recomendaciones: [] } };
+              })
+            );
+            setTreeDistances(normalizeTrees(treesWithWeather));
+          } catch (err) {
+            console.error("Error poblando árboles sin ubicación:", err);
+            setTreeDistances(normalizeTrees(data.map((t: any) => ({ ...t, distance: null, weather: { indice_supervivencia: 75, recomendaciones: [] } }))));
+          }
+        }
       }
     } catch (error) {
       console.error("Error al cargar árboles:", error);
@@ -154,6 +206,73 @@ export function GeolocalizacionContent() {
     return R * c;
   };
 
+  const generateLocalRecommendations = (especie?: string, estado?: string, indice?: number) => {
+    const recs: string[] = [];
+    if (indice != null) {
+      if (indice < 40) {
+        recs.push('🚨 Supervivencia baja: intervención urgente (riego, revisión)');
+      } else if (indice < 60) {
+        recs.push('⚠️ Riesgo moderado: aumentar monitoreo y riego según necesidad');
+      } else if (indice < 80) {
+        recs.push('🔍 Condiciones aceptables: monitorear salud y plagas');
+      } else {
+        recs.push('✅ Condiciones favorables');
+      }
+    }
+    if (estado === 'malo') recs.unshift('❌ Estado crítico: considera intervención profesional');
+    if (especie) recs.push(`📌 Especie: ${especie}`);
+    return recs;
+  }
+
+    const generateZoneRecommendations = (lat?: number | string, lon?: number | string, riesgo?: string | null, indice?: number, especie?: string) => {
+      const recs: string[] = []
+      if (riesgo) {
+        const r = String(riesgo).toLowerCase()
+        if (r.includes('alto')) recs.push('⚠️ Riesgo ambiental alto en la zona: aumentar riego y monitoreo')
+        else if (r.includes('medio')) recs.push('⚠️ Riesgo ambiental moderado: programar revisiones y control de plagas')
+        else if (r.includes('bajo')) recs.push('ℹ️ Riesgo ambiental bajo: mantenimiento rutinario')
+      }
+
+      if (typeof indice === 'number') {
+        if (indice < 50) recs.push('🚨 Índice bajo: intervención local (sombra/acolchado/riego)')
+        else if (indice < 70) recs.push('🔍 Índice medio: revisar exposición solar y humedad del suelo')
+        else recs.push('✅ Índice alto: condiciones favorables, mantener plan de cuidado')
+      }
+
+      try {
+        const latNum = Number(lat)
+        const lonNum = Number(lon)
+        if (!Number.isNaN(latNum) && !Number.isNaN(lonNum)) {
+          if (Math.abs(lonNum + 80.63) < 0.05) {
+            recs.push('🌬️ Zona costera: proteger contra salitre y vientos fuertes')
+          }
+          if (latNum > -5.25 && latNum < -5.10) {
+            recs.push('☀️ Alta exposición solar: considerar sombra temporal o riego por la mañana/tarde')
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      if (especie) recs.push(`📌 Recomendación por especie: ajustar cuidados para ${especie}`)
+      return recs
+    }
+
+  const normalizeTrees = (arr: any[]): TreeDistance[] => {
+    return arr.map((t, idx) => {
+      const safeId = t.id ?? t._id ?? t.usuario_id ?? `fallback-${idx}-${Date.now()}`;
+      const weatherIndice = t.weather?.indice_supervivencia ?? t.indices?.indice_supervivencia ?? null;
+      const indice = t.indice_supervivencia ?? weatherIndice ?? 75;
+      const recomendaciones = t.recomendaciones ?? t.weather?.recomendaciones ?? t.recomendaciones_arbol ?? [];
+      return {
+        ...t,
+        id: safeId,
+        indice_supervivencia: indice,
+        recomendaciones,
+      } as TreeDistance;
+    });
+  }
+
   const calculateDistances = async (location: UserLocation) => {
     const distances = arboles
       .map((arbol) => ({
@@ -174,29 +293,34 @@ export function GeolocalizacionContent() {
           const weatherRes = await fetch(
             `/geolocalizacion/api-clima?lat=${tree.latitud}&lon=${tree.longitud}&species=${encodeURIComponent(tree.especie || "")}`
           );
-          if (weatherRes.ok) {
-            const weatherData = await weatherRes.json();
-            return {
-              ...tree,
-              weather: {
-                temperatura: weatherData.current?.temperatura,
-                humedad: weatherData.current?.humedad,
-                descripcion: weatherData.current?.descripcion,
-                icono: weatherData.current?.icono,
-                indice_supervivencia: weatherData.indices?.indice_supervivencia,
-                riesgo_ambiental: weatherData.indices?.riesgo_ambiental,
-                recomendaciones: weatherData.recomendaciones_arbol,
-              },
-            };
+                    if (weatherRes.ok) {
+                    const weatherData = await weatherRes.json();
+                    const indice = weatherData.indices?.indice_supervivencia ?? 75;
+                    const recomendaciones = weatherData.recomendaciones_arbol ?? generateLocalRecommendations(tree.especie, tree.estado_salud, indice);
+                    const zoneRecs = generateZoneRecommendations(tree.latitud, tree.longitud, weatherData.indices?.riesgo_ambiental ?? null, indice, tree.especie)
+                    const finalRecs = Array.isArray(recomendaciones) ? [...recomendaciones, ...zoneRecs] : [...zoneRecs]
+                    return {
+                      ...tree,
+                      distance: null,
+                      weather: {
+                        temperatura: weatherData.current?.temperatura,
+                        humedad: weatherData.current?.humedad,
+                        descripcion: weatherData.current?.descripcion,
+                        icono: weatherData.current?.icono,
+                        indice_supervivencia: indice,
+                        riesgo_ambiental: weatherData.indices?.riesgo_ambiental ?? 'desconocido',
+                        recomendaciones: finalRecs,
+                      },
+                    };
           }
         } catch (error) {
           console.error("Error fetching weather for tree:", error);
         }
-        return tree;
+        return { ...tree, weather: { indice_supervivencia: 75, recomendaciones: generateLocalRecommendations(tree.especie, tree.estado_salud, 75) } };
       })
     );
 
-    setTreeDistances(treesWithWeather);
+    setTreeDistances(normalizeTrees(treesWithWeather));
   };
 
   useEffect(() => {
@@ -216,7 +340,7 @@ export function GeolocalizacionContent() {
         ]
       : []),
     ...treeDistances
-      .filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud))
+      .filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud))
       .map((a) => {
         let popupContent = `<div class="popup-container" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">`;
         
@@ -246,7 +370,7 @@ export function GeolocalizacionContent() {
         }
         
         // Distancia
-        if (a.distance) {
+        if (a.distance != null) {
           popupContent += `<div style="color: #16a34a; font-size: 12px; font-weight: 600; margin: 6px 0;">📏 ${a.distance.toFixed(2)} km</div>`;
         }
         
@@ -265,51 +389,21 @@ export function GeolocalizacionContent() {
           popupContent += `</div>`;
         }
         
-        // Riesgo Ambiental y Supervivencia
-        if (a.weather?.riesgo_ambiental !== undefined || a.weather?.indice_supervivencia !== undefined) {
-          const riesgoColors: Record<string, string> = {
-           bajo: "#22c55e",
-           moderado: "#f59e0b",
-           alto: "#ef4444",
-           crítico: "#7f1d1d",
-          };
-          const riesgoLabels: Record<string, string> = {
-           bajo: "✅ Bajo",
-           moderado: "⚠️ Moderado",
-           alto: "🔴 Alto",
-           crítico: "🚨 Crítico",
-          };
-          
-          const riesgoColor = riesgoColors[a.weather.riesgo_ambiental || ""] || "#6b7280";
-          const riesgoLabel = riesgoLabels[a.weather.riesgo_ambiental || ""] || "Desconocido";
-          
-          popupContent += `<div style="background: ${riesgoColor}20; border: 2px solid ${riesgoColor}; padding: 8px; border-radius: 4px; margin-top: 8px;">`;
-          popupContent += `<div style="font-weight: bold; color: ${riesgoColor}; margin-bottom: 6px; font-size: 13px;">📊 Riesgo Ambiental</div>`;
-          popupContent += `<div style="color: ${riesgoColor}; font-weight: 600; font-size: 12px; margin-bottom: 4px;">${riesgoLabel}</div>`;
-          
-          if (a.weather.indice_supervivencia !== undefined) {
-            const supervivenciaScore = getCoherentSurvivalScore(
-              a.estado_salud,
-              a.weather.indice_supervivencia,
-              a.id
-            );
-            if (supervivenciaScore !== null) {
-              popupContent += `<div style="font-size: 11px; color: #6b7280;">Índice de Supervivencia: <span style="font-weight: bold; color: ${riesgoColor};">${supervivenciaScore}%</span></div>`;
-            }
+        // Mostrar sólo el índice de supervivencia (porcentaje) en el popup
+        {
+          const baseIndice = a.weather?.indice_supervivencia ?? a.indice_supervivencia ?? 75;
+          const supervivenciaScore = getCoherentSurvivalScore(a.estado_salud, baseIndice, a.id);
+          if (supervivenciaScore !== null) {
+            popupContent += `<div style="background: #eef2ff; border-left: 3px solid #6366f1; padding: 6px 8px; margin-top: 8px; border-radius: 3px; font-size: 12px; color: #3730a3; font-weight: 600;">Índice de Supervivencia: <span style="font-weight: bold; color: #0f172a;">${supervivenciaScore}%</span></div>`;
           }
-          
-          popupContent += `</div>`;
         }
         
-        // Recomendaciones
+        // Recomendaciones: mostrar todas (sin truncado)
         if (a.weather?.recomendaciones && a.weather.recomendaciones.length > 0) {
           popupContent += `<div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 8px; border-radius: 3px; margin-top: 8px; font-size: 11px; color: #92400e;">`;
-          a.weather.recomendaciones.slice(0, 2).forEach((rec: string) => {
-           popupContent += `<div style="margin-bottom: 3px;">${rec}</div>`;
+          a.weather.recomendaciones.forEach((rec: string) => {
+            popupContent += `<div style="margin-bottom: 4px;">${rec}</div>`;
           });
-          if (a.weather.recomendaciones.length > 2) {
-           popupContent += `<div style="font-size: 10px; font-style: italic;">+${a.weather.recomendaciones.length - 2} más...</div>`;
-          }
           popupContent += `</div>`;
         }
         
@@ -318,13 +412,15 @@ export function GeolocalizacionContent() {
         return {
           lat: a.latitud,
           lng: a.longitud,
-          healthStatus: a.estado_salud,
+          healthStatus: a.estado_salud ? String(a.estado_salud).toLowerCase() : undefined,
           popup: popupContent,
           nombre: a.nombre,
           especie: a.especie,
           temperatura: a.weather?.temperatura,
           humedad: a.weather?.humedad,
           distance: a.distance,
+          indice_supervivencia: a.weather?.indice_supervivencia ?? null,
+          recomendaciones: a.weather?.recomendaciones ?? a.weather?.recomendaciones ?? [],
         };
       }),
   ], [userLocation, treeDistances, activeHealthFilters]);
@@ -434,13 +530,17 @@ export function GeolocalizacionContent() {
                       ? [userLocation.lat, userLocation.lng]
                       : [-5.1946, -80.6307]
                   }
-                  zoom={13}
+                  // Cargar inicialmente en clusters (zoom inicial más lejano)
+                  zoom={11}
                   markers={mapMarkers}
                   clusteringConfig={{
                     maxClusterRadius: 80,
-                    showCoverageOnHover: true,
+                    showCoverageOnHover: false,
                     zoomToBoundsOnClick: true,
+                    // Desagregar al acercar a zoom 15 o superior
                     disableClusteringAtZoom: 15,
+                    // Si hay muchos marcadores en el mismo punto, desplegarlos tipo "spiderfy" al hacer clic
+                    spiderfyOnMaxZoom: true,
                   }}
                 />
               </CardContent>
@@ -519,11 +619,11 @@ export function GeolocalizacionContent() {
                       {Math.round(userWeather.current.humedad)}%
                     </p>
                   </div>
-                  {userWeather.current.velocidad_viento !== undefined && (
+                    {userWeather.current.velocidad_viento !== undefined && (
                     <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
                       <p className="text-xs text-purple-900 font-semibold">💨 Viento</p>
                       <p className="text-sm font-semibold text-purple-700">
-                        {(userWeather.current.velocidad_viento).toFixed(1)} m/s
+                        {userWeather.current.velocidad_viento != null ? `${userWeather.current.velocidad_viento.toFixed(1)} m/s` : "N/A"}
                       </p>
                     </div>
                   )}
@@ -531,53 +631,7 @@ export function GeolocalizacionContent() {
               </Card>
             )}
 
-            {userWeather && userWeather.indices && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    📊 Riesgo Ambiental para Árboles
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {(() => {
-                    const riesgo = userWeather.indices.riesgo_ambiental;
-                    const riesgoColors: Record<string, string> = {
-                      bajo: "bg-green-50 border-green-200 text-green-900",
-                      moderado: "bg-yellow-50 border-yellow-200 text-yellow-900",
-                      alto: "bg-orange-50 border-orange-200 text-orange-900",
-                      crítico: "bg-red-50 border-red-200 text-red-900",
-                    };
-                    const riesgoEmojis: Record<string, string> = {
-                      bajo: "✅",
-                      moderado: "⚠️",
-                      alto: "🔴",
-                      crítico: "🚨",
-                    };
-                    const riesgoLabels: Record<string, string> = {
-                      bajo: "Bajo - Condiciones favorables",
-                      moderado: "Moderado - Monitoreo recomendado",
-                      alto: "Alto - Intervención necesaria",
-                      crítico: "Crítico - Condiciones extremas",
-                    };
-                    return (
-                      <div className={`border-2 rounded-lg p-4 ${riesgoColors[riesgo] || riesgoColors.moderado}`}>
-                        <div className="font-bold text-lg mb-2">
-                          {riesgoEmojis[riesgo] || "❓"} {riesgoLabels[riesgo] || "Desconocido"}
-                        </div>
-                        <div className="text-sm mb-3">
-                          Índice de Supervivencia: <span className="font-bold text-lg">{Math.round(userWeather.indices.indice_supervivencia)}%</span>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <div>💧 Riesgo de Sequedad: <span className="font-semibold">{userWeather.indices.riesgo_sequedad}</span></div>
-                          <div>🌡️ Índice de Calor: <span className="font-semibold">{userWeather.indices.indice_calor}</span></div>
-                          <div>☀️ Índice UV: <span className="font-semibold">{userWeather.indices.indice_uv.toFixed(1)}</span></div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
-            )}
+            {/* Se removió la tarjeta resumen de 'Riesgo Ambiental para Árboles' por petición del usuario. */}
 
             <Card>
               <CardHeader>
@@ -593,13 +647,13 @@ export function GeolocalizacionContent() {
                     <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                       <p className="text-xs text-green-900 font-semibold">Árbol Más Cercano</p>
                       <p className="text-sm text-green-700">
-                        {treeDistances[0].distance.toFixed(2)} km
+                        {treeDistances[0]?.distance != null ? `${treeDistances[0].distance.toFixed(2)} km` : "-"}
                       </p>
                     </div>
                     <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
                       <p className="text-xs text-orange-900 font-semibold">Árbol Más Lejano</p>
                       <p className="text-sm text-orange-700">
-                        {treeDistances[treeDistances.length - 1].distance.toFixed(2)} km
+                        {treeDistances.length > 0 && treeDistances[treeDistances.length - 1]?.distance != null ? `${treeDistances[treeDistances.length - 1]!.distance!.toFixed(2)} km` : "-"}
                       </p>
                     </div>
                   </>
@@ -612,11 +666,11 @@ export function GeolocalizacionContent() {
         {treeDistances.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Árboles Cercanos a tu Ubicación ({treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).length})</CardTitle>
+              <CardTitle>Árboles Cercanos a tu Ubicación ({treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).length})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
+                {treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
                   <div
                     key={arbol.id}
                     className="flex items-center justify-between p-3 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
@@ -636,11 +690,9 @@ export function GeolocalizacionContent() {
                     </div>
                     <div className="flex-shrink-0 text-right">
                       <div className="text-sm font-bold text-green-600">
-                        {arbol.distance.toFixed(2)} km
+                        {arbol.distance != null ? `${arbol.distance.toFixed(2)} km` : "-"}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {arbol.estado_salud ? `Estado: ${arbol.estado_salud}` : "Sin estado"}
-                      </div>
+                      {/* Estado, supervivencia y recomendaciones se muestran solo en el popup del mapa */}
                     </div>
                   </div>
                 ))}

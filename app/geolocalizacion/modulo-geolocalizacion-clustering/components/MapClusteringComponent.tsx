@@ -20,6 +20,8 @@ interface MapClusteringComponentProps {
     showCoverageOnHover?: boolean;
     zoomToBoundsOnClick?: boolean;
     disableClusteringAtZoom?: number;
+    spiderfyOnMaxZoom?: boolean;
+    spiderLegPolylineOptions?: any;
   };
   className?: string;
 }
