@@ -75,7 +75,7 @@ async function parseArbolesFromSQL(sqlContent: string) {
   const arboles = arbolTuples.map(t => {
     const inner = t.slice(1, -1).trim()
     const parts = inner.split(/,(?=(?:[^']*'[^']*')*[^']*$)/).map(p => p.trim())
-    const [id, usuario_id, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, creado_en, actualizado_en] = parts
+    const [id, usuario_id, especie_id, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, altura_actual_cm, diametro_tronco_cm, estado_salud] = parts
     function unquote(v: string | undefined) {
       if (!v) return null
       const s = v.trim()
@@ -92,9 +92,12 @@ async function parseArbolesFromSQL(sqlContent: string) {
       longitud: Number(unquote(longitud)),
       fecha_plantacion: unquote(fecha_plantacion),
       descripcion: unquote(descripcion),
-      foto_url: unquote(foto_url),
-      creado_en: unquote(creado_en),
-      actualizado_en: unquote(actualizado_en),
+      foto_url: null,
+      altura_actual_cm: unquote(altura_actual_cm) ? Number(unquote(altura_actual_cm)) : null,
+      diametro_tronco_cm: unquote(diametro_tronco_cm) ? Number(unquote(diametro_tronco_cm)) : null,
+      estado_salud: unquote(estado_salud),
+      creado_en: null,
+      actualizado_en: null,
     }
   })
 
@@ -105,7 +108,7 @@ async function parseArbolesFromSQL(sqlContent: string) {
     const inner = t.slice(1, -1).trim()
     const parts = inner.split(/,(?=(?:[^']*'[^']*')*[^']*$)/).map(p => p.trim())
     // seg: (id, arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, creado_en, actualizado_en)
-    const [id, arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, creado_en, actualizado_en] = parts
+    const [id, arbol_id, usuario_id, titulo, descripcion, altura_cm, salud, tipo_seguimiento, fecha_seguimiento, temperatura_ambiente, humedad_suelo, notas_tecnicas] = parts
     function unquote(v: string | undefined) {
       if (!v) return null
       const s = v.trim()
@@ -119,12 +122,16 @@ async function parseArbolesFromSQL(sqlContent: string) {
       usuario_id: Number(unquote(usuario_id)),
       titulo: unquote(titulo),
       descripcion: unquote(descripcion),
-      foto_url: unquote(foto_url),
-      altura_cm: unquote(altura_cm),
+      foto_url: null,
+      altura_cm: unquote(altura_cm) ? Number(unquote(altura_cm)) : null,
       salud: unquote(salud),
+      tipo_seguimiento: unquote(tipo_seguimiento),
       fecha_seguimiento: unquote(fecha_seguimiento),
-      creado_en: unquote(creado_en),
-      actualizado_en: unquote(actualizado_en),
+      temperatura_ambiente: unquote(temperatura_ambiente) ? Number(unquote(temperatura_ambiente)) : null,
+      humedad_suelo: unquote(humedad_suelo) ? Number(unquote(humedad_suelo)) : null,
+      notas_tecnicas: unquote(notas_tecnicas),
+      creado_en: null,
+      actualizado_en: null,
     }
   })
 
@@ -211,24 +218,7 @@ export async function GET(request: NextRequest) {
     const limit = parseOptionalPositiveInt(searchParams.get("limit"))
     const offset = parseOptionalPositiveInt(searchParams.get("offset"))
 
-    // Si existe un SQL local con datos (scripts/EcoDataBase_FINAL.sql), preferirlo
-    try {
-      const sqlPathCheck = path.join(process.cwd(), "scripts", "EcoDataBase_FINAL.sql")
-      const stat = await fs.stat(sqlPathCheck).catch(() => null)
-      if (stat) {
-        const sqlContent = await fs.readFile(sqlPathCheck, "utf-8")
-          const parsed = await parseArbolesFromSQL(sqlContent)
-          const enriched = parsed.map(enrichTreeWithWeather)
-          const start = offset ?? 0
-          const end = limit !== null && limit !== undefined ? start + limit : undefined
-          const finalRows = enriched.slice(start, end)
-          console.log(`Usando ${finalRows.length} filas desde scripts/EcoDataBase_FINAL.sql (con weather)`)
-          return NextResponse.json(finalRows)
-      }
-    } catch (err) {
-      console.warn('Error comprobando SQL local:', err)
-    }
-
+    // Consultar BD (fuente primaria de datos, filtrada por usuario)
     let queryText = `${selectedQuery} WHERE a.usuario_id = $1 ORDER BY a.creado_en DESC`
     const queryParams: Array<number> = [userId]
 
@@ -245,7 +235,7 @@ export async function GET(request: NextRequest) {
     let rows: any[] = []
     try {
       const result = await query(queryText, queryParams)
-      rows = result.rows
+      rows = result.rows.map(enrichTreeWithWeather)
     } catch (dbError) {
       console.warn("Error en consulta a BD al obtener árboles, intentando fallback sin filtro de usuario:", dbError)
       try {
@@ -264,8 +254,8 @@ export async function GET(request: NextRequest) {
           const insertMatch = sqlContent.match(/INSERT INTO arboles\s*\([^)]*\)\s*VALUES\s*([\s\S]*?)ON CONFLICT/i)
             if (insertMatch && insertMatch[1]) {
             const parsed = await parseArbolesFromSQL(sqlContent)
-            rows = parsed.map(enrichTreeWithWeather)
-            console.log(`Leídas ${rows.length} filas de ${sqlPath} (enriquecidas)`)
+            rows = parsed.filter(a => a.usuario_id === userId).map(enrichTreeWithWeather)
+            console.log(`Leídas ${rows.length} filas de ${sqlPath} (enriquecidas, filtradas por userId=${userId})`)
           } else {
             console.warn("No se encontró INSERT INTO arboles en el SQL local")
           }
@@ -273,7 +263,8 @@ export async function GET(request: NextRequest) {
           console.warn("No se pudo leer ni parsear el SQL local, devolviendo datos demo:", sqlErr)
         }
       }
-      // Generar 49 árboles demo con variación en posición y estado de salud
+      // Solo generar datos demo si los fallbacks anteriores no produjeron resultados
+      if (rows.length === 0) {
       const centerLat = -5.1940
       const centerLon = -80.6310
       const species = ["Ceiba", "Mango", "Palo", "Ficus", "Jacaranda", "Eucalipto", "Aliso"]
@@ -306,6 +297,7 @@ export async function GET(request: NextRequest) {
       const start = offset ?? 0
       const end = limit !== null && limit !== undefined ? start + limit : undefined
       rows = enrichedGenerated.slice(start, end)
+      }
     }
 
     return NextResponse.json(rows)
