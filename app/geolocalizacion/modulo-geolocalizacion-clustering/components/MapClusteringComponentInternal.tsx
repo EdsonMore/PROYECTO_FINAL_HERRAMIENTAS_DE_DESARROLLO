@@ -112,9 +112,11 @@ export function MapClusteringComponent({
       // Crear grupo de clustering
       const markerClusterGroup = new (L as any).MarkerClusterGroup({
         maxClusterRadius: clusteringConfig.maxClusterRadius ?? 80,
-        showCoverageOnHover: clusteringConfig.showCoverageOnHover ?? true,
+        showCoverageOnHover: clusteringConfig.showCoverageOnHover ?? false,
         zoomToBoundsOnClick: clusteringConfig.zoomToBoundsOnClick ?? true,
         disableClusteringAtZoom: clusteringConfig.disableClusteringAtZoom ?? 15,
+        spiderfyOnMaxZoom: clusteringConfig.spiderfyOnMaxZoom ?? false,
+        spiderLegPolylineOptions: clusteringConfig.spiderLegPolylineOptions ?? { weight: 0, opacity: 0 },
         iconCreateFunction: createClusterIcon,
       });
 
@@ -196,10 +198,15 @@ export function MapClusteringComponent({
       markers.forEach((marker, index) => {
         try {
           const isFirstMarker = index === 0;
-          const markerColor = getMarkerColor(marker.healthStatus, isFirstMarker && !marker.healthStatus);
+          const hs = marker.healthStatus ? String(marker.healthStatus).toLowerCase() : undefined;
+          const markerColor = getMarkerColor(hs, (marker as any).indice_supervivencia ?? null, isFirstMarker && !hs);
           const leafletMarker = L.marker([marker.lat, marker.lng], {
             icon: createCustomMarkerIcon(markerColor),
-          });
+            // Pasamos propiedades personalizadas para que el cluster pueda leerlas
+            indice_supervivencia: (marker as any).indice_supervivencia ?? null,
+            recomendaciones: (marker as any).recomendaciones ?? [],
+            healthStatus: hs ?? null,
+          } as any);
 
           if (marker.popup) {
             leafletMarker.bindPopup(marker.popup);

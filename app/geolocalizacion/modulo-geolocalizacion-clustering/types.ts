@@ -3,6 +3,8 @@ export interface ClusterMarker {
   lng: number;
   popup?: string;
   healthStatus?: string;
+  indice_supervivencia?: number | null;
+  recomendaciones?: string[];
 }
 
 export interface ClusteringConfig {
@@ -10,4 +12,6 @@ export interface ClusteringConfig {
   showCoverageOnHover?: boolean;
   zoomToBoundsOnClick?: boolean;
   disableClusteringAtZoom?: number;
+  spiderfyOnMaxZoom?: boolean;
+  spiderLegPolylineOptions?: any;
 }

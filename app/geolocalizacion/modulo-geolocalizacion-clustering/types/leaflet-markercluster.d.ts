@@ -6,6 +6,8 @@ declare module 'leaflet.markercluster' {
     showCoverageOnHover?: boolean;
     zoomToBoundsOnClick?: boolean;
     disableClusteringAtZoom?: number;
+    spiderfyOnMaxZoom?: boolean;
+    spiderLegPolylineOptions?: L.PathOptions;
     iconCreateFunction?: (cluster: L.MarkerCluster) => L.Icon | L.DivIcon;
   }
 
