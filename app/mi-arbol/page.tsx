@@ -81,6 +81,22 @@ export default function MiArbolPage() {
     lat: number;
     lng: number;
   } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("")
+  const [healthFilter, setHealthFilter] = useState("")
+  const [visibleCount, setVisibleCount] = useState(20)
+  const ITEMS_PER_PAGE = 20
+
+  const filteredArboles = arboles.filter((a) => {
+    const matchesSearch = !searchQuery ||
+      a.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.especie && a.especie.toLowerCase().includes(searchQuery.toLowerCase()))
+    const matchesHealth = !healthFilter || a.estado_salud === healthFilter
+    return matchesSearch && matchesHealth
+  })
+
+  const paginatedArboles = filteredArboles.slice(0, visibleCount)
+  const hasMore = filteredArboles.length > visibleCount
+
   const [formData, setFormData] = useState({
     nombre: "",
     especie: "",
@@ -774,6 +790,38 @@ export default function MiArbolPage() {
           </Dialog>
         </div>
 
+        {/* Barra de búsqueda y filtros */}
+        {arboles.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="flex-1">
+              <Input
+                placeholder="Buscar por nombre o especie..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(ITEMS_PER_PAGE) }}
+                className="border-green-200 focus:border-green-500"
+              />
+            </div>
+            <div className="w-full sm:w-48">
+              <Select value={healthFilter || "ALL"} onValueChange={(v) => { setHealthFilter(v === "ALL" ? "" : v); setVisibleCount(ITEMS_PER_PAGE) }}>
+                <SelectTrigger className="border-green-200 focus:border-green-500">
+                  <SelectValue placeholder="Todos los estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos los estados</SelectItem>
+                  <SelectItem value="EXCELENTE">Excelente</SelectItem>
+                  <SelectItem value="BUENO">Bueno</SelectItem>
+                  <SelectItem value="REGULAR">Regular</SelectItem>
+                  <SelectItem value="MALO">Malo</SelectItem>
+                  <SelectItem value="CRITICO">Crítico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground whitespace-nowrap">
+              {filteredArboles.length} de {arboles.length} árboles
+            </div>
+          </div>
+        )}
+
         {arboles.length === 0 ? (
           <Card className="border-2 border-dashed border-green-300 bg-gradient-to-br from-green-50 to-emerald-50">
             <CardContent className="text-center py-16">
@@ -799,8 +847,18 @@ export default function MiArbolPage() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
-              {arboles.map((arbol) => (
+            {filteredArboles.length === 0 ? (
+              <Card className="border-2 border-dashed border-amber-300 bg-gradient-to-br from-amber-50 to-yellow-50">
+                <CardContent className="text-center py-12">
+                  <TreePine className="h-16 w-16 text-amber-300 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-xl font-bold mb-2">Sin resultados</h3>
+                  <p className="text-muted-foreground">No hay árboles que coincidan con tu búsqueda. <button onClick={() => { setSearchQuery(""); setHealthFilter("") }} className="text-green-600 underline">Limpiar filtros</button></p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-4">
+              {paginatedArboles.map((arbol) => (
                 <Card
                   key={arbol.id}
                   className="overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col border border-gray-200 hover:border-green-300 group"
@@ -897,8 +955,24 @@ export default function MiArbolPage() {
                 </Card>
               ))}
             </div>
-          </>
-        )}
+            {hasMore && (
+              <div className="flex justify-center mt-4 mb-8">
+                <Button variant="outline" className="gap-2" onClick={() => setVisibleCount((p) => p + ITEMS_PER_PAGE)}>
+                  Ver más ({filteredArboles.length - visibleCount} restantes)
+                </Button>
+              </div>
+            )}
+            {visibleCount > ITEMS_PER_PAGE && (
+              <div className="flex justify-center -mt-4 mb-8">
+                <Button variant="ghost" size="sm" onClick={() => setVisibleCount(ITEMS_PER_PAGE)}>
+                  Mostrar menos
+                </Button>
+              </div>
+            )}
+            </>
+          )}
+        </>
+      )}
       </main>
 
       <AlertDialog
