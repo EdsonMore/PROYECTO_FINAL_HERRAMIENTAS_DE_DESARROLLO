@@ -1,5 +1,5 @@
 export const HEALTH_STATUS = {
-  excelente: {
+  EXCELENTE: {
     color: '#22c55e',
     emoji: '🟢',
     label: 'Excelente',
@@ -7,7 +7,15 @@ export const HEALTH_STATUS = {
     textColor: 'text-green-900',
     borderColor: 'border-green-200'
   },
-  regular: {
+  BUENO: {
+    color: '#4ade80',
+    emoji: '🟢',
+    label: 'Bueno',
+    bgColor: 'bg-green-50',
+    textColor: 'text-green-800',
+    borderColor: 'border-green-300'
+  },
+  REGULAR: {
     color: '#eab308',
     emoji: '🟡',
     label: 'Regular',
@@ -15,13 +23,21 @@ export const HEALTH_STATUS = {
     textColor: 'text-yellow-900',
     borderColor: 'border-yellow-200'
   },
-  malo: {
+  MALO: {
     color: '#ef4444',
     emoji: '🔴',
-    label: 'Crítico',
+    label: 'Malo',
     bgColor: 'bg-red-50',
     textColor: 'text-red-900',
     borderColor: 'border-red-200'
+  },
+  CRITICO: {
+    color: '#dc2626',
+    emoji: '🆘',
+    label: 'Crítico',
+    bgColor: 'bg-red-100',
+    textColor: 'text-red-950',
+    borderColor: 'border-red-400'
   }
 } as const
 
@@ -65,21 +81,27 @@ export function getHealthStyles(status?: string) {
 }
 
 export const HEALTH_FILTER_OPTIONS = [
-  { value: 'excelente', label: 'Excelente', color: '#22c55e' },
-  { value: 'regular', label: 'Regular', color: '#eab308' },
-  { value: 'malo', label: 'Crítico', color: '#ef4444' }
+  { value: 'EXCELENTE', label: 'Excelente', color: '#22c55e' },
+  { value: 'BUENO', label: 'Bueno', color: '#4ade80' },
+  { value: 'REGULAR', label: 'Regular', color: '#eab308' },
+  { value: 'MALO', label: 'Malo', color: '#ef4444' },
+  { value: 'CRITICO', label: 'Crítico', color: '#dc2626' }
 ] as const
 
 export const SURVIVAL_STATUS_MULTIPLIERS = {
-  excelente: 0.96,
-  regular: 0.84,
-  malo: 0.70
+  EXCELENTE: 0.96,
+  BUENO: 0.92,
+  REGULAR: 0.84,
+  MALO: 0.70,
+  CRITICO: 0.50
 } as const
 
 const SURVIVAL_STATUS_BOUNDS = {
-  excelente: { min: 70, max: 100 },
-  regular: { min: 45, max: 79 },
-  malo: { min: 0, max: 49 }
+  EXCELENTE: { min: 70, max: 100 },
+  BUENO: { min: 60, max: 89 },
+  REGULAR: { min: 45, max: 79 },
+  MALO: { min: 20, max: 59 },
+  CRITICO: { min: 0, max: 39 }
 } as const
 
 function getSeedOffset(value?: string | number): number {

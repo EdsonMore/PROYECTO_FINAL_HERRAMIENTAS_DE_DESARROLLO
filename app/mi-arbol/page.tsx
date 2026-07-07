@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   TreePine,
@@ -88,6 +89,9 @@ export default function MiArbolPage() {
     fecha_plantacion: "",
     descripcion: "",
     foto_url: "",
+    estado_salud: "",
+    altura_actual_cm: "",
+    diametro_tronco_cm: "",
   });
 
   useEffect(() => {
@@ -276,6 +280,9 @@ export default function MiArbolPage() {
       fecha_plantacion: "",
       descripcion: "",
       foto_url: "",
+      estado_salud: "",
+      altura_actual_cm: "",
+      diametro_tronco_cm: "",
     });
     setEditingArbol(null);
     setIsChangingLocation(false);
@@ -317,6 +324,9 @@ export default function MiArbolPage() {
         : "",
       descripcion: arbol.descripcion || "",
       foto_url: arbol.foto_url || "",
+      estado_salud: arbol.estado_salud || "",
+      altura_actual_cm: arbol.altura_actual_cm ? arbol.altura_actual_cm.toString() : "",
+      diametro_tronco_cm: arbol.diametro_tronco_cm ? arbol.diametro_tronco_cm.toString() : "",
     });
     setDialogOpen(true);
   };
@@ -518,6 +528,74 @@ export default function MiArbolPage() {
                     <p className="text-xs text-muted-foreground">
                       {formData.descripcion.length} caracteres
                     </p>
+                  </div>
+                </div>
+
+                {/* Sección: Estado y Medidas */}
+                <div className="border-l-4 pl-4 border-amber-400">
+                  <h3 className="font-semibold text-sm text-amber-700 mb-3 flex items-center gap-1">
+                    <span className="text-base">🌿</span> Estado y Medidas
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="estado_salud" className="font-semibold">
+                        Estado de Salud
+                      </Label>
+                      <Select
+                        value={formData.estado_salud}
+                        onValueChange={(value) => setFormData({ ...formData, estado_salud: value })}
+                      >
+                        <SelectTrigger id="estado_salud" className="border-amber-200 focus:border-amber-500">
+                          <SelectValue placeholder="Seleccionar estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="EXCELENTE">Excelente</SelectItem>
+                          <SelectItem value="BUENO">Bueno</SelectItem>
+                          <SelectItem value="REGULAR">Regular</SelectItem>
+                          <SelectItem value="MALO">Malo</SelectItem>
+                          <SelectItem value="CRITICO">Crítico</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Estado general del árbol
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="altura_actual_cm" className="font-semibold">
+                        Altura (cm)
+                      </Label>
+                      <Input
+                        id="altura_actual_cm"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={formData.altura_actual_cm}
+                        onChange={(e) =>
+                          setFormData({ ...formData, altura_actual_cm: e.target.value })
+                        }
+                        placeholder="Ej: 150"
+                        className="border-amber-200 focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="diametro_tronco_cm" className="font-semibold">
+                        Diámetro del Tronco (cm)
+                      </Label>
+                      <Input
+                        id="diametro_tronco_cm"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={formData.diametro_tronco_cm}
+                        onChange={(e) =>
+                          setFormData({ ...formData, diametro_tronco_cm: e.target.value })
+                        }
+                        placeholder="Ej: 25"
+                        className="border-amber-200 focus:border-amber-500"
+                      />
+                    </div>
                   </div>
                 </div>
 

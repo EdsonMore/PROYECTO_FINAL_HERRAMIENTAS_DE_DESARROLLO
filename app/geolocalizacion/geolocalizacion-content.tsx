@@ -52,8 +52,8 @@ export function GeolocalizacionContent() {
   const [loading, setLoading] = useState(true);
   const [geoLoading, setGeoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeHealthFilters, setActiveHealthFilters] = useState<string[]>(["excelente", "regular", "malo"]);
-  const [activeTreeFilters, setActiveTreeFilters] = useState<string[]>(["excelente", "regular", "malo"]);
+  const [activeHealthFilters, setActiveHealthFilters] = useState<string[]>(["EXCELENTE", "BUENO", "REGULAR", "MALO", "CRITICO"]);
+  const [activeTreeFilters, setActiveTreeFilters] = useState<string[]>(["EXCELENTE", "BUENO", "REGULAR", "MALO", "CRITICO"]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -216,7 +216,7 @@ export function GeolocalizacionContent() {
         ]
       : []),
     ...treeDistances
-      .filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud))
+      .filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud.toUpperCase()))
       .map((a) => {
         let popupContent = `<div class="popup-container" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">`;
         
@@ -231,14 +231,18 @@ export function GeolocalizacionContent() {
         // Estado de salud
         if (a.estado_salud) {
           const healthColors: Record<string, string> = {
-            excelente: "#22c55e",
-            regular: "#f59e0b",
-            malo: "#ef4444",
+            EXCELENTE: "#22c55e",
+            BUENO: "#4ade80",
+            REGULAR: "#f59e0b",
+            MALO: "#ef4444",
+            CRITICO: "#dc2626",
           };
           const healthLabels: Record<string, string> = {
-            excelente: "✅ Excelente",
-            regular: "⚠️ Regular",
-            malo: "❌ Crítico",
+            EXCELENTE: "✅ Excelente",
+            BUENO: "🟢 Bueno",
+            REGULAR: "⚠️ Regular",
+            MALO: "🔴 Malo",
+            CRITICO: "🆘 Crítico",
           };
           const color = healthColors[a.estado_salud] || "#6b7280";
           const label = healthLabels[a.estado_salud] || a.estado_salud;
@@ -612,11 +616,11 @@ export function GeolocalizacionContent() {
         {treeDistances.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Árboles Cercanos a tu Ubicación ({treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).length})</CardTitle>
+              <CardTitle>Árboles Cercanos a tu Ubicación ({treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud.toUpperCase())).length})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
+                {treeDistances.filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud.toUpperCase())).map((arbol, index) => (
                   <div
                     key={arbol.id}
                     className="flex items-center justify-between p-3 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
