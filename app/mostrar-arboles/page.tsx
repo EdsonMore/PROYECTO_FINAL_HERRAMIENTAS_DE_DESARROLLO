@@ -40,7 +40,7 @@ export default function MostrarArbolesPage() {
   const [arboles, setArboles] = useState<Arbol[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeHealthFilters, setActiveHealthFilters] = useState<string[]>(["excelente", "regular", "malo"]);
+  const [activeHealthFilters, setActiveHealthFilters] = useState<string[]>(["EXCELENTE", "BUENO", "REGULAR", "MALO", "CRITICO"]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -73,7 +73,7 @@ export default function MostrarArbolesPage() {
   };
 
   const filteredArboles = arboles.filter(
-    (arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud)
+    (arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud.toUpperCase())
   );
 
   if (status === "loading" || loading) {
@@ -187,19 +187,31 @@ export default function MostrarArbolesPage() {
                   <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                     <p className="text-xs text-green-900 font-semibold">Excelentes</p>
                     <p className="text-xl font-bold text-green-700">
-                      {arboles.filter((a) => a.estado_salud === "excelente").length}
+                      {arboles.filter((a) => a.estado_salud === "EXCELENTE").length}
+                    </p>
+                  </div>
+                  <div className="bg-green-100 rounded-lg p-3 border border-green-300">
+                    <p className="text-xs text-green-900 font-semibold">Buenos</p>
+                    <p className="text-xl font-bold text-green-700">
+                      {arboles.filter((a) => a.estado_salud === "BUENO").length}
                     </p>
                   </div>
                   <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
                     <p className="text-xs text-yellow-900 font-semibold">Regular</p>
                     <p className="text-xl font-bold text-yellow-700">
-                      {arboles.filter((a) => a.estado_salud === "regular").length}
+                      {arboles.filter((a) => a.estado_salud === "REGULAR").length}
                     </p>
                   </div>
                   <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                    <p className="text-xs text-red-900 font-semibold">Críticos</p>
+                    <p className="text-xs text-red-900 font-semibold">Malos</p>
                     <p className="text-xl font-bold text-red-700">
-                      {arboles.filter((a) => a.estado_salud === "malo").length}
+                      {arboles.filter((a) => a.estado_salud === "MALO").length}
+                    </p>
+                  </div>
+                  <div className="bg-red-100 rounded-lg p-3 border border-red-400">
+                    <p className="text-xs text-red-950 font-semibold">Críticos</p>
+                    <p className="text-xl font-bold text-red-800">
+                      {arboles.filter((a) => a.estado_salud === "CRITICO").length}
                     </p>
                   </div>
                 </CardContent>

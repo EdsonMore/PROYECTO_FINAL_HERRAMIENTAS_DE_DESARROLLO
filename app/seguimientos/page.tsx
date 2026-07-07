@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Navbar } from "@/components/navbar"
@@ -27,9 +27,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { CalendarComponent } from "@/components/calendar-component"
 import { ImageUploader } from "@/components/image-uploader"
-import { CatalogCombobox } from "@/components/catalog-combobox"
 import type { ArbolResumen, Seguimiento } from "@/types"
 import { useToast } from "@/hooks/use-toast"
+import { getHealthEmoji, getHealthLabel } from "@/lib/health-utils"
 
 export default function SeguimientosPage() {
   const { data: session, status } = useSession()
@@ -52,9 +52,12 @@ export default function SeguimientosPage() {
     foto_url: "",
     altura_cm: "",
     salud: "",
-    tratamiento: "",
+    tipo_seguimiento: "",
     fecha_seguimiento: new Date().toISOString().split("T")[0],
   })
+  const [treeSearchQuery, setTreeSearchQuery] = useState("")
+  const [treeSearchOpen, setTreeSearchOpen] = useState(false)
+  const treeSearchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -67,6 +70,17 @@ export default function SeguimientosPage() {
       fetchData()
     }
   }, [status])
+
+  // Close tree search dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (treeSearchRef.current && !treeSearchRef.current.contains(e.target as Node)) {
+        setTreeSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const fetchData = async () => {
     try {
@@ -114,7 +128,6 @@ export default function SeguimientosPage() {
           ...formData,
           arbol_id: Number.parseInt(formData.arbol_id),
           altura_cm: formData.altura_cm ? Number.parseFloat(formData.altura_cm) : null,
-          tratamiento: formData.tratamiento || null,
         }),
       })
 
@@ -166,9 +179,11 @@ export default function SeguimientosPage() {
       foto_url: "",
       altura_cm: "",
       salud: "",
-      tratamiento: "",
+      tipo_seguimiento: "",
       fecha_seguimiento: new Date().toISOString().split("T")[0],
     })
+    setTreeSearchQuery("")
+    setTreeSearchOpen(false)
     setEditingSeguimiento(null)
   }
 
@@ -195,6 +210,7 @@ export default function SeguimientosPage() {
       fechaFormateada = seg.fecha_seguimiento.toISOString().split("T")[0]
     }
     
+    const arbolNombre = seg.arbol_nombre || arboles.find(a => a.id.toString() === seg.arbol_id.toString())?.nombre || ""
     setFormData({
       arbol_id: seg.arbol_id.toString(),
       titulo: seg.titulo,
@@ -202,9 +218,10 @@ export default function SeguimientosPage() {
       foto_url: seg.foto_url || "",
       altura_cm: seg.altura_cm ? seg.altura_cm.toString() : "",
       salud: seg.salud || "",
-      tratamiento: (seg as any).tratamiento || "",
+      tipo_seguimiento: (seg as any).tipo_seguimiento || "",
       fecha_seguimiento: fechaFormateada,
     })
+    setTreeSearchQuery(arbolNombre)
     setDialogOpen(true)
   }
 
@@ -311,23 +328,65 @@ export default function SeguimientosPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="arbol_id">Árbol *</Label>
-                    <Select
-                      value={formData.arbol_id}
-                      onValueChange={(value) => setFormData({ ...formData, arbol_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona un árbol" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {arboles.map((arbol) => (
-                          <SelectItem key={arbol.id} value={arbol.id.toString()}>
-                            {arbol.nombre} {arbol.especie && `(${arbol.especie})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-2" ref={treeSearchRef}>
+                    <Label htmlFor="tree-search">Árbol *</Label>
+                    <div className="relative">
+                      <Input
+                        id="tree-search"
+                        value={treeSearchQuery}
+                        onChange={(e) => {
+                          setTreeSearchQuery(e.target.value)
+                          setTreeSearchOpen(true)
+                        }}
+                        onFocus={() => setTreeSearchOpen(true)}
+                        placeholder="Buscar árbol por nombre..."
+                        autoComplete="off"
+                      />
+                      {treeSearchOpen && (
+                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                          {arboles
+                            .filter((a) =>
+                              a.nombre.toLowerCase().includes(treeSearchQuery.toLowerCase()) ||
+                              (a.especie && a.especie.toLowerCase().includes(treeSearchQuery.toLowerCase()))
+                            )
+                            .map((arbol) => (
+                              <button
+                                key={arbol.id}
+                                type="button"
+                                className={`w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors text-sm ${
+                                  formData.arbol_id === arbol.id.toString() ? "bg-blue-50 dark:bg-slate-800 font-semibold" : ""
+                                }`}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  setFormData({ ...formData, arbol_id: arbol.id.toString() })
+                                  setTreeSearchQuery(arbol.nombre)
+                                  setTreeSearchOpen(false)
+                                }}
+                              >
+                                <p className="font-medium text-gray-900 dark:text-gray-100">
+                                  {arbol.nombre}
+                                </p>
+                                {arbol.especie && (
+                                  <p className="text-xs text-muted-foreground">🌿 {arbol.especie}</p>
+                                )}
+                              </button>
+                            ))}
+                          {arboles.filter((a) =>
+                            a.nombre.toLowerCase().includes(treeSearchQuery.toLowerCase()) ||
+                            (a.especie && a.especie.toLowerCase().includes(treeSearchQuery.toLowerCase()))
+                          ).length === 0 && (
+                            <p className="px-3 py-2 text-sm text-muted-foreground">
+                              No se encontraron árboles con ese nombre
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {formData.arbol_id && (
+                      <p className="text-xs text-green-600">
+                        ✓ Seleccionado: {arboles.find(a => a.id.toString() === formData.arbol_id)?.nombre}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -373,24 +432,35 @@ export default function SeguimientosPage() {
                           <SelectValue placeholder="Selecciona estado" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="excelente">🟢 Excelente</SelectItem>
-                          <SelectItem value="bueno">🟢 Bueno</SelectItem>
-                          <SelectItem value="regular">🟡 Regular</SelectItem>
-                          <SelectItem value="malo">🔴 Malo</SelectItem>
+                          <SelectItem value="EXCELENTE">🟢 Excelente</SelectItem>
+                          <SelectItem value="BUENO">🟢 Bueno</SelectItem>
+                          <SelectItem value="REGULAR">🟡 Regular</SelectItem>
+                          <SelectItem value="MALO">🔴 Malo</SelectItem>
+                          <SelectItem value="CRITICO">🆘 Crítico</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
-                  {/* Campo Tratamiento - Combobox con catálogo */}
-                  <CatalogCombobox
-                    tipo="tratamiento"
-                    id="tratamiento"
-                    label="Tratamiento aplicado"
-                    value={formData.tratamiento}
-                    onChange={(val) => setFormData({ ...formData, tratamiento: val })}
-                    placeholder="Ej: Poda sanitaria, Fertilización..."
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="tipo_seguimiento">Tipo de Seguimiento</Label>
+                    <Select
+                      value={formData.tipo_seguimiento}
+                      onValueChange={(value) => setFormData({ ...formData, tipo_seguimiento: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OBSERVACION">🔍 Observación</SelectItem>
+                        <SelectItem value="RIEGO">💧 Riego</SelectItem>
+                        <SelectItem value="PODA">✂️ Poda</SelectItem>
+                        <SelectItem value="FERTILIZACION">🌱 Fertilización</SelectItem>
+                        <SelectItem value="PLAGAS">🐛 Tratamiento de Plagas</SelectItem>
+                        <SelectItem value="COSECHA">🍎 Cosecha</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2">
                     <Label>Foto del Seguimiento</Label>
                     <ImageUploader
@@ -641,10 +711,7 @@ export default function SeguimientosPage() {
                     )}
                     {seg.salud && (
                       <p className="line-clamp-1">
-                        {seg.salud === "excelente" && "🟢"}
-                        {seg.salud === "bueno" && "🟢"}
-                        {seg.salud === "regular" && "🟡"}
-                        {seg.salud === "malo" && "🔴"} {seg.salud}
+                        {getHealthEmoji(seg.salud)} {getHealthLabel(seg.salud)}
                       </p>
                     )}
                   </div>
@@ -727,20 +794,10 @@ export default function SeguimientosPage() {
                 )}
 
                 {selectedSeguimiento.salud && (
-                  <div className={`p-3 rounded-lg ${
-                    selectedSeguimiento.salud === "excelente" || selectedSeguimiento.salud === "bueno"
-                      ? "bg-green-50"
-                      : selectedSeguimiento.salud === "regular"
-                        ? "bg-yellow-50"
-                        : "bg-red-50"
-                  }`}>
+                  <div className="p-3 rounded-lg bg-slate-50">
                     <p className="text-xs text-muted-foreground">Estado de Salud</p>
-                    <p className="text-lg font-semibold capitalize flex items-center gap-2">
-                      {selectedSeguimiento.salud === "excelente" && "🟢"}
-                      {selectedSeguimiento.salud === "bueno" && "🟢"}
-                      {selectedSeguimiento.salud === "regular" && "🟡"}
-                      {selectedSeguimiento.salud === "malo" && "🔴"}
-                      {selectedSeguimiento.salud}
+                    <p className="text-lg font-semibold flex items-center gap-2">
+                      {getHealthEmoji(selectedSeguimiento.salud)} {getHealthLabel(selectedSeguimiento.salud)}
                     </p>
                   </div>
                 )}
