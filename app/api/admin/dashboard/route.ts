@@ -53,14 +53,14 @@ export async function GET(req: NextRequest) {
         GROUP BY DATE(creado_en)
         ORDER BY DATE(creado_en)
       `),
-      // Salud de árboles (desde seguimientos)
+      // Salud de árboles (desde la tabla arboles)
       query(`
         SELECT 
-          COALESCE(s.salud, 'sin_dato') as estado,
+          COALESCE(estado_salud, 'SIN_DATO') as estado,
           COUNT(*) as cantidad
-        FROM seguimientos s
-        WHERE s.fecha_seguimiento > NOW() - INTERVAL '30 days'
-        GROUP BY COALESCE(s.salud, 'sin_dato')
+        FROM arboles
+        WHERE deleted_at IS NULL
+        GROUP BY COALESCE(estado_salud, 'SIN_DATO')
       `),
       // Histórico de seguimientos por día (últimos 30 días)
       query(`
@@ -117,8 +117,8 @@ export async function GET(req: NextRequest) {
       salud[row.estado] = parseInt(row.cantidad);
     });
 
-    // Total de árboles saludables (última entrada de salud o Excelente)
-    const arbolSaludable = salud['Excelente'] || 0;
+    // Total de árboles saludables (Excelente + Bueno)
+    const arbolSaludable = (salud['EXCELENTE'] || 0) + (salud['BUENO'] || 0);
 
     // Predicción de árboles
     const arbolCrecimientoSemanales = arbolesHistorico.slice(-7);

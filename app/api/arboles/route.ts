@@ -157,14 +157,11 @@ async function parseArbolesFromSQL(sqlContent: string) {
 }
 
 const ARBOLES_SELECTS: Record<ArbolQueryMode, string> = {
-  full: `SELECT a.id, a.usuario_id, a.nombre, a.especie, a.latitud, a.longitud, a.fecha_plantacion, a.descripcion, a.foto_url, a.creado_en, a.actualizado_en,
-         (SELECT s.salud FROM seguimientos s WHERE s.arbol_id = a.id ORDER BY s.fecha_seguimiento DESC LIMIT 1) as estado_salud
+  full: `SELECT a.id, a.usuario_id, a.nombre, a.especie, a.latitud, a.longitud, a.fecha_plantacion, a.descripcion, a.foto_url, a.estado_salud, a.altura_actual_cm, a.diametro_tronco_cm, a.creado_en, a.actualizado_en
          FROM arboles a`,
-  summary: `SELECT a.id, a.nombre, a.especie, a.foto_url, a.creado_en,
-            (SELECT s.salud FROM seguimientos s WHERE s.arbol_id = a.id ORDER BY s.fecha_seguimiento DESC LIMIT 1) as estado_salud
+  summary: `SELECT a.id, a.nombre, a.especie, a.foto_url, a.estado_salud, a.creado_en
             FROM arboles a`,
-  geo: `SELECT a.id, a.nombre, a.especie, a.latitud, a.longitud, a.foto_url, a.creado_en,
-        (SELECT s.salud FROM seguimientos s WHERE s.arbol_id = a.id ORDER BY s.fecha_seguimiento DESC LIMIT 1) as estado_salud
+  geo: `SELECT a.id, a.nombre, a.especie, a.latitud, a.longitud, a.foto_url, a.estado_salud, a.creado_en
         FROM arboles a`,
 }
 
@@ -325,7 +322,7 @@ export async function POST(request: NextRequest) {
     if (error) return error
 
     const body = await request.json()
-    const { nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url } = body
+    const { nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, estado_salud, altura_actual_cm, diametro_tronco_cm } = body
 
     if (!nombre || !latitud || !longitud) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
@@ -336,12 +333,17 @@ export async function POST(request: NextRequest) {
       await autoRegistrarEspecie(especie);
     }
 
+    const fotoFinal = foto_url?.trim() || null;
+    const alturaFinal = altura_actual_cm ? Number.parseFloat(altura_actual_cm) : null;
+    const diametroFinal = diametro_tronco_cm ? Number.parseFloat(diametro_tronco_cm) : null;
+    const saludFinal = estado_salud ? estado_salud.toUpperCase() : null;
+
     // Insertar el árbol
     const result = await query(
-      `INSERT INTO arboles (usuario_id, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO arboles (usuario_id, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, estado_salud, altura_actual_cm, diametro_tronco_cm)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
-      [userId, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url],
+      [userId, nombre, especie, latitud, longitud, fecha_plantacion, descripcion, fotoFinal, saludFinal, alturaFinal, diametroFinal],
     )
 
     return NextResponse.json(result.rows[0], { status: 201 })

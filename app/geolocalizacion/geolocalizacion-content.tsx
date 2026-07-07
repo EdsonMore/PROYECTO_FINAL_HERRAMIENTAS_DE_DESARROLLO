@@ -54,8 +54,8 @@ export function GeolocalizacionContent() {
   const [loading, setLoading] = useState(true);
   const [geoLoading, setGeoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeHealthFilters, setActiveHealthFilters] = useState<string[]>(["excelente", "regular", "malo"]);
-  const [activeTreeFilters, setActiveTreeFilters] = useState<string[]>(["excelente", "regular", "malo"]);
+  const [activeHealthFilters, setActiveHealthFilters] = useState<string[]>(["EXCELENTE", "BUENO", "REGULAR", "MALO", "CRITICO"]);
+  const [activeTreeFilters, setActiveTreeFilters] = useState<string[]>(["EXCELENTE", "BUENO", "REGULAR", "MALO", "CRITICO"]);
 
   useEffect(() => {
     // En desarrollo permitimos ver la página sin autenticación para facilitar pruebas.
@@ -355,14 +355,18 @@ export function GeolocalizacionContent() {
         // Estado de salud
         if (a.estado_salud) {
           const healthColors: Record<string, string> = {
-            excelente: "#22c55e",
-            regular: "#f59e0b",
-            malo: "#ef4444",
+            EXCELENTE: "#22c55e",
+            BUENO: "#4ade80",
+            REGULAR: "#f59e0b",
+            MALO: "#ef4444",
+            CRITICO: "#dc2626",
           };
           const healthLabels: Record<string, string> = {
-            excelente: "✅ Excelente",
-            regular: "⚠️ Regular",
-            malo: "❌ Crítico",
+            EXCELENTE: "✅ Excelente",
+            BUENO: "🟢 Bueno",
+            REGULAR: "⚠️ Regular",
+            MALO: "🔴 Malo",
+            CRITICO: "🆘 Crítico",
           };
           const color = healthColors[a.estado_salud] || "#6b7280";
           const label = healthLabels[a.estado_salud] || a.estado_salud;

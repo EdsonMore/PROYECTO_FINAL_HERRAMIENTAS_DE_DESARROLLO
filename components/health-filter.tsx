@@ -50,7 +50,9 @@ export function HealthFilter({ activeFilters, onFilterChange }: HealthFilterProp
         </div>
         <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
           {activeFilters.map((filter) => {
-            const health = HEALTH_STATUS[filter as keyof typeof HEALTH_STATUS]
+            const normalizedFilter = filter.toUpperCase()
+            const health = HEALTH_STATUS[normalizedFilter as keyof typeof HEALTH_STATUS]
+            if (!health) return null
             return (
               <div
                 key={filter}

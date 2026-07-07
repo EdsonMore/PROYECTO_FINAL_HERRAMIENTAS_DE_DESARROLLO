@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   TreePine,
@@ -80,6 +81,22 @@ export default function MiArbolPage() {
     lat: number;
     lng: number;
   } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("")
+  const [healthFilter, setHealthFilter] = useState("")
+  const [visibleCount, setVisibleCount] = useState(20)
+  const ITEMS_PER_PAGE = 20
+
+  const filteredArboles = arboles.filter((a) => {
+    const matchesSearch = !searchQuery ||
+      a.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.especie && a.especie.toLowerCase().includes(searchQuery.toLowerCase()))
+    const matchesHealth = !healthFilter || a.estado_salud === healthFilter
+    return matchesSearch && matchesHealth
+  })
+
+  const paginatedArboles = filteredArboles.slice(0, visibleCount)
+  const hasMore = filteredArboles.length > visibleCount
+
   const [formData, setFormData] = useState({
     nombre: "",
     especie: "",
@@ -88,6 +105,9 @@ export default function MiArbolPage() {
     fecha_plantacion: "",
     descripcion: "",
     foto_url: "",
+    estado_salud: "",
+    altura_actual_cm: "",
+    diametro_tronco_cm: "",
   });
 
   useEffect(() => {
@@ -276,6 +296,9 @@ export default function MiArbolPage() {
       fecha_plantacion: "",
       descripcion: "",
       foto_url: "",
+      estado_salud: "",
+      altura_actual_cm: "",
+      diametro_tronco_cm: "",
     });
     setEditingArbol(null);
     setIsChangingLocation(false);
@@ -317,6 +340,9 @@ export default function MiArbolPage() {
         : "",
       descripcion: arbol.descripcion || "",
       foto_url: arbol.foto_url || "",
+      estado_salud: arbol.estado_salud || "",
+      altura_actual_cm: arbol.altura_actual_cm ? arbol.altura_actual_cm.toString() : "",
+      diametro_tronco_cm: arbol.diametro_tronco_cm ? arbol.diametro_tronco_cm.toString() : "",
     });
     setDialogOpen(true);
   };
@@ -521,6 +547,74 @@ export default function MiArbolPage() {
                   </div>
                 </div>
 
+                {/* Sección: Estado y Medidas */}
+                <div className="border-l-4 pl-4 border-amber-400">
+                  <h3 className="font-semibold text-sm text-amber-700 mb-3 flex items-center gap-1">
+                    <span className="text-base">🌿</span> Estado y Medidas
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="estado_salud" className="font-semibold">
+                        Estado de Salud
+                      </Label>
+                      <Select
+                        value={formData.estado_salud}
+                        onValueChange={(value) => setFormData({ ...formData, estado_salud: value })}
+                      >
+                        <SelectTrigger id="estado_salud" className="border-amber-200 focus:border-amber-500">
+                          <SelectValue placeholder="Seleccionar estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="EXCELENTE">Excelente</SelectItem>
+                          <SelectItem value="BUENO">Bueno</SelectItem>
+                          <SelectItem value="REGULAR">Regular</SelectItem>
+                          <SelectItem value="MALO">Malo</SelectItem>
+                          <SelectItem value="CRITICO">Crítico</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Estado general del árbol
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="altura_actual_cm" className="font-semibold">
+                        Altura (cm)
+                      </Label>
+                      <Input
+                        id="altura_actual_cm"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={formData.altura_actual_cm}
+                        onChange={(e) =>
+                          setFormData({ ...formData, altura_actual_cm: e.target.value })
+                        }
+                        placeholder="Ej: 150"
+                        className="border-amber-200 focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="diametro_tronco_cm" className="font-semibold">
+                        Diámetro del Tronco (cm)
+                      </Label>
+                      <Input
+                        id="diametro_tronco_cm"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={formData.diametro_tronco_cm}
+                        onChange={(e) =>
+                          setFormData({ ...formData, diametro_tronco_cm: e.target.value })
+                        }
+                        placeholder="Ej: 25"
+                        className="border-amber-200 focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Sección: Ubicación en Mapa */}
                 <div className="border-l-4 pl-4">
                   <h3 className="font-semibold text-sm text-purple-700 mb-3 flex items-center gap-1">
@@ -696,6 +790,38 @@ export default function MiArbolPage() {
           </Dialog>
         </div>
 
+        {/* Barra de búsqueda y filtros */}
+        {arboles.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="flex-1">
+              <Input
+                placeholder="Buscar por nombre o especie..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(ITEMS_PER_PAGE) }}
+                className="border-green-200 focus:border-green-500"
+              />
+            </div>
+            <div className="w-full sm:w-48">
+              <Select value={healthFilter || "ALL"} onValueChange={(v) => { setHealthFilter(v === "ALL" ? "" : v); setVisibleCount(ITEMS_PER_PAGE) }}>
+                <SelectTrigger className="border-green-200 focus:border-green-500">
+                  <SelectValue placeholder="Todos los estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos los estados</SelectItem>
+                  <SelectItem value="EXCELENTE">Excelente</SelectItem>
+                  <SelectItem value="BUENO">Bueno</SelectItem>
+                  <SelectItem value="REGULAR">Regular</SelectItem>
+                  <SelectItem value="MALO">Malo</SelectItem>
+                  <SelectItem value="CRITICO">Crítico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground whitespace-nowrap">
+              {filteredArboles.length} de {arboles.length} árboles
+            </div>
+          </div>
+        )}
+
         {arboles.length === 0 ? (
           <Card className="border-2 border-dashed border-green-300 bg-gradient-to-br from-green-50 to-emerald-50">
             <CardContent className="text-center py-16">
@@ -721,8 +847,18 @@ export default function MiArbolPage() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
-              {arboles.map((arbol) => (
+            {filteredArboles.length === 0 ? (
+              <Card className="border-2 border-dashed border-amber-300 bg-gradient-to-br from-amber-50 to-yellow-50">
+                <CardContent className="text-center py-12">
+                  <TreePine className="h-16 w-16 text-amber-300 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-xl font-bold mb-2">Sin resultados</h3>
+                  <p className="text-muted-foreground">No hay árboles que coincidan con tu búsqueda. <button onClick={() => { setSearchQuery(""); setHealthFilter("") }} className="text-green-600 underline">Limpiar filtros</button></p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-4">
+              {paginatedArboles.map((arbol) => (
                 <Card
                   key={arbol.id}
                   className="overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col border border-gray-200 hover:border-green-300 group"
@@ -819,8 +955,24 @@ export default function MiArbolPage() {
                 </Card>
               ))}
             </div>
-          </>
-        )}
+            {hasMore && (
+              <div className="flex justify-center mt-4 mb-8">
+                <Button variant="outline" className="gap-2" onClick={() => setVisibleCount((p) => p + ITEMS_PER_PAGE)}>
+                  Ver más ({filteredArboles.length - visibleCount} restantes)
+                </Button>
+              </div>
+            )}
+            {visibleCount > ITEMS_PER_PAGE && (
+              <div className="flex justify-center -mt-4 mb-8">
+                <Button variant="ghost" size="sm" onClick={() => setVisibleCount(ITEMS_PER_PAGE)}>
+                  Mostrar menos
+                </Button>
+              </div>
+            )}
+            </>
+          )}
+        </>
+      )}
       </main>
 
       <AlertDialog

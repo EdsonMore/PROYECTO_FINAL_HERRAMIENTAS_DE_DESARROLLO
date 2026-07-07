@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Navbar } from "@/components/navbar"
@@ -27,9 +27,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { CalendarComponent } from "@/components/calendar-component"
 import { ImageUploader } from "@/components/image-uploader"
-import { CatalogCombobox } from "@/components/catalog-combobox"
 import type { ArbolResumen, Seguimiento } from "@/types"
 import { useToast } from "@/hooks/use-toast"
+import { getHealthEmoji, getHealthLabel } from "@/lib/health-utils"
 
 export default function SeguimientosPage() {
   const { data: session, status } = useSession()
@@ -52,9 +52,30 @@ export default function SeguimientosPage() {
     foto_url: "",
     altura_cm: "",
     salud: "",
-    tratamiento: "",
+    tipo_seguimiento: "",
     fecha_seguimiento: new Date().toISOString().split("T")[0],
   })
+  const [treeSearchQuery, setTreeSearchQuery] = useState("")
+  const [treeSearchOpen, setTreeSearchOpen] = useState(false)
+  const treeSearchRef = useRef<HTMLDivElement>(null)
+  const [segSearchQuery, setSegSearchQuery] = useState("")
+  const [segHealthFilter, setSegHealthFilter] = useState("")
+  const [segTipoFilter, setSegTipoFilter] = useState("")
+  const [segVisibleCount, setSegVisibleCount] = useState(20)
+  const SEG_ITEMS_PER_PAGE = 20
+
+  const filteredSeguimientos = seguimientos.filter((s) => {
+    const matchesSearch = !segSearchQuery ||
+      s.titulo.toLowerCase().includes(segSearchQuery.toLowerCase()) ||
+      (s.descripcion && s.descripcion.toLowerCase().includes(segSearchQuery.toLowerCase())) ||
+      (s.arbol_nombre && s.arbol_nombre.toLowerCase().includes(segSearchQuery.toLowerCase()))
+    const matchesHealth = !segHealthFilter || (s.salud && s.salud === segHealthFilter)
+    const matchesTipo = !segTipoFilter || (s as any).tipo_seguimiento === segTipoFilter
+    return matchesSearch && matchesHealth && matchesTipo
+  })
+
+  const paginatedSeguimientos = filteredSeguimientos.slice(0, segVisibleCount)
+  const segHasMore = filteredSeguimientos.length > segVisibleCount
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -67,6 +88,17 @@ export default function SeguimientosPage() {
       fetchData()
     }
   }, [status])
+
+  // Close tree search dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (treeSearchRef.current && !treeSearchRef.current.contains(e.target as Node)) {
+        setTreeSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const fetchData = async () => {
     try {
@@ -114,7 +146,6 @@ export default function SeguimientosPage() {
           ...formData,
           arbol_id: Number.parseInt(formData.arbol_id),
           altura_cm: formData.altura_cm ? Number.parseFloat(formData.altura_cm) : null,
-          tratamiento: formData.tratamiento || null,
         }),
       })
 
@@ -166,9 +197,11 @@ export default function SeguimientosPage() {
       foto_url: "",
       altura_cm: "",
       salud: "",
-      tratamiento: "",
+      tipo_seguimiento: "",
       fecha_seguimiento: new Date().toISOString().split("T")[0],
     })
+    setTreeSearchQuery("")
+    setTreeSearchOpen(false)
     setEditingSeguimiento(null)
   }
 
@@ -195,6 +228,7 @@ export default function SeguimientosPage() {
       fechaFormateada = seg.fecha_seguimiento.toISOString().split("T")[0]
     }
     
+    const arbolNombre = seg.arbol_nombre || arboles.find(a => a.id.toString() === seg.arbol_id.toString())?.nombre || ""
     setFormData({
       arbol_id: seg.arbol_id.toString(),
       titulo: seg.titulo,
@@ -202,9 +236,10 @@ export default function SeguimientosPage() {
       foto_url: seg.foto_url || "",
       altura_cm: seg.altura_cm ? seg.altura_cm.toString() : "",
       salud: seg.salud || "",
-      tratamiento: (seg as any).tratamiento || "",
+      tipo_seguimiento: (seg as any).tipo_seguimiento || "",
       fecha_seguimiento: fechaFormateada,
     })
+    setTreeSearchQuery(arbolNombre)
     setDialogOpen(true)
   }
 
@@ -311,23 +346,65 @@ export default function SeguimientosPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="arbol_id">Árbol *</Label>
-                    <Select
-                      value={formData.arbol_id}
-                      onValueChange={(value) => setFormData({ ...formData, arbol_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona un árbol" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {arboles.map((arbol) => (
-                          <SelectItem key={arbol.id} value={arbol.id.toString()}>
-                            {arbol.nombre} {arbol.especie && `(${arbol.especie})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-2" ref={treeSearchRef}>
+                    <Label htmlFor="tree-search">Árbol *</Label>
+                    <div className="relative">
+                      <Input
+                        id="tree-search"
+                        value={treeSearchQuery}
+                        onChange={(e) => {
+                          setTreeSearchQuery(e.target.value)
+                          setTreeSearchOpen(true)
+                        }}
+                        onFocus={() => setTreeSearchOpen(true)}
+                        placeholder="Buscar árbol por nombre..."
+                        autoComplete="off"
+                      />
+                      {treeSearchOpen && (
+                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                          {arboles
+                            .filter((a) =>
+                              a.nombre.toLowerCase().includes(treeSearchQuery.toLowerCase()) ||
+                              (a.especie && a.especie.toLowerCase().includes(treeSearchQuery.toLowerCase()))
+                            )
+                            .map((arbol) => (
+                              <button
+                                key={arbol.id}
+                                type="button"
+                                className={`w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors text-sm ${
+                                  formData.arbol_id === arbol.id.toString() ? "bg-blue-50 dark:bg-slate-800 font-semibold" : ""
+                                }`}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  setFormData({ ...formData, arbol_id: arbol.id.toString() })
+                                  setTreeSearchQuery(arbol.nombre)
+                                  setTreeSearchOpen(false)
+                                }}
+                              >
+                                <p className="font-medium text-gray-900 dark:text-gray-100">
+                                  {arbol.nombre}
+                                </p>
+                                {arbol.especie && (
+                                  <p className="text-xs text-muted-foreground">🌿 {arbol.especie}</p>
+                                )}
+                              </button>
+                            ))}
+                          {arboles.filter((a) =>
+                            a.nombre.toLowerCase().includes(treeSearchQuery.toLowerCase()) ||
+                            (a.especie && a.especie.toLowerCase().includes(treeSearchQuery.toLowerCase()))
+                          ).length === 0 && (
+                            <p className="px-3 py-2 text-sm text-muted-foreground">
+                              No se encontraron árboles con ese nombre
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {formData.arbol_id && (
+                      <p className="text-xs text-green-600">
+                        ✓ Seleccionado: {arboles.find(a => a.id.toString() === formData.arbol_id)?.nombre}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -373,24 +450,35 @@ export default function SeguimientosPage() {
                           <SelectValue placeholder="Selecciona estado" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="excelente">🟢 Excelente</SelectItem>
-                          <SelectItem value="bueno">🟢 Bueno</SelectItem>
-                          <SelectItem value="regular">🟡 Regular</SelectItem>
-                          <SelectItem value="malo">🔴 Malo</SelectItem>
+                          <SelectItem value="EXCELENTE">🟢 Excelente</SelectItem>
+                          <SelectItem value="BUENO">🟢 Bueno</SelectItem>
+                          <SelectItem value="REGULAR">🟡 Regular</SelectItem>
+                          <SelectItem value="MALO">🔴 Malo</SelectItem>
+                          <SelectItem value="CRITICO">🆘 Crítico</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
-                  {/* Campo Tratamiento - Combobox con catálogo */}
-                  <CatalogCombobox
-                    tipo="tratamiento"
-                    id="tratamiento"
-                    label="Tratamiento aplicado"
-                    value={formData.tratamiento}
-                    onChange={(val) => setFormData({ ...formData, tratamiento: val })}
-                    placeholder="Ej: Poda sanitaria, Fertilización..."
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="tipo_seguimiento">Tipo de Seguimiento</Label>
+                    <Select
+                      value={formData.tipo_seguimiento}
+                      onValueChange={(value) => setFormData({ ...formData, tipo_seguimiento: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OBSERVACION">🔍 Observación</SelectItem>
+                        <SelectItem value="RIEGO">💧 Riego</SelectItem>
+                        <SelectItem value="PODA">✂️ Poda</SelectItem>
+                        <SelectItem value="FERTILIZACION">🌱 Fertilización</SelectItem>
+                        <SelectItem value="PLAGAS">🐛 Tratamiento de Plagas</SelectItem>
+                        <SelectItem value="COSECHA">🍎 Cosecha</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2">
                     <Label>Foto del Seguimiento</Label>
                     <ImageUploader
@@ -431,6 +519,49 @@ export default function SeguimientosPage() {
             </Dialog>
           </div>
         </div>
+
+        {/* Barra de búsqueda y filtros (solo en vista lista con datos) */}
+        {arboles.length > 0 && viewMode === "list" && seguimientos.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="flex-1">
+              <Input
+                placeholder="Buscar por título, notas o árbol..."
+                value={segSearchQuery}
+                onChange={(e) => { setSegSearchQuery(e.target.value); setSegVisibleCount(SEG_ITEMS_PER_PAGE) }}
+              />
+            </div>
+            <div className="w-full sm:w-40">
+              <Select value={segHealthFilter || "ALL"} onValueChange={(v) => { setSegHealthFilter(v === "ALL" ? "" : v); setSegVisibleCount(SEG_ITEMS_PER_PAGE) }}>
+                <SelectTrigger><SelectValue placeholder="Salud" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Toda salud</SelectItem>
+                  <SelectItem value="EXCELENTE">Excelente</SelectItem>
+                  <SelectItem value="BUENO">Bueno</SelectItem>
+                  <SelectItem value="REGULAR">Regular</SelectItem>
+                  <SelectItem value="MALO">Malo</SelectItem>
+                  <SelectItem value="CRITICO">Crítico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full sm:w-44">
+              <Select value={segTipoFilter || "ALL"} onValueChange={(v) => { setSegTipoFilter(v === "ALL" ? "" : v); setSegVisibleCount(SEG_ITEMS_PER_PAGE) }}>
+                <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todo tipo</SelectItem>
+                  <SelectItem value="OBSERVACION">Observación</SelectItem>
+                  <SelectItem value="RIEGO">Riego</SelectItem>
+                  <SelectItem value="PODA">Poda</SelectItem>
+                  <SelectItem value="FERTILIZACION">Fertilización</SelectItem>
+                  <SelectItem value="PLAGAS">Plagas</SelectItem>
+                  <SelectItem value="COSECHA">Cosecha</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground whitespace-nowrap">
+              {filteredSeguimientos.length} de {seguimientos.length}
+            </div>
+          </div>
+        )}
 
         {arboles.length === 0 ? (
           <div className="space-y-6">
@@ -572,6 +703,14 @@ export default function SeguimientosPage() {
               </Card>
             )}
           </div>
+        ) : viewMode === "list" && filteredSeguimientos.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Camera className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Sin resultados</h3>
+              <p className="text-muted-foreground mb-6">No hay seguimientos que coincidan con tu búsqueda. <button onClick={() => { setSegSearchQuery(""); setSegHealthFilter(""); setSegTipoFilter("") }} className="text-blue-600 underline">Limpiar filtros</button></p>
+            </CardContent>
+          </Card>
         ) : seguimientos.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
@@ -585,8 +724,9 @@ export default function SeguimientosPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {seguimientos.map((seg) => (
+          <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-4">
+            {paginatedSeguimientos.map((seg) => (
               <Card
                 key={seg.id}
                 className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer group h-full flex flex-col border border-gray-200 hover:border-blue-300"
@@ -641,10 +781,7 @@ export default function SeguimientosPage() {
                     )}
                     {seg.salud && (
                       <p className="line-clamp-1">
-                        {seg.salud === "excelente" && "🟢"}
-                        {seg.salud === "bueno" && "🟢"}
-                        {seg.salud === "regular" && "🟡"}
-                        {seg.salud === "malo" && "🔴"} {seg.salud}
+                        {getHealthEmoji(seg.salud)} {getHealthLabel(seg.salud)}
                       </p>
                     )}
                   </div>
@@ -676,6 +813,21 @@ export default function SeguimientosPage() {
               </Card>
             ))}
           </div>
+          {segHasMore && (
+            <div className="flex justify-center mt-4 mb-6">
+              <Button variant="outline" className="gap-2" onClick={() => setSegVisibleCount((p) => p + SEG_ITEMS_PER_PAGE)}>
+                Ver más ({filteredSeguimientos.length - segVisibleCount} restantes)
+              </Button>
+            </div>
+          )}
+          {segVisibleCount > SEG_ITEMS_PER_PAGE && (
+            <div className="flex justify-center mt-2 mb-6">
+              <Button variant="ghost" size="sm" onClick={() => setSegVisibleCount(SEG_ITEMS_PER_PAGE)}>
+                Mostrar menos
+              </Button>
+            </div>
+          )}
+          </>
         )}
       </main>
 
@@ -727,20 +879,10 @@ export default function SeguimientosPage() {
                 )}
 
                 {selectedSeguimiento.salud && (
-                  <div className={`p-3 rounded-lg ${
-                    selectedSeguimiento.salud === "excelente" || selectedSeguimiento.salud === "bueno"
-                      ? "bg-green-50"
-                      : selectedSeguimiento.salud === "regular"
-                        ? "bg-yellow-50"
-                        : "bg-red-50"
-                  }`}>
+                  <div className="p-3 rounded-lg bg-slate-50">
                     <p className="text-xs text-muted-foreground">Estado de Salud</p>
-                    <p className="text-lg font-semibold capitalize flex items-center gap-2">
-                      {selectedSeguimiento.salud === "excelente" && "🟢"}
-                      {selectedSeguimiento.salud === "bueno" && "🟢"}
-                      {selectedSeguimiento.salud === "regular" && "🟡"}
-                      {selectedSeguimiento.salud === "malo" && "🔴"}
-                      {selectedSeguimiento.salud}
+                    <p className="text-lg font-semibold flex items-center gap-2">
+                      {getHealthEmoji(selectedSeguimiento.salud)} {getHealthLabel(selectedSeguimiento.salud)}
                     </p>
                   </div>
                 )}
