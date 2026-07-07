@@ -111,8 +111,16 @@ export function AdminDashboard() {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   // Preparar datos de salud de árboles
+  const saludLabels: Record<string, string> = {
+    EXCELENTE: 'Excelente',
+    BUENO: 'Bueno',
+    REGULAR: 'Regular',
+    MALO: 'Malo',
+    CRITICO: 'Crítico',
+    SIN_DATO: 'Sin dato',
+  }
   const arbolSaludData = Object.entries(stats.arboles.salud).map(([name, value]) => ({
-    name: name.replace(/_/g, ' ').charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
+    name: saludLabels[name.toUpperCase()] || name,
     value: typeof value === 'number' ? value : 0,
   }));
 

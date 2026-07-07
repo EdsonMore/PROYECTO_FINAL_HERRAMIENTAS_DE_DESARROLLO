@@ -58,6 +58,24 @@ export default function SeguimientosPage() {
   const [treeSearchQuery, setTreeSearchQuery] = useState("")
   const [treeSearchOpen, setTreeSearchOpen] = useState(false)
   const treeSearchRef = useRef<HTMLDivElement>(null)
+  const [segSearchQuery, setSegSearchQuery] = useState("")
+  const [segHealthFilter, setSegHealthFilter] = useState("")
+  const [segTipoFilter, setSegTipoFilter] = useState("")
+  const [segVisibleCount, setSegVisibleCount] = useState(20)
+  const SEG_ITEMS_PER_PAGE = 20
+
+  const filteredSeguimientos = seguimientos.filter((s) => {
+    const matchesSearch = !segSearchQuery ||
+      s.titulo.toLowerCase().includes(segSearchQuery.toLowerCase()) ||
+      (s.descripcion && s.descripcion.toLowerCase().includes(segSearchQuery.toLowerCase())) ||
+      (s.arbol_nombre && s.arbol_nombre.toLowerCase().includes(segSearchQuery.toLowerCase()))
+    const matchesHealth = !segHealthFilter || (s.salud && s.salud === segHealthFilter)
+    const matchesTipo = !segTipoFilter || (s as any).tipo_seguimiento === segTipoFilter
+    return matchesSearch && matchesHealth && matchesTipo
+  })
+
+  const paginatedSeguimientos = filteredSeguimientos.slice(0, segVisibleCount)
+  const segHasMore = filteredSeguimientos.length > segVisibleCount
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -502,6 +520,49 @@ export default function SeguimientosPage() {
           </div>
         </div>
 
+        {/* Barra de búsqueda y filtros (solo en vista lista con datos) */}
+        {arboles.length > 0 && viewMode === "list" && seguimientos.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="flex-1">
+              <Input
+                placeholder="Buscar por título, notas o árbol..."
+                value={segSearchQuery}
+                onChange={(e) => { setSegSearchQuery(e.target.value); setSegVisibleCount(SEG_ITEMS_PER_PAGE) }}
+              />
+            </div>
+            <div className="w-full sm:w-40">
+              <Select value={segHealthFilter || "ALL"} onValueChange={(v) => { setSegHealthFilter(v === "ALL" ? "" : v); setSegVisibleCount(SEG_ITEMS_PER_PAGE) }}>
+                <SelectTrigger><SelectValue placeholder="Salud" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Toda salud</SelectItem>
+                  <SelectItem value="EXCELENTE">Excelente</SelectItem>
+                  <SelectItem value="BUENO">Bueno</SelectItem>
+                  <SelectItem value="REGULAR">Regular</SelectItem>
+                  <SelectItem value="MALO">Malo</SelectItem>
+                  <SelectItem value="CRITICO">Crítico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full sm:w-44">
+              <Select value={segTipoFilter || "ALL"} onValueChange={(v) => { setSegTipoFilter(v === "ALL" ? "" : v); setSegVisibleCount(SEG_ITEMS_PER_PAGE) }}>
+                <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todo tipo</SelectItem>
+                  <SelectItem value="OBSERVACION">Observación</SelectItem>
+                  <SelectItem value="RIEGO">Riego</SelectItem>
+                  <SelectItem value="PODA">Poda</SelectItem>
+                  <SelectItem value="FERTILIZACION">Fertilización</SelectItem>
+                  <SelectItem value="PLAGAS">Plagas</SelectItem>
+                  <SelectItem value="COSECHA">Cosecha</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground whitespace-nowrap">
+              {filteredSeguimientos.length} de {seguimientos.length}
+            </div>
+          </div>
+        )}
+
         {arboles.length === 0 ? (
           <div className="space-y-6">
             {/* Estadísticas superiores */}
@@ -642,6 +703,14 @@ export default function SeguimientosPage() {
               </Card>
             )}
           </div>
+        ) : viewMode === "list" && filteredSeguimientos.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Camera className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Sin resultados</h3>
+              <p className="text-muted-foreground mb-6">No hay seguimientos que coincidan con tu búsqueda. <button onClick={() => { setSegSearchQuery(""); setSegHealthFilter(""); setSegTipoFilter("") }} className="text-blue-600 underline">Limpiar filtros</button></p>
+            </CardContent>
+          </Card>
         ) : seguimientos.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
@@ -655,8 +724,9 @@ export default function SeguimientosPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {seguimientos.map((seg) => (
+          <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-4">
+            {paginatedSeguimientos.map((seg) => (
               <Card
                 key={seg.id}
                 className="overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer group h-full flex flex-col border border-gray-200 hover:border-blue-300"
@@ -743,6 +813,21 @@ export default function SeguimientosPage() {
               </Card>
             ))}
           </div>
+          {segHasMore && (
+            <div className="flex justify-center mt-4 mb-6">
+              <Button variant="outline" className="gap-2" onClick={() => setSegVisibleCount((p) => p + SEG_ITEMS_PER_PAGE)}>
+                Ver más ({filteredSeguimientos.length - segVisibleCount} restantes)
+              </Button>
+            </div>
+          )}
+          {segVisibleCount > SEG_ITEMS_PER_PAGE && (
+            <div className="flex justify-center mt-2 mb-6">
+              <Button variant="ghost" size="sm" onClick={() => setSegVisibleCount(SEG_ITEMS_PER_PAGE)}>
+                Mostrar menos
+              </Button>
+            </div>
+          )}
+          </>
         )}
       </main>
 
