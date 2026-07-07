@@ -8,7 +8,7 @@ import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TreePine, Camera, Calendar, TrendingUp, Plus } from "lucide-react";
+import { TreePine, Camera, Calendar, TrendingUp, Plus, MapPin, Leaf } from "lucide-react";
 import Link from "next/link";
 import type { ArbolResumen, Seguimiento } from "@/types";
 
@@ -88,12 +88,22 @@ export default function DashboardPage() {
 
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            Bienvenid@, {session?.user?.name || "Usuario"}
-          </h1>
-          <p className="text-muted-foreground">
-            Aquí está el resumen de tus árboles y seguimientos
-          </p>
+          <div className="rounded-lg overflow-hidden bg-gradient-to-r from-emerald-50 to-emerald-100 p-6 flex flex-col items-start gap-6">
+            <div className="w-full">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-emerald-900 mb-2">
+                ¡Bienvenid@, {session?.user?.name || "Usuario"}! <span className="text-emerald-700"></span>
+              </h1>
+              <p className="text-emerald-800/80 mb-4">
+                Aquí tienes el resumen de tus árboles y seguimientos. Sigue registrando y cuidando nuestro planeta.
+              </p>
+              <Link href="/mi-arbol">
+                <Button className="bg-emerald-800 hover:bg-emerald-900 text-white">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Registrar nuevo árbol
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -163,31 +173,50 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions y Últimos Seguimientos lado a lado */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader>
               <CardTitle>Acciones Rápidas</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <Link href="/mi-arbol">
-                <Button
-                  className="w-full justify-start bg-transparent"
-                  variant="outline"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Registrar Nuevo Árbol
-                </Button>
-              </Link>
-              <Link href="/seguimientos">
-                <Button
-                  className="w-full justify-start bg-transparent"
-                  variant="outline"
-                >
-                  <Camera className="h-4 w-4 mr-2" />
-                  Agregar Seguimiento
-                </Button>
-              </Link>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                <Link href="/mi-arbol" className="block">
+                  <div className="p-4 bg-white dark:bg-secondary rounded-lg shadow-sm hover:shadow-md transition flex flex-col items-center text-center">
+                    <div className="h-12 w-12 rounded-md bg-green-50 flex items-center justify-center mb-3">
+                      <Plus className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div className="text-sm font-medium">Registrar Nuevo Árbol</div>
+                  </div>
+                </Link>
+
+                <Link href="/seguimientos" className="block">
+                  <div className="p-4 bg-white dark:bg-secondary rounded-lg shadow-sm hover:shadow-md transition flex flex-col items-center text-center">
+                    <div className="h-12 w-12 rounded-md bg-blue-50 flex items-center justify-center mb-3">
+                      <Camera className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="text-sm font-medium">Agregar Seguimiento</div>
+                  </div>
+                </Link>
+
+                <Link href="/geolocalizacion" className="block">
+                  <div className="p-4 bg-white dark:bg-secondary rounded-lg shadow-sm hover:shadow-md transition flex flex-col items-center text-center">
+                    <div className="h-12 w-12 rounded-md bg-violet-50 flex items-center justify-center mb-3">
+                      <MapPin className="h-6 w-6 text-violet-600" />
+                    </div>
+                    <div className="text-sm font-medium">Ver Geolocalización</div>
+                  </div>
+                </Link>
+
+                <Link href="/identificador" className="block">
+                  <div className="p-4 bg-white dark:bg-secondary rounded-lg shadow-sm hover:shadow-md transition flex flex-col items-center text-center">
+                    <div className="h-12 w-12 rounded-md bg-emerald-50 flex items-center justify-center mb-3">
+                      <Leaf className="h-6 w-6 text-emerald-600" />
+                    </div>
+                    <div className="text-sm font-medium">Identificar Planta (IA)</div>
+                  </div>
+                </Link>
+              </div>
             </CardContent>
           </Card>
 
@@ -197,27 +226,18 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {seguimientos.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No hay seguimientos aún
-                </p>
+                <p className="text-sm text-muted-foreground">No hay seguimientos aún</p>
               ) : (
                 <div className="space-y-3">
                   {seguimientos.slice(0, 3).map((seg) => (
-                    <div
-                      key={seg.id}
-                      className="flex items-start gap-3 pb-3 border-b last:border-0"
-                    >
+                    <div key={seg.id} className="flex items-start gap-3 pb-3 border-b last:border-0">
                       <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <Camera className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {seg.titulo}
-                        </p>
+                        <p className="text-sm font-medium truncate">{seg.titulo}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(seg.fecha_seguimiento).toLocaleDateString(
-                            "es-ES"
-                          )}
+                          {new Date(seg.fecha_seguimiento).toLocaleDateString("es-ES")}
                         </p>
                       </div>
                     </div>

@@ -6,29 +6,46 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Users, Trees, Activity, TrendingUp, Download, Loader2, Shield, ChevronDown } from 'lucide-react';
+import { AlertCircle, Users, Trees, Activity, TrendingUp, Download, Loader2, Shield, ChevronDown, ArrowUpRight, ArrowDownRight, Zap } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 interface DashboardStats {
   usuarios: {
     total: number;
     admins: number;
+    porcentajeAdmins: string | number;
+    tendencia: string | number;
+    histórico: Array<{ fecha: string; total: number; admins: number }>;
+    predicción: Array<{ fecha: string; prediccion: number }>;
   };
   arboles: {
     total: number;
+    salud: Record<string, number>;
     saludables: number;
+    tendencia: string | number;
+    histórico: Array<{ fecha: string; total: number }>;
+    predicción: Array<{ fecha: string; prediccion: number }>;
   };
   seguimientos: {
     total: number;
+    histórico: Array<{ fecha: string; total: number }>;
   };
   auditoria: {
     logs_semana: number;
     usuarios_activos: number;
+  };
+  resumen?: {
+    tasa_crecimiento_usuarios: string | number;
+    tasa_crecimiento_arboles: string | number;
+    proyección_usuarios_30d: number;
+    proyección_arboles_30d: number;
   };
 }
 
@@ -90,103 +107,341 @@ export function AdminDashboard() {
     );
   }
 
+  // Colores para gráficos
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+  // Preparar datos de salud de árboles
+  const saludLabels: Record<string, string> = {
+    EXCELENTE: 'Excelente',
+    BUENO: 'Bueno',
+    REGULAR: 'Regular',
+    MALO: 'Malo',
+    CRITICO: 'Crítico',
+    SIN_DATO: 'Sin dato',
+  }
+  const arbolSaludData = Object.entries(stats.arboles.salud).map(([name, value]) => ({
+    name: saludLabels[name.toUpperCase()] || name,
+    value: typeof value === 'number' ? value : 0,
+  }));
+
+  // Predicción: últimos 30 días de usuarios
+  const usuarioPredicciónData = stats.usuarios.predicción?.slice(0, 15) || [];
+  
+  // Predicción: últimos 30 días de árboles
+  const arbolPredicciónData = stats.arboles.predicción?.slice(0, 15) || [];
+
   return (
     <div className="space-y-6">
-      {/* Cards de Resumen */}
+      {/* KPI Cards - Mejoradas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        {/* Usuarios */}
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+          <div className="absolute inset-0 opacity-5 bg-grid-pattern" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Usuarios</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-blue-200/50 dark:bg-blue-800/50 rounded-lg">
+              <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.usuarios.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.usuarios.admins} administradores
-            </p>
+            <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{stats.usuarios.total}</div>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200">
+                {stats.usuarios.admins} admins
+              </Badge>
+              <div className={`flex items-center gap-1 text-xs font-semibold ${parseFloat(String(stats.usuarios.tendencia)) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {parseFloat(String(stats.usuarios.tendencia)) >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                {Math.abs(parseFloat(String(stats.usuarios.tendencia)))}%
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Árboles */}
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
+          <div className="absolute inset-0 opacity-5 bg-grid-pattern" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Árboles Registrados</CardTitle>
-            <Trees className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-green-200/50 dark:bg-green-800/50 rounded-lg">
+              <Trees className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.arboles.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.arboles.saludables} en excelente estado
-            </p>
+            <div className="text-3xl font-bold text-green-900 dark:text-green-100">{stats.arboles.total}</div>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className="bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200">
+                {stats.arboles.saludables} saludables
+              </Badge>
+              <div className={`flex items-center gap-1 text-xs font-semibold ${parseFloat(String(stats.arboles.tendencia)) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {parseFloat(String(stats.arboles.tendencia)) >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                {Math.abs(parseFloat(String(stats.arboles.tendencia)))}%
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Seguimientos */}
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
+          <div className="absolute inset-0 opacity-5 bg-grid-pattern" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Seguimientos</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-amber-200/50 dark:bg-amber-800/50 rounded-lg">
+              <Activity className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.seguimientos.total}</div>
-            <p className="text-xs text-muted-foreground">Total en el sistema</p>
+            <div className="text-3xl font-bold text-amber-900 dark:text-amber-100">{stats.seguimientos.total}</div>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">Registros totales del sistema</p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Actividad */}
+        <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
+          <div className="absolute inset-0 opacity-5 bg-grid-pattern" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Actividad (7d)</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-purple-200/50 dark:bg-purple-800/50 rounded-lg">
+              <Zap className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.auditoria.logs_semana}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.auditoria.usuarios_activos} usuarios activos
-            </p>
+            <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">{stats.auditoria.logs_semana}</div>
+            <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">{stats.auditoria.usuarios_activos} usuarios activos</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs Mejoradas */}
       <Tabs defaultValue="resumen" className="w-full">
-        <TabsList>
-          <TabsTrigger value="resumen">Resumen</TabsTrigger>
-          <TabsTrigger value="usuarios">Usuarios</TabsTrigger>
-          <TabsTrigger value="roles">Roles</TabsTrigger>
-          <TabsTrigger value="auditoria">Auditoría</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 bg-muted p-1 rounded-lg">
+          <TabsTrigger value="resumen" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">Resumen</TabsTrigger>
+          <TabsTrigger value="predicciones" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">Predicciones</TabsTrigger>
+          <TabsTrigger value="usuarios" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">Usuarios</TabsTrigger>
+          <TabsTrigger value="contenido" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">Contenido</TabsTrigger>
+          <TabsTrigger value="roles" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">Roles</TabsTrigger>
+          <TabsTrigger value="auditoria" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950">Auditoría</TabsTrigger>
         </TabsList>
 
+        {/* Tab: Resumen */}
         <TabsContent value="resumen" className="space-y-4">
+          {/* Métricas Clave */}
           <Card>
             <CardHeader>
-              <CardTitle>Información General del Sistema</CardTitle>
-              <CardDescription>Estado actual y métricas clave</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                Análisis General del Sistema
+              </CardTitle>
+              <CardDescription>Métricas operacionales y tendencias en tiempo real</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Tasa de Admins</p>
-                  <p className="text-lg font-semibold">
-                    {stats.usuarios.total > 0
-                      ? ((stats.usuarios.admins / stats.usuarios.total) * 100).toFixed(1)
-                      : 0}
-                    %
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <p className="text-xs text-muted-foreground font-semibold">Tasa Admins</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats.usuarios.porcentajeAdmins}%</p>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg border border-green-200 dark:border-green-700">
+                  <p className="text-xs text-muted-foreground font-semibold">Árboles Saludables</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.arboles.total > 0 ? ((stats.arboles.saludables / stats.arboles.total) * 100).toFixed(1) : 0}%</p>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg border border-orange-200 dark:border-orange-700">
+                  <p className="text-xs text-muted-foreground font-semibold">Crec. Usuarios (7d)</p>
+                  <p className={`text-2xl font-bold mt-1 ${parseFloat(String(stats.usuarios.tendencia)) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {parseFloat(String(stats.usuarios.tendencia)) >= 0 ? '+' : ''}{Number(stats.usuarios.tendencia).toFixed(1)}%
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Árb. Saludables</p>
-                  <p className="text-lg font-semibold">
-                    {stats.arboles.total > 0
-                      ? ((stats.arboles.saludables / stats.arboles.total) * 100).toFixed(1)
-                      : 0}
-                    %
+                <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <p className="text-xs text-muted-foreground font-semibold">Crec. Árboles (7d)</p>
+                  <p className={`text-2xl font-bold mt-1 ${parseFloat(String(stats.arboles.tendencia)) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {parseFloat(String(stats.arboles.tendencia)) >= 0 ? '+' : ''}{Number(stats.arboles.tendencia).toFixed(1)}%
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Gráficos: Histórico */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Histórico de Usuarios */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Histórico de Usuarios (30 días)</CardTitle>
+                <CardDescription>Crecimiento del total de usuarios registrados</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={stats.usuarios.histórico}>
+                    <defs>
+                      <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" dark-stroke="#374151" />
+                    <XAxis dataKey="fecha" tick={{fontSize: 12}} />
+                    <YAxis tick={{fontSize: 12}} />
+                    <Tooltip 
+                      contentStyle={{backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff'}}
+                      formatter={(value: any) => [`${value} usuarios`, 'Total']}
+                    />
+                    <Area type="monotone" dataKey="total" stroke="#3b82f6" fillOpacity={1} fill="url(#colorUsers)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Histórico de Árboles */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Histórico de Árboles (30 días)</CardTitle>
+                <CardDescription>Crecimiento del total de árboles registrados</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={stats.arboles.histórico}>
+                    <defs>
+                      <linearGradient id="colorTrees" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" dark-stroke="#374151" />
+                    <XAxis dataKey="fecha" tick={{fontSize: 12}} />
+                    <YAxis tick={{fontSize: 12}} />
+                    <Tooltip 
+                      contentStyle={{backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff'}}
+                      formatter={(value: any) => [`${value} árboles`, 'Total']}
+                    />
+                    <Area type="monotone" dataKey="total" stroke="#10b981" fillOpacity={1} fill="url(#colorTrees)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Salud de Árboles */}
+          {arbolSaludData.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Distribución de Salud de Árboles</CardTitle>
+                <CardDescription>Estado actual de los árboles por categoría de salud</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col lg:flex-row items-center justify-between">
+                  <div className="w-full lg:w-1/2">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={arbolSaludData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {arbolSaludData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: any) => `${value} árboles`} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="w-full lg:w-1/2 space-y-2">
+                    {arbolSaludData.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{backgroundColor: COLORS[index % COLORS.length]}} />
+                          <span className="text-sm font-medium">{item.name}</span>
+                        </div>
+                        <span className="text-sm font-bold">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab: Predicciones */}
+        <TabsContent value="predicciones" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-amber-600" />
+                Proyecciones y Predicciones (30 días)
+              </CardTitle>
+              <CardDescription>Tendencias proyectadas basadas en datos históricos</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Predicción Usuarios */}
+              <div>
+                <h3 className="text-sm font-semibold mb-4 text-blue-600 dark:text-blue-400">Predicción de Usuarios</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={usuarioPredicciónData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" dark-stroke="#374151" />
+                    <XAxis dataKey="fecha" tick={{fontSize: 12}} />
+                    <YAxis tick={{fontSize: 12}} />
+                    <Tooltip 
+                      contentStyle={{backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff'}}
+                      formatter={(value: any) => [`${value} usuarios`, 'Predicción']}
+                    />
+                    <Legend />
+                    <Line type="monotone" dataKey="prediccion" stroke="#3b82f6" name="Proyección" strokeWidth={2} dot={{fill: '#3b82f6', r: 4}} activeDot={{r: 6}} />
+                  </LineChart>
+                </ResponsiveContainer>
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <p className="text-xs text-muted-foreground">Proyección en 30 días:</p>
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats.resumen?.proyección_usuarios_30d || stats.usuarios.total} usuarios</p>
+                </div>
+              </div>
+
+              {/* Predicción Árboles */}
+              <div>
+                <h3 className="text-sm font-semibold mb-4 text-green-600 dark:text-green-400">Predicción de Árboles</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={arbolPredicciónData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" dark-stroke="#374151" />
+                    <XAxis dataKey="fecha" tick={{fontSize: 12}} />
+                    <YAxis tick={{fontSize: 12}} />
+                    <Tooltip 
+                      contentStyle={{backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff'}}
+                      formatter={(value: any) => [`${value} árboles`, 'Predicción']}
+                    />
+                    <Legend />
+                    <Line type="monotone" dataKey="prediccion" stroke="#10b981" name="Proyección" strokeWidth={2} dot={{fill: '#10b981', r: 4}} activeDot={{r: 6}} />
+                  </LineChart>
+                </ResponsiveContainer>
+                <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                  <p className="text-xs text-muted-foreground">Proyección en 30 días:</p>
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400">{stats.resumen?.proyección_arboles_30d || stats.arboles.total} árboles</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Información de Predicciones */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">¿Cómo se calculan?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>✓ Las predicciones se basan en el crecimiento de los últimos 7 días</p>
+              <p>✓ Se utiliza una proyección lineal simple para estimar tendencias futuras</p>
+              <p>✓ Los datos se actualizan en tiempo real con cada nueva entrada</p>
+              <p>✓ Estas proyecciones son estimaciones y pueden variar según la actividad real del sistema</p>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="usuarios">
           <AdminUsersTable />
+        </TabsContent>
+
+        <TabsContent value="contenido">
+          <AdminContentTable />
         </TabsContent>
 
         <TabsContent value="roles">
@@ -212,7 +467,8 @@ function AdminUsersTable() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [newRole, setNewRole] = useState<'USER' | 'ADMIN'>('USER');
+  const [newRole, setNewRole] = useState('USER');
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
   const [newStatus, setNewStatus] = useState<'ACTIVO' | 'INACTIVO'>('ACTIVO');
   const [formData, setFormData] = useState({ nombre: '', apellido: '', email: '', telefono: '', contrasena: '' });
   const [updatingRole, setUpdatingRole] = useState(false);
@@ -221,6 +477,7 @@ function AdminUsersTable() {
 
   useEffect(() => {
     fetchUsers();
+    fetchAvailableRoles();
   }, []);
 
   const fetchUsers = async () => {
@@ -245,9 +502,20 @@ function AdminUsersTable() {
     }
   };
 
+  const fetchAvailableRoles = async () => {
+    try {
+      const res = await fetch('/api/admin/roles');
+      if (!res.ok) return;
+      const data = await res.json();
+      setAvailableRoles(data.data || []);
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+    }
+  };
+
   const handleOpenRoleDialog = (user: any) => {
     setSelectedUser(user);
-    setNewRole(user.rol === 'ADMIN' ? 'ADMIN' : 'USER');
+    setNewRole(user.rol || 'USER');
     setShowRoleDialog(true);
   };
 
@@ -542,73 +810,110 @@ function AdminUsersTable() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Usuarios del Sistema</CardTitle>
-            <CardDescription>Gestiona usuarios, cambia roles y elimina cuentas</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-600" />
+              Gestión de Usuarios
+            </CardTitle>
+            <CardDescription>Administra usuarios, roles y permisos del sistema</CardDescription>
           </div>
-          <Button onClick={handleOpenCreateDialog} className="gap-2">
+          <Button onClick={handleOpenCreateDialog} className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700">
             <Users className="w-4 h-4" />
-            Crear Usuario
+            + Nuevo Usuario
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {users.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No hay usuarios</p>
-            ) : (
-              users.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium">{user.nombre} {user.apellido}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                    {user.telefono && <p className="text-xs text-muted-foreground">Tel: {user.telefono}</p>}
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant={user.rol === 'ADMIN' ? 'default' : 'secondary'} className="flex items-center gap-1">
-                      {user.rol === 'ADMIN' && <Shield className="w-3 h-3" />}
-                      {user.rol}
-                    </Badge>
-                    <Badge variant={user.estado === 'ACTIVO' ? 'default' : 'destructive'} className="text-xs">
-                      {user.estado}
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenRoleDialog(user)}
-                      className="text-xs"
-                    >
-                      Rol
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenStatusDialog(user)}
-                      className="text-xs"
-                    >
-                      Estado
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenEditDialog(user)}
-                      className="text-xs"
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleOpenDeleteDialog(user)}
-                      className="text-xs"
-                    >
-                      Eliminar
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="border rounded-lg overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold">Usuario</th>
+                  <th className="px-4 py-3 text-left font-semibold">Email</th>
+                  <th className="px-4 py-3 text-left font-semibold">Rol</th>
+                  <th className="px-4 py-3 text-left font-semibold">Estado</th>
+                  <th className="px-4 py-3 text-left font-semibold">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                      No hay usuarios registrados
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user) => (
+                    <tr key={user.id} className="hover:bg-muted/50 transition">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{user.nombre} {user.apellido}</div>
+                        <div className="text-xs text-muted-foreground">{user.telefono || 'Sin teléfono'}</div>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <Badge 
+                          variant={user.rol === 'ADMIN' ? 'default' : 'secondary'}
+                          className={`gap-1 ${user.rol === 'ADMIN' ? 'bg-blue-600' : 'bg-gray-400'}`}
+                        >
+                          {user.rol === 'ADMIN' && <Shield className="w-3 h-3" />}
+                          {user.rol}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={user.estado === 'ACTIVO' ? 'default' : 'destructive'}>
+                          {user.estado === 'ACTIVO' ? '✓ Activo' : '✗ Inactivo'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Cambiar rol"
+                            onClick={() => handleOpenRoleDialog(user)}
+                            className="h-8 px-2"
+                          >
+                            Rol
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Cambiar estado"
+                            onClick={() => handleOpenStatusDialog(user)}
+                            className="h-8 px-2"
+                          >
+                            Estado
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Editar"
+                            onClick={() => handleOpenEditDialog(user)}
+                            className="h-8 px-2"
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Desactivar"
+                            onClick={() => handleOpenDeleteDialog(user)}
+                            className="h-8 px-2 text-red-600 hover:text-red-700"
+                          >
+                            Desactivar
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+            <p className="text-sm text-muted-foreground">
+              <strong>Total:</strong> {users.length} usuario{users.length !== 1 ? 's' : ''} • 
+              <strong className="ml-2">Admins:</strong> {users.filter(u => u.rol === 'ADMIN').length} • 
+              <strong className="ml-2">Activos:</strong> {users.filter(u => u.estado === 'ACTIVO').length}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -640,18 +945,25 @@ function AdminUsersTable() {
 
             <div className="space-y-2">
               <Label htmlFor="role-select">Nuevo Rol</Label>
-              <Select value={newRole} onValueChange={(v) => setNewRole(v as 'USER' | 'ADMIN')}>
+              <Select value={newRole} onValueChange={setNewRole}>
                 <SelectTrigger id="role-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  {availableRoles
+                    .filter((role) => !['USER', 'ADMIN'].includes(role.rol))
+                    .map((role) => (
+                      <SelectItem key={role.rol} value={role.rol}>
+                        {role.rol} - {role.descripcion || 'Rol personalizado'}
+                      </SelectItem>
+                    ))}
                   <SelectItem value="USER">👤 Usuario Regular - Sin acceso al panel admin</SelectItem>
                   <SelectItem value="ADMIN">👑 Administrador - Acceso completo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {selectedUser?.rol === 'ADMIN' && newRole === 'USER' && (
+            {selectedUser?.rol === 'ADMIN' && newRole !== 'ADMIN' && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
@@ -660,7 +972,7 @@ function AdminUsersTable() {
               </Alert>
             )}
 
-            {selectedUser?.rol === 'USER' && newRole === 'ADMIN' && (
+            {selectedUser?.rol !== 'ADMIN' && newRole === 'ADMIN' && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
@@ -694,15 +1006,13 @@ function AdminUsersTable() {
             <Button 
               onClick={handleChangeRole} 
               disabled={updatingRole || newRole === selectedUser?.rol}
-              variant={selectedUser?.rol === 'ADMIN' && newRole === 'USER' ? 'destructive' : 'default'}
+              variant={selectedUser?.rol === 'ADMIN' && newRole !== 'ADMIN' ? 'destructive' : 'default'}
               className="gap-2"
             >
               {updatingRole && <Loader2 className="h-4 w-4 animate-spin" />}
               {updatingRole 
                 ? 'Actualizando...' 
-                : newRole === 'ADMIN' 
-                  ? 'Promover a Administrador'
-                  : 'Degradar a Usuario'}
+                : `Cambiar a ${newRole}`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -990,6 +1300,103 @@ function AdminUsersTable() {
   );
 }
 
+type PermissionConfig = {
+  tree: string[];
+  user: string[];
+  admin: string[];
+};
+
+const DEFAULT_ROLE_PERMISSIONS: PermissionConfig = {
+  tree: ['read_own'],
+  user: ['read_own'],
+  admin: [],
+};
+
+const PERMISSION_GROUPS: Array<{
+  key: keyof PermissionConfig;
+  label: string;
+  permissions: Array<{ value: string; label: string }>;
+}> = [
+  {
+    key: 'tree',
+    label: 'Árboles',
+    permissions: [
+      { value: 'create', label: 'Crear' },
+      { value: 'read_own', label: 'Ver propios' },
+      { value: 'read_all', label: 'Ver todos' },
+      { value: 'update_own', label: 'Editar propios' },
+      { value: 'delete_own', label: 'Eliminar propios' },
+    ],
+  },
+  {
+    key: 'user',
+    label: 'Usuarios',
+    permissions: [
+      { value: 'read_own', label: 'Ver perfil propio' },
+      { value: 'read_all', label: 'Ver usuarios' },
+      { value: 'update_own', label: 'Editar perfil propio' },
+      { value: 'delete_own', label: 'Eliminar propios' },
+    ],
+  },
+  {
+    key: 'admin',
+    label: 'Administración',
+    permissions: [
+      { value: 'manage_users', label: 'Gestionar usuarios' },
+      { value: 'manage_roles', label: 'Gestionar roles' },
+      { value: 'view_audit', label: 'Ver auditoría' },
+      { value: 'view_dashboard', label: 'Ver dashboard' },
+    ],
+  },
+];
+
+function clonePermissions(permissions?: Partial<PermissionConfig>): PermissionConfig {
+  return {
+    tree: [...(permissions?.tree || DEFAULT_ROLE_PERMISSIONS.tree)],
+    user: [...(permissions?.user || DEFAULT_ROLE_PERMISSIONS.user)],
+    admin: [...(permissions?.admin || DEFAULT_ROLE_PERMISSIONS.admin)],
+  };
+}
+
+function PermissionEditor({
+  value,
+  onChange,
+}: {
+  value: PermissionConfig;
+  onChange: (next: PermissionConfig) => void;
+}) {
+  const togglePermission = (group: keyof PermissionConfig, permission: string, checked: boolean) => {
+    const current = value[group] || [];
+    onChange({
+      ...value,
+      [group]: checked
+        ? Array.from(new Set([...current, permission]))
+        : current.filter((item) => item !== permission),
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {PERMISSION_GROUPS.map((group) => (
+        <div key={group.key} className="rounded-lg border p-3">
+          <p className="text-sm font-semibold mb-3">{group.label}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {group.permissions.map((permission) => (
+              <label key={permission.value} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={value[group.key]?.includes(permission.value)}
+                  onCheckedChange={(checked) => togglePermission(group.key, permission.value, checked === true)}
+                />
+                {permission.label}
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Tabla de Roles - GESTIÓN COMPLETA DE ROLES (RF-032)
 function AdminRolesTable() {
   const [roles, setRoles] = useState<any[]>([]);
@@ -1000,6 +1407,7 @@ function AdminRolesTable() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [formData, setFormData] = useState({ rol: '', descripcion: '' });
+  const [rolePermissions, setRolePermissions] = useState<PermissionConfig>(clonePermissions());
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -1031,12 +1439,14 @@ function AdminRolesTable() {
 
   const handleOpenCreateDialog = () => {
     setFormData({ rol: '', descripcion: '' });
+    setRolePermissions(clonePermissions());
     setShowCreateDialog(true);
   };
 
   const handleOpenEditDialog = (role: any) => {
     setSelectedRole(role);
     setFormData({ rol: role.rol, descripcion: role.descripcion || '' });
+    setRolePermissions(clonePermissions(role.permisos));
     setShowEditDialog(true);
   };
 
@@ -1063,11 +1473,7 @@ function AdminRolesTable() {
         body: JSON.stringify({
           rol: formData.rol.trim(),
           descripcion: formData.descripcion.trim(),
-          permisos: {
-            tree: ['read_own'],
-            user: ['read_own'],
-            admin: [],
-          },
+          permisos: rolePermissions,
         }),
       });
 
@@ -1114,6 +1520,7 @@ function AdminRolesTable() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           descripcion: formData.descripcion.trim(),
+          permisos: rolePermissions,
         }),
       });
 
@@ -1228,6 +1635,9 @@ function AdminRolesTable() {
                     <div className="flex-1">
                       <p className="font-medium">{role.rol}</p>
                       <p className="text-sm text-muted-foreground">{role.descripcion || 'Rol del sistema'}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {Object.values(role.permisos || {}).flat().length} permiso(s)
+                      </p>
                     </div>
                     <Badge variant="secondary">Sistema</Badge>
                   </div>
@@ -1249,6 +1659,9 @@ function AdminRolesTable() {
                     <div className="flex-1">
                       <p className="font-medium">{role.rol}</p>
                       <p className="text-sm text-muted-foreground">{role.descripcion || 'Sin descripción'}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {Object.values(role.permisos || {}).flat().length} permiso(s)
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -1307,6 +1720,10 @@ function AdminRolesTable() {
                 onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Permisos</Label>
+              <PermissionEditor value={rolePermissions} onChange={setRolePermissions} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
@@ -1348,6 +1765,10 @@ function AdminRolesTable() {
                 value={formData.descripcion}
                 onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Permisos</Label>
+              <PermissionEditor value={rolePermissions} onChange={setRolePermissions} />
             </div>
           </div>
           <DialogFooter>
@@ -1391,6 +1812,306 @@ function AdminRolesTable() {
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {submitting ? 'Eliminando...' : 'Confirmar Eliminación'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function AdminContentTable() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [showFormDialog, setShowFormDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [formData, setFormData] = useState({
+    tipo: 'especie',
+    nombre: '',
+    descripcion: '',
+    estado: 'ACTIVO',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchContent();
+  }, []);
+
+  const fetchContent = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/content');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `Error ${res.status}`);
+      }
+      const data = await res.json();
+      setItems(data.data || []);
+      setError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openCreateDialog = (tipo: string) => {
+    setSelectedItem(null);
+    setFormData({ tipo, nombre: '', descripcion: '', estado: 'ACTIVO' });
+    setShowFormDialog(true);
+  };
+
+  const openEditDialog = (item: any) => {
+    setSelectedItem(item);
+    setFormData({
+      tipo: item.tipo,
+      nombre: item.nombre || '',
+      descripcion: item.descripcion || '',
+      estado: item.estado || 'ACTIVO',
+    });
+    setShowFormDialog(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.nombre.trim()) {
+      toast({ title: 'Error', description: 'El nombre es requerido', variant: 'destructive' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const url = selectedItem ? `/api/admin/content/${selectedItem.id}` : '/api/admin/content';
+      const res = await fetch(url, {
+        method: selectedItem ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: formData.tipo,
+          nombre: formData.nombre.trim(),
+          descripcion: formData.descripcion.trim(),
+          estado: formData.estado,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `Error ${res.status}`);
+      }
+
+      const data = await res.json();
+      setItems((current) =>
+        selectedItem
+          ? current.map((item) => (item.id === selectedItem.id ? { ...item, ...data.data } : item))
+          : [...current, { ...data.data, usos: 0 }]
+      );
+      setShowFormDialog(false);
+      toast({
+        title: 'Éxito',
+        description: selectedItem ? 'Contenido actualizado' : 'Contenido creado',
+      });
+    } catch (error) {
+      toast({
+        title: selectedItem ? 'Error al actualizar' : 'Error al crear',
+        description: error instanceof Error ? error.message : 'Error desconocido',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedItem) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/content/${selectedItem.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `Error ${res.status}`);
+      }
+      setItems((current) => current.filter((item) => item.id !== selectedItem.id));
+      setShowDeleteDialog(false);
+      setSelectedItem(null);
+      toast({ title: 'Éxito', description: 'Contenido eliminado' });
+    } catch (error) {
+      toast({
+        title: 'Error al eliminar',
+        description: error instanceof Error ? error.message : 'Error desconocido',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="text-center py-8">Cargando contenido...</div>;
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Gestión de Contenido</CardTitle>
+          <CardDescription>Catálogo de especies y tratamientos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const species = items.filter((item) => item.tipo === 'especie');
+  const treatments = items.filter((item) => item.tipo === 'tratamiento');
+
+  const renderItems = (records: any[], emptyText: string) => (
+    <div className="space-y-2">
+      {records.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">{emptyText}</p>
+      ) : (
+        records.map((item) => (
+          <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="font-medium truncate">{item.nombre}</p>
+                <Badge variant={item.estado === 'ACTIVO' ? 'default' : 'secondary'}>{item.estado}</Badge>
+                {item.tipo === 'especie' && <Badge variant="outline">{item.usos || 0} uso(s)</Badge>}
+              </div>
+              <p className="text-sm text-muted-foreground">{item.descripcion || 'Sin descripción'}</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => openEditDialog(item)}>Editar</Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  setSelectedItem(item);
+                  setShowDeleteDialog(true);
+                }}
+              >
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trees className="h-5 w-5 text-green-600" />
+            Gestión de Contenido
+          </CardTitle>
+          <CardDescription>Administra especies y tratamientos usados por el sistema</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Especies</h3>
+                <Button size="sm" onClick={() => openCreateDialog('especie')}>Nueva especie</Button>
+              </div>
+              {renderItems(species, 'No hay especies registradas en el catálogo')}
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Tratamientos</h3>
+                <Button size="sm" onClick={() => openCreateDialog('tratamiento')}>Nuevo tratamiento</Button>
+              </div>
+              {renderItems(treatments, 'No hay tratamientos registrados en el catálogo')}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedItem ? 'Editar contenido' : 'Crear contenido'}</DialogTitle>
+            <DialogDescription>Completa la información del catálogo administrativo</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select
+                value={formData.tipo}
+                onValueChange={(tipo) => setFormData({ ...formData, tipo })}
+                disabled={Boolean(selectedItem)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="especie">Especie</SelectItem>
+                  <SelectItem value="tratamiento">Tratamiento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Nombre</Label>
+              <Input
+                value={formData.nombre}
+                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                placeholder={formData.tipo === 'especie' ? 'Ej: Algarrobo' : 'Ej: Poda sanitaria'}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Descripción</Label>
+              <Input
+                value={formData.descripcion}
+                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                placeholder="Detalle breve para administradores"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Estado</Label>
+              <Select value={formData.estado} onValueChange={(estado) => setFormData({ ...formData, estado })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVO">Activo</SelectItem>
+                  <SelectItem value="INACTIVO">Inactivo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFormDialog(false)}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={submitting} className="gap-2">
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {selectedItem ? 'Guardar cambios' : 'Crear'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar contenido</DialogTitle>
+            <DialogDescription>Esta acción elimina el registro del catálogo</DialogDescription>
+          </DialogHeader>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              ¿Eliminar <strong>{selectedItem?.nombre}</strong> del catálogo?
+            </AlertDescription>
+          </Alert>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+              {submitting ? 'Eliminando...' : 'Eliminar'}
             </Button>
           </DialogFooter>
         </DialogContent>

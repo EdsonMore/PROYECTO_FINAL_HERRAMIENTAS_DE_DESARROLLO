@@ -3,10 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-/**
- * API endpoint para renovar la sesión JWT
- * Extiende la expiración del token actual
- */
+
 export async function POST(request: NextRequest) {
   try {
     // Obtener sesión actual
@@ -19,15 +16,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // El token se renueva automáticamente a través del callback jwt de NextAuth
-    // Este endpoint actúa como disparador para forzar la renovación
-    
+
     // Verificar si el token necesita renovación
     const token = session as any;
     const now = Math.floor(Date.now() / 1000);
     const secondsUntilExpiry = Math.max(0, token.exp - now);
 
-    if (secondsUntilExpiry < 300) { // Menos de 5 minutos
+    if (secondsUntilExpiry < 300) { // TIENE menos de 5 minutos
       // El token será renovado automáticamente en la próxima solicitud
       return NextResponse.json({
         success: true,

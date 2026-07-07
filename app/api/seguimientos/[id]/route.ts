@@ -3,6 +3,21 @@ import { type NextRequest, NextResponse } from "next/server"
 import { protectRoute, validateResourceOwnership } from "@/lib/route-guards"
 import { query } from "@/lib/db"
 
+// Helper: auto-registra tratamiento en catálogo si no existe
+async function autoRegistrarTratamiento(tratamiento: string) {
+  if (!tratamiento || tratamiento.trim().length < 2) return;
+  try {
+    await query(
+      `INSERT INTO admin_content_items (tipo, nombre, descripcion, estado)
+       VALUES ('tratamiento', $1, 'Registrado automáticamente por usuario', 'ACTIVO')
+       ON CONFLICT (tipo, nombre) DO NOTHING`,
+      [tratamiento.trim()]
+    );
+  } catch (e) {
+    console.warn('No se pudo auto-registrar tratamiento en catálogo:', e);
+  }
+}
+
 // PUT - Actualizar un seguimiento
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -16,23 +31,56 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json()
-    const { arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento } = body
+    const { arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, tipo_seguimiento } = body
 
     // Validar que el seguimiento pertenece al usuario
     const { error: ownershipError } = await validateResourceOwnership("seguimientos", seguimientoId, userId)
     if (ownershipError) return ownershipError
 
-    const result = await query(
-      `UPDATE seguimientos
-       SET arbol_id = $1, titulo = $2, descripcion = $3, foto_url = $4, 
-           altura_cm = $5, salud = $6, fecha_seguimiento = $7, actualizado_en = NOW()
-       WHERE id = $8 AND usuario_id = $9
-       RETURNING id, arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, creado_en, actualizado_en`,
-      [arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, seguimientoId, userId],
-    )
+    const fotoFinal = foto_url?.trim() || null;
+    const alturaFinal = altura_cm ? Number.parseFloat(altura_cm) : null;
+    const saludFinal = salud ? salud.toUpperCase() : null;
+    const tipoFinal = tipo_seguimiento ? tipo_seguimiento.toUpperCase() : null;
+
+    let result;
+    try {
+      result = await query(
+        `UPDATE seguimientos
+         SET arbol_id = $1, titulo = $2, descripcion = $3, foto_url = $4, 
+             altura_cm = $5, salud = $6, fecha_seguimiento = $7, tipo_seguimiento = $8, actualizado_en = NOW()
+         WHERE id = $9 AND usuario_id = $10
+         RETURNING id, arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, tipo_seguimiento, fecha_seguimiento, creado_en, actualizado_en`,
+        [arbol_id, titulo, descripcion, fotoFinal, alturaFinal, saludFinal, fecha_seguimiento, tipoFinal, seguimientoId, userId],
+      )
+    } catch (colError: any) {
+      if (colError.message && colError.message.includes('tipo_seguimiento')) {
+        result = await query(
+          `UPDATE seguimientos
+           SET arbol_id = $1, titulo = $2, descripcion = $3, foto_url = $4, 
+               altura_cm = $5, salud = $6, fecha_seguimiento = $7, actualizado_en = NOW()
+           WHERE id = $8 AND usuario_id = $9
+           RETURNING id, arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, creado_en, actualizado_en`,
+          [arbol_id, titulo, descripcion, fotoFinal, alturaFinal, saludFinal, fecha_seguimiento, seguimientoId, userId],
+        )
+      } else {
+        throw colError;
+      }
+    }
 
     if (result.rows.length === 0) {
       return NextResponse.json({ error: "Seguimiento no encontrado" }, { status: 404 })
+    }
+
+    // Actualizar estado_salud del árbol con el último valor del seguimiento
+    if (saludFinal) {
+      try {
+        await query(
+          `UPDATE arboles SET estado_salud = $1, actualizado_en = NOW() WHERE id = $2`,
+          [saludFinal, arbol_id]
+        );
+      } catch (e) {
+        console.warn('No se pudo actualizar estado_salud del árbol:', e);
+      }
     }
 
     return NextResponse.json(result.rows[0])

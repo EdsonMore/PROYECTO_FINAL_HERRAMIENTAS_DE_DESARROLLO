@@ -329,3 +329,15 @@
   }
 }
 
+/* Ocultar "spider legs" generadas por leaflet.markercluster para mostrar clusters limpios */
+.leaflet-cluster-spider-leg {
+  display: none !important;
+  stroke-opacity: 0 !important;
+  opacity: 0 !important;
+}
+
+/* Asegurar que los marcadores no muestren líneas residuales */
+.leaflet-marker-icon.leaflet-cluster-marker {
+  box-shadow: none !important;
+}
+

@@ -3,6 +3,21 @@ import { type NextRequest, NextResponse } from "next/server"
 import { protectRoute, validateResourceOwnership } from "@/lib/route-guards"
 import { query } from "@/lib/db"
 
+// Helper: auto-registra tratamiento en catálogo si no existe
+async function autoRegistrarTratamiento(tratamiento: string) {
+  if (!tratamiento || tratamiento.trim().length < 2) return;
+  try {
+    await query(
+      `INSERT INTO admin_content_items (tipo, nombre, descripcion, estado)
+       VALUES ('tratamiento', $1, 'Registrado automáticamente por usuario', 'ACTIVO')
+       ON CONFLICT (tipo, nombre) DO NOTHING`,
+      [tratamiento.trim()]
+    );
+  } catch (e) {
+    console.warn('No se pudo auto-registrar tratamiento en catálogo:', e);
+  }
+}
+
 // GET - Obtener seguimientos (todos o de un árbol específico)
 export async function GET(request: NextRequest) {
   try {
@@ -12,10 +27,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const arbolId = searchParams.get("arbol_id")
 
+    const selectColumns = `s.id, s.arbol_id, s.usuario_id, s.titulo, s.descripcion, s.foto_url, s.altura_cm, s.salud, s.tipo_seguimiento, s.fecha_seguimiento, s.creado_en, s.actualizado_en, a.nombre as arbol_nombre`
+
     let result
     if (arbolId) {
       result = await query(
-        `SELECT s.id, s.arbol_id, s.usuario_id, s.titulo, s.descripcion, s.foto_url, s.altura_cm, s.salud, s.fecha_seguimiento, s.creado_en, s.actualizado_en, a.nombre as arbol_nombre 
+        `SELECT ${selectColumns}
          FROM seguimientos s
          INNER JOIN arboles a ON s.arbol_id = a.id
          WHERE s.arbol_id = $1 AND s.usuario_id = $2 AND a.usuario_id = $2
@@ -24,7 +41,7 @@ export async function GET(request: NextRequest) {
       )
     } else {
       result = await query(
-        `SELECT s.id, s.arbol_id, s.usuario_id, s.titulo, s.descripcion, s.foto_url, s.altura_cm, s.salud, s.fecha_seguimiento, s.creado_en, s.actualizado_en, a.nombre as arbol_nombre 
+        `SELECT ${selectColumns}
          FROM seguimientos s
          INNER JOIN arboles a ON s.arbol_id = a.id
          WHERE s.usuario_id = $1
@@ -47,7 +64,7 @@ export async function POST(request: NextRequest) {
     if (error) return error
 
     const body = await request.json()
-    const { arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento } = body
+    const { arbol_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento, tipo_seguimiento } = body
 
     if (!arbol_id || !titulo) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
@@ -57,13 +74,44 @@ export async function POST(request: NextRequest) {
     const { error: ownershipError } = await validateResourceOwnership("arboles", arbol_id, userId)
     if (ownershipError) return ownershipError
 
+    const fotoFinal = foto_url?.trim() || null;
+    const alturaFinal = altura_cm ? Number.parseFloat(altura_cm) : null;
+    const saludFinal = salud ? salud.toUpperCase() : null;
+    const tipoFinal = tipo_seguimiento ? tipo_seguimiento.toUpperCase() : null;
+
     // Insertar el seguimiento
-    const result = await query(
-      `INSERT INTO seguimientos (arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [arbol_id, userId, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento || new Date()],
-    )
+    let result;
+    try {
+      result = await query(
+        `INSERT INTO seguimientos (arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, tipo_seguimiento, fecha_seguimiento)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING *`,
+        [arbol_id, userId, titulo, descripcion, fotoFinal, alturaFinal, saludFinal, tipoFinal, fecha_seguimiento || new Date()],
+      )
+    } catch (colError: any) {
+      if (colError.message && colError.message.includes('tipo_seguimiento')) {
+        result = await query(
+          `INSERT INTO seguimientos (arbol_id, usuario_id, titulo, descripcion, foto_url, altura_cm, salud, fecha_seguimiento)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           RETURNING *`,
+          [arbol_id, userId, titulo, descripcion, fotoFinal, alturaFinal, saludFinal, fecha_seguimiento || new Date()],
+        )
+      } else {
+        throw colError;
+      }
+    }
+
+    // Actualizar estado_salud del árbol con el último valor del seguimiento
+    if (saludFinal) {
+      try {
+        await query(
+          `UPDATE arboles SET estado_salud = $1, actualizado_en = NOW() WHERE id = $2`,
+          [saludFinal, arbol_id]
+        );
+      } catch (e) {
+        console.warn('No se pudo actualizar estado_salud del árbol:', e);
+      }
+    }
 
     return NextResponse.json(result.rows[0], { status: 201 })
   } catch (error) {

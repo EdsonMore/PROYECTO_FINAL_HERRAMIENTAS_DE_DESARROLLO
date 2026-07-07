@@ -19,6 +19,8 @@ export interface Arbol {
   descripcion?: string
   foto_url?: string
   estado_salud?: string
+  altura_actual_cm?: number
+  diametro_tronco_cm?: number
   creado_en: Date
   actualizado_en: Date
 }
@@ -28,6 +30,7 @@ export interface ArbolResumen {
   nombre: string
   especie?: string
   foto_url?: string
+  estado_salud?: string
   creado_en: Date
 }
 
@@ -50,8 +53,10 @@ export interface Seguimiento {
   foto_url?: string
   altura_cm?: number
   salud?: string
-  fecha_seguimiento: Date
+  fecha_seguimiento: Date | string
   creado_en: Date
+  arbol_nombre?: string
+  arbol_especie?: string
 }
 
 export interface Tip {

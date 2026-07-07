@@ -1,20 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import dynamic from "next/dynamic";
+
+let L: any = null;
+
+// Cargar Leaflet dinámicamente para evitar errores SSR
+const loadLeaflet = async () => {
+  if (!L) {
+    const leafletModule = await import("leaflet");
+    L = leafletModule.default;
+    // Importar CSS dinámicamente
+    await import("leaflet/dist/leaflet.css");
+    // Fix para los iconos de Leaflet en Next.js
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
+  }
+  return L;
+};
+
 import { ClusterMarker, ClusteringConfig } from "../types";
 import { createClusterIcon, createCustomMarkerIcon, getMarkerColor } from "../utils/clusterUtils";
 
-let MarkerClusterGroupLoaded = false;
+import "leaflet/dist/leaflet.css";
 
-// Fix para los iconos de Leaflet en Next.js
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+let MarkerClusterGroupLoaded = false;
 
 interface MapClusteringComponentProps {
   center: [number, number];
@@ -33,17 +47,20 @@ export function MapClusteringComponent({
   clusteringConfig = {},
   className = "",
 }: MapClusteringComponentProps) {
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<any | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markerClusterGroupRef = useRef<any | null>(null);
   const clickHandlerRef = useRef(onLocationSelect);
   const isUnmountingRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
+  const leafletRef = useRef<any>(null);
 
   // Cargar MarkerClusterGroup dinámicamente
   useEffect(() => {
     const loadClusterGroup = async () => {
       try {
+        const leaflet = await loadLeaflet();
+        leafletRef.current = leaflet;
         await import("leaflet.markercluster");
         await import("leaflet.markercluster/dist/MarkerCluster.css");
         await import("leaflet.markercluster/dist/MarkerCluster.Default.css");
@@ -66,12 +83,14 @@ export function MapClusteringComponent({
   useEffect(() => {
     console.log("Map init effect - isReady:", isReady, "mapRef exists:", !!mapRef.current);
 
-    if (!mapContainerRef.current || !isReady) return;
+    if (!mapContainerRef.current || !isReady || !leafletRef.current) return;
     if (mapRef.current) return;
 
     isUnmountingRef.current = false;
 
     try {
+      const L = leafletRef.current;
+      
       if (mapContainerRef.current.offsetWidth === 0 || mapContainerRef.current.offsetHeight === 0) {
         console.warn("Contenedor del mapa sin dimensiones");
         return;
@@ -93,9 +112,11 @@ export function MapClusteringComponent({
       // Crear grupo de clustering
       const markerClusterGroup = new (L as any).MarkerClusterGroup({
         maxClusterRadius: clusteringConfig.maxClusterRadius ?? 80,
-        showCoverageOnHover: clusteringConfig.showCoverageOnHover ?? true,
+        showCoverageOnHover: clusteringConfig.showCoverageOnHover ?? false,
         zoomToBoundsOnClick: clusteringConfig.zoomToBoundsOnClick ?? true,
         disableClusteringAtZoom: clusteringConfig.disableClusteringAtZoom ?? 15,
+        spiderfyOnMaxZoom: clusteringConfig.spiderfyOnMaxZoom ?? false,
+        spiderLegPolylineOptions: clusteringConfig.spiderLegPolylineOptions ?? { weight: 0, opacity: 0 },
         iconCreateFunction: createClusterIcon,
       });
 
@@ -103,7 +124,7 @@ export function MapClusteringComponent({
       markerClusterGroupRef.current = markerClusterGroup;
 
       // Click en el mapa para seleccionar ubicación
-      map.on("click", (e: L.LeafletMouseEvent) => {
+      map.on("click", (e: any) => {
         if (!isUnmountingRef.current && clickHandlerRef.current && e.latlng) {
           clickHandlerRef.current(e.latlng.lat, e.latlng.lng);
         }
@@ -168,16 +189,24 @@ export function MapClusteringComponent({
 
     if (!isReady || !markerClusterGroupRef.current || !mapRef.current || isUnmountingRef.current) return;
 
+    const L = leafletRef.current;
+    if (!L) return;
+
     try {
       markerClusterGroupRef.current.clearLayers();
 
       markers.forEach((marker, index) => {
         try {
           const isFirstMarker = index === 0;
-          const markerColor = getMarkerColor(marker.healthStatus, isFirstMarker && !marker.healthStatus);
+          const hs = marker.healthStatus ? String(marker.healthStatus).toLowerCase() : undefined;
+          const markerColor = getMarkerColor(hs, (marker as any).indice_supervivencia ?? null, isFirstMarker && !hs);
           const leafletMarker = L.marker([marker.lat, marker.lng], {
             icon: createCustomMarkerIcon(markerColor),
-          });
+            // Pasamos propiedades personalizadas para que el cluster pueda leerlas
+            indice_supervivencia: (marker as any).indice_supervivencia ?? null,
+            recomendaciones: (marker as any).recomendaciones ?? [],
+            healthStatus: hs ?? null,
+          } as any);
 
           if (marker.popup) {
             leafletMarker.bindPopup(marker.popup);

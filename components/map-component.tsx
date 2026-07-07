@@ -3,6 +3,10 @@
 import { useEffect, useRef } from "react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
+// Marker cluster plugin and styles
+import "leaflet.markercluster"
+import "leaflet.markercluster/dist/MarkerCluster.css"
+import "leaflet.markercluster/dist/MarkerCluster.Default.css"
 import { getHealthColor } from "@/lib/health-utils"
 
 // Fix para los iconos de Leaflet en Next.js
@@ -29,7 +33,17 @@ const createCustomMarkerIcon = (color: string = "blue") => {
 interface MapComponentProps {
   center: [number, number]
   zoom?: number
-  markers?: Array<{ lat: number; lng: number; popup?: string; healthStatus?: string }>
+  markers?: Array<{ 
+    lat: number
+    lng: number
+    popup?: string
+    healthStatus?: string
+    nombre?: string
+    especie?: string
+    temperatura?: number
+    humedad?: number
+    distance?: number
+  }>
   onLocationSelect?: (lat: number, lng: number) => void
   className?: string
 }
@@ -43,7 +57,7 @@ export function MapComponent({
 }: MapComponentProps) {
   const mapRef = useRef<L.Map | null>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
-  const markersLayerRef = useRef<L.LayerGroup | null>(null)
+  const markersLayerRef = useRef<any | null>(null)
   const clickHandlerRef = useRef(onLocationSelect)
   const isUnmountingRef = useRef(false)
 
@@ -79,8 +93,9 @@ export function MapComponent({
         maxZoom: 19,
       }).addTo(map)
 
-      // Capa para los marcadores
-      const markersLayer = L.layerGroup().addTo(map)
+      // Capa para los marcadores (usamos MarkerClusterGroup si está disponible)
+      const markersLayer = (L as any).markerClusterGroup ? (L as any).markerClusterGroup() : L.layerGroup()
+      markersLayer.addTo(map)
       markersLayerRef.current = markersLayer
 
       // Click en el mapa para seleccionar ubicación
@@ -161,9 +176,9 @@ export function MapComponent({
             icon: createCustomMarkerIcon(markerColor),
           })
           if (marker.popup) {
-            leafletMarker.bindPopup(marker.popup).openPopup()
+            leafletMarker.bindPopup(marker.popup)
           }
-          leafletMarker.addTo(markersLayerRef.current!)
+          leafletMarker.addTo(markersLayerRef.current)
         } catch (error) {
           console.error(`Error agregando marcador ${index}:`, error)
         }
