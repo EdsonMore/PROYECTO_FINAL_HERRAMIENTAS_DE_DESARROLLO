@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +31,11 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Leaf,
+  HelpCircle,
+  ShieldCheck,
+  BarChart3,
+  TreePine,
 } from "lucide-react";
 import type { Arbol } from "@/types";
 
@@ -435,7 +441,7 @@ export default function ClimaPage() {
     if (selectedArbol && !weather && !weatherLoading) {
       fetchWeatherForArbol(selectedArbol);
     }
-  }, []);
+  }, [selectedArbol, weather, weatherLoading]);
 
   // ... (resto de funciones existentes: detectAnomalies, getClimaticComparison, getDetailedAdvice)
 
@@ -589,143 +595,404 @@ export default function ClimaPage() {
   const overallTrend =
     prediction.length > 0 ? getOverallTrend(prediction) : null;
 
+  const heroWeather = weather ?? {
+    main: {
+      temp: 22,
+      feels_like: 23,
+      humidity: 65,
+      pressure: 1016,
+    },
+    wind: { speed: 12, gust: 14 },
+    weather: [{ description: "parcialmente nublado" }],
+    clouds: { all: 48 },
+    name: selectedArbol?.nombre || "Tu árbol",
+    sys: { country: "PE" },
+  };
+
+  const forecastPreview =
+    prediction.length > 0
+      ? prediction
+      : [
+          { day: 1, tempMax: 21, tempMin: 17, humidity: 64, windSpeed: 11 },
+          { day: 2, tempMax: 23, tempMin: 18, humidity: 61, windSpeed: 10 },
+          { day: 3, tempMax: 22, tempMin: 17, humidity: 63, windSpeed: 9 },
+          { day: 4, tempMax: 24, tempMin: 18, humidity: 59, windSpeed: 10 },
+          { day: 5, tempMax: 22, tempMin: 17, humidity: 60, windSpeed: 8 },
+          { day: 6, tempMax: 25, tempMin: 19, humidity: 56, windSpeed: 10 },
+          { day: 7, tempMax: 23, tempMin: 18, humidity: 58, windSpeed: 9 },
+        ].map((item, index) => ({
+          ...item,
+          date: ["L", "M", "M", "J", "V", "S", "D"][index],
+          description: "Tendencia estable",
+          icon: "🌤️",
+          trend: "stable" as const,
+          tempChange: 0,
+          windSpeed: item.windSpeed,
+        }));
+
+  const forecastLine = forecastPreview.map((item) => item.tempMax);
+  const minForecast = Math.min(...forecastLine);
+  const maxForecast = Math.max(...forecastLine);
+
+  const irrigationLabel = (() => {
+    const temp = heroWeather.main?.temp || 0;
+    const humidity = heroWeather.main?.humidity || 0;
+
+    if (temp >= 33 || humidity <= 35) return "Hoy";
+    if (temp >= 28 || humidity <= 45) return "En 1 día";
+    return "En 2 días";
+  })();
+
+  const forecastPath = forecastLine
+    .map((value, index) => {
+      const x = forecastLine.length === 1 ? 50 : (index / (forecastLine.length - 1)) * 100;
+      const y =
+        100 -
+        ((value - minForecast) / Math.max(maxForecast - minForecast, 1)) * 70 -
+        15;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative py-12 px-4 bg-gradient-to-b from-blue-50 to-blue-100">
-          <div className="container mx-auto max-w-4xl">
-            <div className="text-center space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-200 text-blue-800 text-sm font-medium">
-                <Cloud className="h-4 w-4" />
-                <span>
-                  Monitoreo Climático en Tiempo Real + Predicción 7 Días
-                </span>
+        <section className="relative overflow-hidden bg-[#f5fbf1]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(236,248,232,0.78)_46%,_rgba(214,235,204,0.95))]" />
+          <div
+            className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white to-transparent"
+            aria-hidden="true"
+          />
+          <div className="container relative mx-auto max-w-7xl px-4 py-8 md:py-12">
+            <div className="grid items-center gap-8 lg:grid-cols-[1.15fr_0.95fr]">
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-100 backdrop-blur">
+                  <Leaf className="h-4 w-4" />
+                  <span>Monitoreo climático en tiempo real + Predicción 7 días</span>
+                </div>
+
+                <div className="max-w-2xl space-y-4">
+                  <h1 className="text-4xl font-black tracking-tight text-slate-900 md:text-6xl">
+                    Clima de tu <span className="text-emerald-700">Árbol</span>
+                  </h1>
+                  <p className="max-w-xl text-base leading-7 text-slate-600 md:text-lg">
+                    Consulta las condiciones climáticas actuales y obtén una predicción
+                    inteligente para los próximos 7 días basada en datos históricos.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Link href="/mi-arbol">
+                    <Button className="h-12 rounded-xl bg-emerald-700 px-6 text-white shadow-lg shadow-emerald-200 hover:bg-emerald-800">
+                      <Leaf className="mr-2 h-4 w-4" />
+                      Registrar mi primer árbol
+                    </Button>
+                  </Link>
+                  <Link href="#como-funciona">
+                    <Button
+                      variant="outline"
+                      className="h-12 rounded-xl border-emerald-200 bg-white/70 px-6 text-emerald-700 hover:bg-emerald-50"
+                    >
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      ¿Cómo funciona?
+                    </Button>
+                  </Link>
+                </div>
+
+                <p className="text-sm text-slate-500">
+                  {arboles.length > 0
+                    ? `Tienes ${arboles.length} árbol${arboles.length === 1 ? "" : "es"} registrado${arboles.length === 1 ? "" : "s"} para consultar.`
+                    : "Todavía no tienes árboles registrados. Agrega el primero para ver el clima de su ubicación."}
+                </p>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-blue-900">
-                Clima de tu Árbol
-              </h1>
-              <p className="text-lg text-blue-700 max-w-2xl mx-auto">
-                Consulta las condiciones climáticas actuales y obtén una
-                predicción inteligente para los próximos 7 días basada en datos
-                históricos
-              </p>
+
+              <div className="relative mx-auto w-full max-w-2xl">
+                <div
+                  className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-transparent p-4 shadow-[0_30px_80px_rgba(51,92,54,0.18)] backdrop-blur"
+                >
+                  <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="rounded-[1.5rem] bg-white/85 p-5 shadow-sm ring-1 ring-white/80">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-emerald-700">
+                            <Cloud className="h-4 w-4" />
+                            <span>Estado actual</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-5xl">🌤️</div>
+                            <div>
+                              <p className="text-4xl font-black tracking-tight text-slate-900">
+                                {heroWeather.main?.temp?.toFixed(0)}°C
+                              </p>
+                              <p className="text-sm font-semibold text-emerald-700">
+                                {weather?.weather?.[0]?.description || "Parcialmente nublado"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="rounded-2xl bg-emerald-50 px-3 py-2 text-right text-xs font-semibold text-emerald-700">
+                          <div>{heroWeather.name}</div>
+                          <div className="text-emerald-600/80">{heroWeather.sys?.country}</div>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 grid grid-cols-3 gap-3 text-sm">
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                          <div className="text-slate-500">Humedad</div>
+                          <div className="mt-1 font-bold text-slate-800">
+                            {heroWeather.main?.humidity}%
+                          </div>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                          <div className="text-slate-500">Viento</div>
+                          <div className="mt-1 font-bold text-slate-800">
+                            {heroWeather.wind?.speed?.toFixed(0)} km/h
+                          </div>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                          <div className="text-slate-500">Sensación</div>
+                          <div className="mt-1 font-bold text-slate-800">
+                            {heroWeather.main?.feels_like?.toFixed(0)}°C
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="rounded-[1.5rem] bg-white/90 p-4 shadow-sm ring-1 ring-white/80">
+                        <div className="mb-3 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">Próximos 7 días</p>
+                            <p className="text-xs text-slate-500">Tendencia climática estimada</p>
+                          </div>
+                          <Calendar className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div className="rounded-2xl bg-emerald-50/80 p-3">
+                          <svg viewBox="0 0 100 60" className="h-24 w-full overflow-visible">
+                            <polyline
+                              fill="none"
+                              stroke="#6b8f3a"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              points={forecastPath}
+                            />
+                            {forecastLine.map((value, index) => {
+                              const x = forecastLine.length === 1 ? 50 : (index / (forecastLine.length - 1)) * 100;
+                              const y =
+                                100 -
+                                ((value - minForecast) / Math.max(maxForecast - minForecast, 1)) * 70 -
+                                15;
+                              return <circle key={index} cx={x} cy={y} r="1.8" fill="#7aa83a" />;
+                            })}
+                          </svg>
+                          <div className="mt-1 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-slate-500">
+                            {forecastPreview.map((item, index) => (
+                              <span key={index}>{item.date}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-[1.5rem] bg-white/90 p-4 shadow-sm ring-1 ring-white/80">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-2xl bg-blue-50 p-3 text-blue-600">
+                            <Droplets className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">Riego recomendado</p>
+                            <p className="text-sm text-emerald-700">En {irrigationLabel.toLowerCase()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Árbol Selection Section */}
-        <section className="py-8 px-4 bg-white border-b">
-          <div className="container mx-auto max-w-4xl">
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                Selecciona un Árbol
-              </h2>
-
-              {arbolesLoading ? (
-                <div className="flex items-center justify-center h-12">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-              ) : arboles.length === 0 ? (
-                <Card className="border-yellow-200 bg-yellow-50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <AlertCircle className="h-6 w-6 text-yellow-600" />
-                      <div>
-                        <p className="text-yellow-800 font-medium">
-                          No tienes árboles registrados
-                        </p>
-                        <p className="text-sm text-yellow-700">
-                          Registra tu primer árbol en "Mi Árbol" para ver el
-                          clima de su ubicación.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="flex flex-col sm:flex-row gap-3 items-end">
-                  <div className="flex-1">
-                    <Select
-                      value={selectedArbol?.id.toString() || ""}
-                      onValueChange={handleArbolChange}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecciona un árbol..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {arboles.map((arbol) => (
-                          <SelectItem
-                            key={arbol.id}
-                            value={arbol.id.toString()}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span>🌳 {arbol.nombre}</span>
-                              {arbol.especie && (
-                                <span className="text-xs text-gray-500">
-                                  ({arbol.especie})
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+        <section className="border-b border-emerald-100 bg-white/80 px-4 py-8">
+          <div className="container mx-auto max-w-7xl">
+            <div className="rounded-[2rem] border border-dashed border-emerald-200 bg-[#f8fcf5] p-5 md:p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="max-w-2xl space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <Leaf className="h-5 w-5" />
+                    <span className="text-lg font-bold">Selecciona un árbol</span>
                   </div>
-
-                  <Button
-                    onClick={() =>
-                      selectedArbol && fetchWeatherForArbol(selectedArbol)
-                    }
-                    disabled={!selectedArbol || weatherLoading}
-                    className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
-                  >
-                    {weatherLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Cargando...
-                      </>
-                    ) : (
-                      <>
-                        <Cloud className="mr-2 h-4 w-4" />
-                        Verificar Clima y Predicción
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {selectedArbol && (
-                <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 text-blue-800">
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-sm">
-                        <strong>{selectedArbol.nombre}</strong>
-                        {selectedArbol.especie && ` (${selectedArbol.especie})`}
-                        {" · "}
-                        Lat: {(+selectedArbol.latitud).toFixed(4)}, Lon:{" "}
-                        {(+selectedArbol.longitud).toFixed(4)}
-                      </span>
+                  {arbolesLoading ? (
+                    <div className="flex items-center gap-3 text-sm text-slate-500">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+                      Cargando árboles registrados...
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  ) : arboles.length === 0 ? (
+                    <div className="flex flex-col gap-4 rounded-[1.5rem] bg-white/90 p-4 md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-5xl">
+                          🌱
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-slate-900">Aún no tienes árboles registrados</p>
+                          <p className="max-w-xl text-sm leading-6 text-slate-600">
+                            Registra tu primer árbol en "Mi Árbol" para ver el clima de su ubicación y recibir predicciones personalizadas.
+                          </p>
+                        </div>
+                      </div>
+                      <Link href="/mi-arbol">
+                        <Button className="h-11 rounded-full border border-emerald-300 bg-white px-6 text-emerald-700 hover:bg-emerald-50">
+                          <TreePine className="mr-2 h-4 w-4" />
+                          Ir a Mi Árbol
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-slate-600">
+                          Elige el árbol que quieres monitorear.
+                        </p>
+                        <Select
+                          value={selectedArbol?.id.toString() || ""}
+                          onValueChange={handleArbolChange}
+                        >
+                          <SelectTrigger className="h-12 rounded-2xl border-emerald-200 bg-white text-left shadow-sm">
+                            <SelectValue placeholder="Selecciona un árbol..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {arboles.map((arbol) => (
+                              <SelectItem key={arbol.id} value={arbol.id.toString()}>
+                                <div className="flex items-center gap-2">
+                                  <span>🌳 {arbol.nombre}</span>
+                                  {arbol.especie && (
+                                    <span className="text-xs text-gray-500">({arbol.especie})</span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-              {/* Botón de Predicción Climática */}
-              {weather && !weatherLoading && (
-                <div className="flex justify-center mt-4">
-                  <Button
-                    onClick={handlePredictionClick}
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                    <Calendar className="mr-2 h-5 w-5" />
-                    🔮 Predicción del Clima para los Próximos Días
-                  </Button>
+                      <Button
+                        onClick={() => selectedArbol && fetchWeatherForArbol(selectedArbol)}
+                        disabled={!selectedArbol || weatherLoading}
+                        className="h-12 rounded-2xl bg-emerald-700 px-6 text-white shadow-lg shadow-emerald-200 hover:bg-emerald-800"
+                      >
+                        {weatherLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Cargando...
+                          </>
+                        ) : (
+                          <>
+                            <Cloud className="mr-2 h-4 w-4" />
+                            Verificar clima
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {selectedArbol && !arbolesLoading && (
+                  <div className="rounded-[1.5rem] bg-white p-4 shadow-sm ring-1 ring-emerald-100">
+                    <div className="flex items-center gap-2 text-emerald-700">
+                      <MapPin className="h-4 w-4" />
+                      <span className="text-sm font-semibold">Ubicación seleccionada</span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-700">
+                      <strong>{selectedArbol.nombre}</strong>
+                      {selectedArbol.especie && ` (${selectedArbol.especie})`}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Lat: {(+selectedArbol.latitud).toFixed(4)} · Lon: {(+selectedArbol.longitud).toFixed(4)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="como-funciona" className="bg-white px-4 py-10">
+          <div className="container mx-auto max-w-7xl">
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-black text-slate-900 md:text-3xl">¿Cómo funciona?</h2>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-3">
+              {[
+                {
+                  step: "1",
+                  title: "Registra tu árbol",
+                  text: "Agrega información básica y la ubicación de tu árbol.",
+                  icon: <TreePine className="h-8 w-8 text-emerald-700" />,
+                },
+                {
+                  step: "2",
+                  title: "Consulta el clima",
+                  text: "Visualiza las condiciones actuales en tiempo real.",
+                  icon: <Cloud className="h-8 w-8 text-sky-600" />,
+                },
+                {
+                  step: "3",
+                  title: "Predicción 7 días",
+                  text: "Recibe una predicción detallada para planificar su cuidado.",
+                  icon: <Calendar className="h-8 w-8 text-emerald-700" />,
+                },
+              ].map((item, index) => (
+                <div
+                  key={item.step}
+                  className="rounded-[1.75rem] border border-slate-100 bg-slate-50/80 p-5 shadow-sm"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-700 text-lg font-black text-white">
+                      {item.step}
+                    </div>
+                    <div className="rounded-2xl bg-white p-3 shadow-sm">{item.icon}</div>
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold text-slate-900">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{item.text}</p>
+                  {index < 2 && (
+                    <div className="mt-4 hidden h-px bg-emerald-100 lg:block" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 pb-8">
+          <div className="container mx-auto max-w-7xl">
+            <div className="rounded-[2rem] border border-sky-100 bg-gradient-to-r from-sky-50 via-white to-emerald-50 p-6 shadow-sm">
+              <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-center">
+                <div>
+                  <div className="flex items-center gap-3 text-sky-700">
+                    <ShieldCheck className="h-6 w-6" />
+                    <h3 className="text-xl font-black text-slate-900">Datos confiables para el mejor cuidado</h3>
+                  </div>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+                    Usamos fuentes meteorológicas confiables y modelos avanzados para brindarte información precisa y útil para tu árbol.
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-center text-sm font-semibold text-slate-700">
+                  <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                    <Cloud className="mx-auto mb-2 h-6 w-6 text-sky-600" />
+                    Fuentes confiables
+                  </div>
+                  <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                    <BarChart3 className="mx-auto mb-2 h-6 w-6 text-emerald-600" />
+                    Predicciones precisas
+                  </div>
+                  <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                    <Leaf className="mx-auto mb-2 h-6 w-6 text-emerald-700" />
+                    Mejores cuidados
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
