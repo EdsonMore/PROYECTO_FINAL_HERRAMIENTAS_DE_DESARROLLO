@@ -15,6 +15,8 @@ import {
   TreePine,
   Compass,
   AlertCircle,
+  CloudSun,
+  Activity,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { HealthFilter } from "@/components/health-filter";
@@ -43,6 +45,11 @@ interface TreeDistance extends Arbol {
   distance?: number | null;
   weather?: WeatherInfo;
 }
+
+const DEFAULT_PIURA_LOCATION: UserLocation = {
+  lat: -5.1946,
+  lng: -80.6307,
+};
 
 export function GeolocalizacionContent() {
   const { data: session, status } = useSession();
@@ -141,47 +148,52 @@ export function GeolocalizacionContent() {
       });
       if (res.ok) {
         const data = await res.json();
-        setArboles(data);
+        const normalizedData = normalizeTrees(Array.isArray(data) ? data : []);
+        setArboles(normalizedData as Arbol[]);
 
-        // Si no tenemos userLocation aún, igualmente intentamos obtener clima
-        // para cada árbol y poblar treeDistances para que se vean en el mapa.
-        if (!userLocation) {
-          try {
-            const treesWithWeather = await Promise.all(
-              data.map(async (tree: any) => {
-                try {
-                  const weatherRes = await fetch(
-                    `/geolocalizacion/api-clima?lat=${tree.latitud}&lon=${tree.longitud}&species=${encodeURIComponent(tree.especie || "")}`
-                  );
-                  if (weatherRes.ok) {
-                    const weatherData = await weatherRes.json();
-                    const indice = weatherData.indices?.indice_supervivencia ?? 75;
-                    const recomendaciones = weatherData.recomendaciones_arbol ?? generateLocalRecommendations(tree.especie, tree.estado_salud, indice);
-                    return {
-                      ...tree,
-                      distance: null,
-                      weather: {
-                        temperatura: weatherData.current?.temperatura,
-                        humedad: weatherData.current?.humedad,
-                        descripcion: weatherData.current?.descripcion,
-                        icono: weatherData.current?.icono,
-                        indice_supervivencia: indice,
-                        riesgo_ambiental: weatherData.indices?.riesgo_ambiental ?? 'desconocido',
-                        recomendaciones,
-                      },
-                    };
-                  }
-                } catch (err) {
-                  console.error("Error fetching weather for tree (no location):", err);
+        const fallbackTrees = normalizedData.map((tree: any) => ({
+          ...tree,
+          distance: null,
+          weather: { indice_supervivencia: tree.indice_supervivencia ?? 75, recomendaciones: tree.recomendaciones ?? [] },
+        }));
+
+        setTreeDistances(fallbackTrees);
+
+        try {
+          const treesWithWeather = await Promise.all(
+            normalizedData.map(async (tree: any) => {
+              try {
+                const weatherRes = await fetch(
+                  `/geolocalizacion/api-clima?lat=${tree.latitud}&lon=${tree.longitud}&species=${encodeURIComponent(tree.especie || "")}`
+                );
+                if (weatherRes.ok) {
+                  const weatherData = await weatherRes.json();
+                  const indice = weatherData.indices?.indice_supervivencia ?? 75;
+                  const recomendaciones = weatherData.recomendaciones_arbol ?? generateLocalRecommendations(tree.especie, tree.estado_salud, indice);
+                  return {
+                    ...tree,
+                    distance: null,
+                    weather: {
+                      temperatura: weatherData.current?.temperatura,
+                      humedad: weatherData.current?.humedad,
+                      descripcion: weatherData.current?.descripcion,
+                      icono: weatherData.current?.icono,
+                      indice_supervivencia: indice,
+                      riesgo_ambiental: weatherData.indices?.riesgo_ambiental ?? 'desconocido',
+                      recomendaciones,
+                    },
+                  };
                 }
-                return { ...tree, distance: null, weather: { indice_supervivencia: 75, recomendaciones: [] } };
-              })
-            );
-            setTreeDistances(normalizeTrees(treesWithWeather));
-          } catch (err) {
-            console.error("Error poblando árboles sin ubicación:", err);
-            setTreeDistances(normalizeTrees(data.map((t: any) => ({ ...t, distance: null, weather: { indice_supervivencia: 75, recomendaciones: [] } }))));
-          }
+              } catch (err) {
+                console.error("Error fetching weather for tree (no location):", err);
+              }
+              return { ...tree, distance: null, weather: { indice_supervivencia: tree.indice_supervivencia ?? 75, recomendaciones: tree.recomendaciones ?? [] } };
+            })
+          );
+          setTreeDistances(normalizeTrees(treesWithWeather));
+        } catch (err) {
+          console.error("Error poblando árboles sin ubicación:", err);
+          setTreeDistances(fallbackTrees);
         }
       }
     } catch (error) {
@@ -258,33 +270,127 @@ export function GeolocalizacionContent() {
       return recs
     }
 
+  const getRecommendationCards = (tree: any) => {
+    const status = String(tree.estado_salud || "").trim().toUpperCase();
+    const species = String(tree.especie || "").trim();
+    const seed = Number(tree.id ?? 0) % 4;
+    const temp = typeof tree.weather?.temperatura === "number" ? tree.weather.temperatura : null;
+    const humidity = typeof tree.weather?.humedad === "number" ? tree.weather.humedad : null;
+    const distance = typeof tree.distance === "number" ? tree.distance : null;
+
+    const statusCards: Record<string, Array<{ icon: string; title: string; text: string; color: string }>> = {
+      EXCELENTE: [
+        { icon: "✨", title: "Crecimiento estable", text: "Mantén el monitoreo mensual y conserva el follaje limpio.", color: "#0f766e" },
+        { icon: "🌿", title: "Mantenimiento preventivo", text: "Una revisión breve cada 15 días evita problemas futuros.", color: "#0891b2" },
+        { icon: "📈", title: "Seguimiento continuo", text: "Registra el crecimiento para detectar cambios tempranos.", color: "#7c3aed" },
+      ],
+      BUENO: [
+        { icon: "💧", title: "Riego moderado", text: "Mantén el suelo húmedo, pero evita el exceso de agua.", color: "#0284c7" },
+        { icon: "🪴", title: "Cuidado activo", text: "Revisa hojas, tronco y raíces con regularidad.", color: "#16a34a" },
+        { icon: "☀️", title: "Equilibrio de luz", text: "Asegura exposición solar sin estrés térmico.", color: "#d97706" },
+      ],
+      REGULAR: [
+        { icon: "⚠️", title: "Monitoreo semanal", text: "Prioriza observación activa de hojas, ramas y suelo.", color: "#ea580c" },
+        { icon: "🧰", title: "Intervención ligera", text: "Aplica riego controlado y limpia restos de poda.", color: "#f59e0b" },
+        { icon: "🌤️", title: "Ajuste ambiental", text: "Protege el árbol de sol intenso y vientos secos.", color: "#b45309" },
+      ],
+      MALO: [
+        { icon: "🚑", title: "Intervención urgente", text: "Revisa raíces, riego y posibles plagas de inmediato.", color: "#dc2626" },
+        { icon: "🛡️", title: "Protección activa", text: "Refuerza soporte, sombra y nutrición del suelo.", color: "#f97316" },
+        { icon: "🩺", title: "Asesoría técnica", text: "Un seguimiento profesional puede recuperar la vitalidad.", color: "#c2410c" },
+      ],
+      CRITICO: [
+        { icon: "🆘", title: "Atención inmediata", text: "Evalúa la salud del tronco y sistema radicular sin demora.", color: "#b91c1c" },
+        { icon: "🌱", title: "Recuperación prioritaria", text: "Prioriza riego, protección y revisión estructural.", color: "#991b1b" },
+        { icon: "👩‍🔬", title: "Seguimiento experto", text: "La intervención técnica es clave para la supervivencia.", color: "#7f1d1d" },
+      ],
+      DEFAULT: [
+        { icon: "🌳", title: "Cuidado continuo", text: "Mantén una revisión periódica para sostener su salud.", color: "#475569" },
+      ],
+    };
+
+    const speciesTips = [
+      { match: "limón", icon: "🍋", title: "Riego preciso", text: "El limón responde mejor a riego moderado y drenaje adecuado.", color: "#f59e0b" },
+      { match: "mango", icon: "🥭", title: "Nutrición balanceada", text: "El mango necesita suelo fértil y buen drenaje.", color: "#16a34a" },
+      { match: "coco", icon: "🥥", title: "Protección costera", text: "El coco se beneficia de sombra y protección contra el salitre.", color: "#0ea5e9" },
+      { match: "cacao", icon: "🍫", title: "Humedad constante", text: "El cacao favorece suelos húmedos y bien protegidos.", color: "#8b5cf6" },
+      { match: "aguacate", icon: "🥑", title: "Suelo profundo", text: "El aguacate necesita drenaje excelente y control de sequía.", color: "#84cc16" },
+    ];
+
+    const envTips = [] as Array<{ icon: string; title: string; text: string; color: string }>;
+    if (temp != null && temp > 30) {
+      envTips.push({ icon: "🌞", title: "Calor intenso", text: "Considera sombra ligera en horas de mayor sol.", color: "#ea580c" });
+    } else if (temp != null && temp < 20) {
+      envTips.push({ icon: "❄️", title: "Temperatura baja", text: "Revisa que no haya estrés por frío o humedad excesiva.", color: "#0ea5e9" });
+    }
+
+    if (humidity != null && humidity > 80) {
+      envTips.push({ icon: "💦", title: "Humedad alta", text: "Monitorea hongos y exceso de agua en raíces.", color: "#2563eb" });
+    } else if (humidity != null && humidity < 45) {
+      envTips.push({ icon: "🏜️", title: "Ambiente seco", text: "Aumenta la observación del suelo y el riego puntual.", color: "#b45309" });
+    }
+
+    if (distance != null && distance < 5) {
+      envTips.push({ icon: "📍", title: "Cercanía al usuario", text: "Es un buen momento para revisar el árbol con frecuencia.", color: "#4f46e5" });
+    } else if (distance != null && distance > 20) {
+      envTips.push({ icon: "🧭", title: "Distancia mayor", text: "Programar visitas periódicas ayuda a conservarlo.", color: "#64748b" });
+    }
+
+    const cards = [] as Array<{ icon: string; title: string; text: string; color: string }>;
+    const primaryCards = statusCards[status] || statusCards.DEFAULT;
+    const primary = primaryCards[seed % primaryCards.length];
+    cards.push(primary);
+
+    const speciesTip = speciesTips.find((item) => species.toLowerCase().includes(item.match)) ?? null;
+    if (speciesTip) {
+      cards.push({ ...speciesTip, title: speciesTip.title, text: speciesTip.text });
+    }
+
+    if (envTips.length > 0) {
+      cards.push(envTips[seed % envTips.length]);
+    }
+
+    return cards.slice(0, 3);
+  };
+
+  const normalizeHealthStatus = (status?: string) => String(status ?? "").trim().toUpperCase();
+
   const normalizeTrees = (arr: any[]): TreeDistance[] => {
     return arr.map((t, idx) => {
       const safeId = t.id ?? t._id ?? t.usuario_id ?? `fallback-${idx}-${Date.now()}`;
       const weatherIndice = t.weather?.indice_supervivencia ?? t.indices?.indice_supervivencia ?? null;
       const indice = t.indice_supervivencia ?? weatherIndice ?? 75;
       const recomendaciones = t.recomendaciones ?? t.weather?.recomendaciones ?? t.recomendaciones_arbol ?? [];
+      const normalizedHealth = normalizeHealthStatus(t.estado_salud);
       return {
         ...t,
         id: safeId,
+        latitud: Number(t.latitud),
+        longitud: Number(t.longitud),
+        estado_salud: normalizedHealth || undefined,
         indice_supervivencia: indice,
         recomendaciones,
       } as TreeDistance;
     });
   }
 
-  const calculateDistances = async (location: UserLocation) => {
+  const calculateDistances = async (location: UserLocation | null) => {
+    const baseLocation = location ?? userLocation ?? DEFAULT_PIURA_LOCATION;
     const distances = arboles
-      .map((arbol) => ({
-        ...arbol,
-        distance: calculateDistance(
-          location.lat,
-          location.lng,
-          Number(arbol.latitud),
-          Number(arbol.longitud)
-        ),
-      }))
-      .sort((a, b) => a.distance - b.distance);
+      .map((arbol) => {
+        const lat = Number(arbol.latitud);
+        const lon = Number(arbol.longitud);
+        const distance = Number.isFinite(lat) && Number.isFinite(lon)
+          ? calculateDistance(baseLocation.lat, baseLocation.lng, lat, lon)
+          : null;
+
+        return {
+          ...arbol,
+          distance,
+        };
+      })
+      .filter((arbol) => arbol.distance != null)
+      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
 
     // Obtener datos de clima para cada árbol
     const treesWithWeather = await Promise.all(
@@ -301,7 +407,7 @@ export function GeolocalizacionContent() {
                     const finalRecs = Array.isArray(recomendaciones) ? [...recomendaciones, ...zoneRecs] : [...zoneRecs]
                     return {
                       ...tree,
-                      distance: null,
+                      distance: tree.distance,
                       weather: {
                         temperatura: weatherData.current?.temperatura,
                         humedad: weatherData.current?.humedad,
@@ -316,7 +422,7 @@ export function GeolocalizacionContent() {
         } catch (error) {
           console.error("Error fetching weather for tree:", error);
         }
-        return { ...tree, weather: { indice_supervivencia: 75, recomendaciones: generateLocalRecommendations(tree.especie, tree.estado_salud, 75) } };
+        return { ...tree, distance: tree.distance, weather: { indice_supervivencia: 75, recomendaciones: generateLocalRecommendations(tree.especie, tree.estado_salud, 75) } };
       })
     );
 
@@ -324,110 +430,130 @@ export function GeolocalizacionContent() {
   };
 
   useEffect(() => {
-    if (userLocation && arboles.length > 0) {
+    if (arboles.length > 0) {
       calculateDistances(userLocation);
     }
-  }, [arboles]);
+  }, [arboles, userLocation]);
 
-  const mapMarkers = useMemo(() => [
-    ...(userLocation
-      ? [
-          {
-            lat: userLocation.lat,
-            lng: userLocation.lng,
-            popup: "<strong>📍 Tu ubicación actual</strong>",
-          },
-        ]
-      : []),
-    ...treeDistances
-      .filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud))
-      .map((a) => {
-        let popupContent = `<div class="popup-container" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">`;
+  const mapMarkers = useMemo(() => {
+    const sourceTrees: TreeDistance[] = treeDistances.length > 0
+      ? treeDistances
+      : (arboles as unknown as TreeDistance[]);
+
+    return [
+      ...(userLocation
+        ? [
+            {
+              lat: userLocation.lat,
+              lng: userLocation.lng,
+              popup: "<strong>📍 Tu ubicación actual</strong>",
+            },
+          ]
+        : []),
+      ...sourceTrees
+        .filter((arbol) => {
+          const health = normalizeHealthStatus(arbol.estado_salud);
+          return health && activeHealthFilters.includes(health);
+        })
+        .map((a) => {
+        let popupContent = `<div class="popup-container" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; width: 300px; max-width: 88vw; line-height: 1.4;">`;
         
-        // Nombre del árbol
-        popupContent += `<div style="font-weight: bold; color: #1f2937; font-size: 14px; margin-bottom: 6px;">🌳 ${a.nombre}</div>`;
+        popupContent += `<div style="background: linear-gradient(135deg, #f8fafc 0%, #ecfeff 100%); border: 1px solid #dbeafe; border-radius: 10px; padding: 8px 10px; margin-bottom: 7px;">`;
+        popupContent += `<div style="font-weight: 800; color: #0f172a; font-size: 13px; margin-bottom: 3px;">🌳 ${a.nombre}</div>`;
         
-        // Especie
         if (a.especie) {
-          popupContent += `<div style="color: #6b7280; font-size: 12px; margin-bottom: 6px;">🌿 ${a.especie}</div>`;
+          popupContent += `<div style="color: #6b7280; font-size: 11px; margin-bottom: 5px;">🌿 ${a.especie}</div>`;
         }
         
-        // Estado de salud
         if (a.estado_salud) {
           const healthColors: Record<string, string> = {
-            EXCELENTE: "#22c55e",
-            BUENO: "#4ade80",
+            EXCELENTE: "#0ea5e9",
+            BUENO: "#16a34a",
             REGULAR: "#f59e0b",
-            MALO: "#ef4444",
+            MALO: "#f97316",
             CRITICO: "#dc2626",
           };
           const healthLabels: Record<string, string> = {
-            EXCELENTE: "✅ Excelente",
+            EXCELENTE: "🔵 Excelente",
             BUENO: "🟢 Bueno",
-            REGULAR: "⚠️ Regular",
-            MALO: "🔴 Malo",
-            CRITICO: "🆘 Crítico",
+            REGULAR: "🟡 Regular",
+            MALO: "🟠 Malo",
+            CRITICO: "🔴 Crítico",
           };
           const color = healthColors[a.estado_salud] || "#6b7280";
           const label = healthLabels[a.estado_salud] || a.estado_salud;
-          popupContent += `<div style="background: ${color}15; border-left: 3px solid ${color}; padding: 6px 8px; margin: 6px 0; border-radius: 3px; font-size: 12px; color: ${color}; font-weight: 600;">${label}</div>`;
+          popupContent += `<div style="background: ${color}15; border-left: 3px solid ${color}; padding: 7px 8px; border-radius: 6px; font-size: 12px; color: ${color}; font-weight: 700;">${label}</div>`;
         }
+        popupContent += `</div>`;
         
-        // Distancia
+        popupContent += `<div style="display: grid; gap: 6px;">`;
+        
         if (a.distance != null) {
-          popupContent += `<div style="color: #16a34a; font-size: 12px; font-weight: 600; margin: 6px 0;">📏 ${a.distance.toFixed(2)} km</div>`;
+          popupContent += `<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 7px; padding: 6px 7px; color: #166534; font-size: 11px; font-weight: 700;">📏 Distancia: ${a.distance.toFixed(2)} km</div>`;
         }
         
-        // Información climática
         if (a.weather?.temperatura !== undefined || a.weather?.humedad !== undefined) {
-          popupContent += `<div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 8px; border-radius: 4px; margin-top: 8px;">`;
-          
+          popupContent += `<div style="background: #f8fafc; border: 1px solid #dbeafe; border-radius: 7px; padding: 7px;">`;
+          popupContent += `<div style="font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Clima</div>`;
           if (a.weather.temperatura !== undefined) {
-            popupContent += `<div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #0369a1; font-weight: 600; margin-bottom: 4px;">🌡️ Temperatura: <span style="color: #ea580c; font-weight: bold;">${Math.round(a.weather.temperatura)}°C</span></div>`;
+            popupContent += `<div style="display: flex; justify-content: space-between; font-size: 12px; color: #0f172a; margin-bottom: 3px;"><span>🌡️ Temperatura</span><strong>${Math.round(a.weather.temperatura)}°C</strong></div>`;
           }
-          
           if (a.weather.humedad !== undefined) {
-            popupContent += `<div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #0369a1; font-weight: 600;">💧 Humedad: <span style="color: #0284c7; font-weight: bold;">${Math.round(a.weather.humedad)}%</span></div>`;
+            popupContent += `<div style="display: flex; justify-content: space-between; font-size: 12px; color: #0f172a;"><span>💧 Humedad</span><strong>${Math.round(a.weather.humedad)}%</strong></div>`;
           }
-          
           popupContent += `</div>`;
         }
         
-        // Mostrar sólo el índice de supervivencia (porcentaje) en el popup
         {
           const baseIndice = a.weather?.indice_supervivencia ?? a.indice_supervivencia ?? 75;
           const supervivenciaScore = getCoherentSurvivalScore(a.estado_salud, baseIndice, a.id);
           if (supervivenciaScore !== null) {
-            popupContent += `<div style="background: #eef2ff; border-left: 3px solid #6366f1; padding: 6px 8px; margin-top: 8px; border-radius: 3px; font-size: 12px; color: #3730a3; font-weight: 600;">Índice de Supervivencia: <span style="font-weight: bold; color: #0f172a;">${supervivenciaScore}%</span></div>`;
+            popupContent += `<div style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 1px solid #c7d2fe; border-radius: 7px; padding: 7px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #4338ca; font-weight: 700;">`;
+            popupContent += `<span>📊 Supervivencia</span>`;
+            popupContent += `<span style="font-size: 14px; color: #111827;">${supervivenciaScore}%</span>`;
+            popupContent += `</div>`;
           }
         }
         
-        // Recomendaciones: mostrar todas (sin truncado)
         if (a.weather?.recomendaciones && a.weather.recomendaciones.length > 0) {
-          popupContent += `<div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 8px; border-radius: 3px; margin-top: 8px; font-size: 11px; color: #92400e;">`;
-          a.weather.recomendaciones.forEach((rec: string) => {
-            popupContent += `<div style="margin-bottom: 4px;">${rec}</div>`;
-          });
-          popupContent += `</div>`;
+          const recommendationCards = getRecommendationCards(a);
+          if (recommendationCards.length > 0) {
+            popupContent += `<div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fde68a; border-radius: 7px; padding: 7px;">`;
+            popupContent += `<div style="font-size: 10px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px;">Recomendaciones</div>`;
+            recommendationCards.forEach((card) => {
+              popupContent += `<div style="display: flex; gap: 7px; align-items: flex-start; padding: 6px 7px; border-radius: 7px; background: ${card.color}12; border-left: 3px solid ${card.color}; margin-bottom: 5px;">`;
+              popupContent += `<div style="font-size: 12px; line-height: 1.1;">${card.icon}</div>`;
+              popupContent += `<div>`;
+              popupContent += `<div style="font-size: 10px; font-weight: 700; color: #334155; margin-bottom: 1px;">${card.title}</div>`;
+              popupContent += `<div style="font-size: 10px; color: #475569; line-height: 1.3;">${card.text}</div>`;
+              popupContent += `</div>`;
+              popupContent += `</div>`;
+            });
+            popupContent += `</div>`;
+          }
         }
         
         popupContent += `</div>`;
+        popupContent += `</div>`;
         
-        return {
-          lat: a.latitud,
-          lng: a.longitud,
-          healthStatus: a.estado_salud ? String(a.estado_salud).toLowerCase() : undefined,
-          popup: popupContent,
-          nombre: a.nombre,
-          especie: a.especie,
-          temperatura: a.weather?.temperatura,
-          humedad: a.weather?.humedad,
-          distance: a.distance,
-          indice_supervivencia: a.weather?.indice_supervivencia ?? null,
-          recomendaciones: a.weather?.recomendaciones ?? a.weather?.recomendaciones ?? [],
-        };
-      }),
-  ], [userLocation, treeDistances, activeHealthFilters]);
+        popupContent += `</div>`;
+        
+          return {
+            lat: Number(a.latitud),
+            lng: Number(a.longitud),
+            healthStatus: normalizeHealthStatus(a.estado_salud) || undefined,
+            popup: popupContent,
+            nombre: a.nombre,
+            especie: a.especie,
+            temperatura: a.weather?.temperatura,
+            humedad: a.weather?.humedad,
+            distance: a.distance,
+            indice_supervivencia: a.weather?.indice_supervivencia ?? null,
+            recomendaciones: a.weather?.recomendaciones ?? a.weather?.recomendaciones ?? [],
+          };
+        }),
+    ];
+  }, [userLocation, treeDistances, arboles, activeHealthFilters]);
 
   if (status === "loading" || loading) {
     return (
@@ -489,111 +615,194 @@ export function GeolocalizacionContent() {
         )}
 
         {treeDistances.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Filtrar por Estado de Salud</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <HealthFilter
-                activeFilters={activeHealthFilters}
-                onFilterChange={setActiveHealthFilters}
-              />
-            </CardContent>
-          </Card>
+          <div className="mb-6">
+            <HealthFilter
+              activeFilters={activeHealthFilters}
+              onFilterChange={setActiveHealthFilters}
+            />
+          </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Mapa Interactivo</CardTitle>
-                <Button
-                  onClick={getGeolocation}
-                  disabled={geoLoading}
-                  size="sm"
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {geoLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Detectando...
-                    </>
-                  ) : (
-                    <>
-                      <Navigation className="h-4 w-4" />
-                      Mi Ubicación
-                    </>
-                  )}
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <MapClusteringComponent
-                  center={
-                    userLocation
-                      ? [userLocation.lat, userLocation.lng]
-                      : [-5.1946, -80.6307]
-                  }
-                  // Cargar inicialmente en clusters (zoom inicial más lejano)
-                  zoom={11}
-                  markers={mapMarkers}
-                  clusteringConfig={{
-                    maxClusterRadius: 80,
-                    showCoverageOnHover: false,
-                    zoomToBoundsOnClick: true,
-                    // Desagregar al acercar a zoom 15 o superior
-                    disableClusteringAtZoom: 15,
-                    // Si hay muchos marcadores en el mismo punto, desplegarlos tipo "spiderfy" al hacer clic
-                    spiderfyOnMaxZoom: true,
-                  }}
-                />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Mapa Interactivo</CardTitle>
+                  <Button
+                    onClick={getGeolocation}
+                    disabled={geoLoading}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    {geoLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Detectando...
+                      </>
+                    ) : (
+                      <>
+                        <Navigation className="h-4 w-4" />
+                        Mi Ubicación
+                      </>
+                    )}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <MapClusteringComponent
+                    center={
+                      userLocation
+                        ? [userLocation.lat, userLocation.lng]
+                        : [DEFAULT_PIURA_LOCATION.lat, DEFAULT_PIURA_LOCATION.lng]
+                    }
+                    // Cargar inicialmente en clusters (zoom inicial más lejano)
+                    zoom={11}
+                    markers={mapMarkers}
+                    clusteringConfig={{
+                      maxClusterRadius: 80,
+                      showCoverageOnHover: false,
+                      zoomToBoundsOnClick: true,
+                      // Desagregar al acercar a zoom 15 o superior
+                      disableClusteringAtZoom: 15,
+                      // Si hay muchos marcadores en el mismo punto, desplegarlos tipo "spiderfy" al hacer clic
+                      spiderfyOnMaxZoom: true,
+                    }}
+                  />
+                </CardContent>
+              </Card>
+
+              {treeDistances.length > 0 && (
+                <Card className="overflow-hidden border-0 shadow-sm">
+                  <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50 border-b">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-full bg-emerald-100 p-2">
+                        <MapPin className="h-4 w-4 text-emerald-700" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">
+                          Árboles Cercanos ({treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).length})
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Lista ordenada por distancia desde tu ubicación
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                      {treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
+                        <div
+                          key={arbol.id}
+                          className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-3 shadow-sm"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center font-bold text-sm text-emerald-800">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-sm line-clamp-1">{arbol.nombre}</h3>
+                              {arbol.especie && (
+                                <p className="text-xs text-muted-foreground line-clamp-1">
+                                  🌿 {arbol.especie}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <div className="text-sm font-bold text-emerald-700">
+                              {arbol.distance != null ? `${arbol.distance.toFixed(2)} km` : "-"}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Tu Ubicación</CardTitle>
+            <Card className="overflow-hidden border-0 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-emerald-100 p-2">
+                    <MapPin className="h-4 w-4 text-emerald-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Tu Ubicación</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ubicación actual detectada y lista para usar
+                    </p>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-4">
                 {userLocation ? (
                   <>
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-xs text-green-900 font-semibold">Latitud</p>
-                      <p className="text-sm font-mono text-green-700">
-                        {userLocation.lat.toFixed(6)}
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                          Estado
+                        </p>
+                        <span className="rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white">
+                          Activa
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-emerald-800">
+                        Tu posición ha sido detectada correctamente.
                       </p>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-xs text-blue-900 font-semibold">Longitud</p>
-                      <p className="text-sm font-mono text-blue-700">
-                        {userLocation.lng.toFixed(6)}
-                      </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-sky-200 bg-sky-50 p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+                          Latitud
+                        </p>
+                        <p className="mt-1 text-sm font-mono text-sky-800">
+                          {userLocation.lat.toFixed(6)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                          Longitud
+                        </p>
+                        <p className="mt-1 text-sm font-mono text-blue-800">
+                          {userLocation.lng.toFixed(6)}
+                        </p>
+                      </div>
                     </div>
+
                     <Button
                       onClick={getGeolocation}
                       disabled={geoLoading}
                       className="w-full"
                       size="sm"
+                      variant="outline"
                     >
-                      <Navigation className="h-4 w-4 mr-2" />
-                      Actualizar
+                      <Navigation className="mr-2 h-4 w-4" />
+                      Actualizar ubicación
                     </Button>
                   </>
                 ) : (
-                  <div className="text-center py-6">
-                    <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No se ha detectado ubicación
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
+                      <MapPin className="h-6 w-6 text-slate-500" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-700">
+                      No se ha detectado tu ubicación
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Activa la detección para ver tu posición en el mapa.
                     </p>
                     <Button
                       onClick={getGeolocation}
                       disabled={geoLoading}
-                      className="w-full mt-3"
+                      className="mt-4 w-full"
                       size="sm"
                     >
-                      Detectar Ubicación
+                      Detectar ubicación
                     </Button>
                   </div>
                 )}
@@ -601,34 +810,73 @@ export function GeolocalizacionContent() {
             </Card>
 
             {userWeather && userWeather.current && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                     Clima Actual
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                    <p className="text-xs text-orange-900 font-semibold">🌡️ Temperatura</p>
-                    <p className="text-2xl font-bold text-orange-600">
-                      {Math.round(userWeather.current.temperatura)}°C
-                    </p>
-                    <p className="text-xs text-orange-700 mt-1">
-                      Sensación: {Math.round(userWeather.current.sensacion_termica)}°C
-                    </p>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-xs text-blue-900 font-semibold">💧 Humedad</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {Math.round(userWeather.current.humedad)}%
-                    </p>
-                  </div>
-                    {userWeather.current.velocidad_viento !== undefined && (
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                      <p className="text-xs text-purple-900 font-semibold">💨 Viento</p>
-                      <p className="text-sm font-semibold text-purple-700">
-                        {userWeather.current.velocidad_viento != null ? `${userWeather.current.velocidad_viento.toFixed(1)} m/s` : "N/A"}
+              <Card className="overflow-hidden border-0 shadow-sm">
+                <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-full bg-sky-100 p-2">
+                      <CloudSun className="h-4 w-4 text-sky-700" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Clima Actual</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Condiciones meteorológicas en tu zona
                       </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-4">
+                  <div className="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-700">
+                          🌡️ Temperatura
+                        </p>
+                        <p className="mt-1 text-3xl font-bold text-orange-600">
+                          {Math.round(userWeather.current.temperatura)}°C
+                        </p>
+                      </div>
+                      <div className="rounded-full bg-orange-100 px-3 py-2 text-sm font-semibold text-orange-700">
+                        Ahora
+                      </div>
+                    </div>
+                    <p className="mt-3 text-sm text-orange-700">
+                      Sensación térmica: {Math.round(userWeather.current.sensacion_termica)}°C
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                          💧 Humedad
+                        </p>
+                        <p className="mt-1 text-3xl font-bold text-blue-600">
+                          {Math.round(userWeather.current.humedad)}%
+                        </p>
+                      </div>
+                      <div className="rounded-full bg-blue-100 px-3 py-2 text-sm font-semibold text-blue-700">
+                        Aire
+                      </div>
+                    </div>
+                  </div>
+
+                  {userWeather.current.velocidad_viento !== undefined && (
+                    <div className="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-violet-50 p-4 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-purple-700">
+                            💨 Viento
+                          </p>
+                          <p className="mt-1 text-xl font-semibold text-purple-700">
+                            {userWeather.current.velocidad_viento != null
+                              ? `${userWeather.current.velocidad_viento.toFixed(1)} m/s`
+                              : "N/A"}
+                          </p>
+                        </div>
+                        <div className="rounded-full bg-purple-100 px-3 py-2 text-sm font-semibold text-purple-700">
+                          Fresco
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -637,73 +885,60 @@ export function GeolocalizacionContent() {
 
             {/* Se removió la tarjeta resumen de 'Riesgo Ambiental para Árboles' por petición del usuario. */}
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Estadísticas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="bg-primary/10 rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground">Total de Árboles</p>
-                  <p className="text-2xl font-bold text-primary">{arboles.length}</p>
+            <Card className="overflow-hidden border-0 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-violet-50 to-fuchsia-50 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-violet-100 p-2">
+                    <Activity className="h-4 w-4 text-violet-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Estadísticas</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Resumen rápido de tus árboles cercanos
+                    </p>
+                  </div>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-4">
+                <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">
+                        Total de árboles
+                      </p>
+                      <p className="mt-1 text-3xl font-bold text-violet-800">{arboles.length}</p>
+                    </div>
+                    <div className="rounded-full bg-violet-100 px-3 py-2 text-sm font-semibold text-violet-700">
+                      Registrados
+                    </div>
+                  </div>
+                </div>
+
                 {treeDistances.length > 0 && (
-                  <>
-                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                      <p className="text-xs text-green-900 font-semibold">Árbol Más Cercano</p>
-                      <p className="text-sm text-green-700">
-                        {treeDistances[0]?.distance != null ? `${treeDistances[0].distance.toFixed(2)} km` : "-"}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-4 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                        Más cercano
+                      </p>
+                      <p className="mt-1 text-xl font-bold text-emerald-800">
+                        {treeDistances[0]?.distance != null ? `${treeDistances[0].distance.toFixed(2)} km` : "0.00 km"}
                       </p>
                     </div>
-                    <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
-                      <p className="text-xs text-orange-900 font-semibold">Árbol Más Lejano</p>
-                      <p className="text-sm text-orange-700">
-                        {treeDistances.length > 0 && treeDistances[treeDistances.length - 1]?.distance != null ? `${treeDistances[treeDistances.length - 1]!.distance!.toFixed(2)} km` : "-"}
+                    <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                        Más lejano
+                      </p>
+                      <p className="mt-1 text-xl font-bold text-amber-800">
+                        {treeDistances.length > 0 && treeDistances[treeDistances.length - 1]?.distance != null ? `${treeDistances[treeDistances.length - 1]!.distance!.toFixed(2)} km` : "0.00 km"}
                       </p>
                     </div>
-                  </>
+                  </div>
                 )}
               </CardContent>
             </Card>
+
           </div>
         </div>
-
-        {treeDistances.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Árboles Cercanos a tu Ubicación ({treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
-                  <div
-                    key={arbol.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm line-clamp-1">{arbol.nombre}</h3>
-                        {arbol.especie && (
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            🌿 {arbol.especie}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <div className="text-sm font-bold text-green-600">
-                        {arbol.distance != null ? `${arbol.distance.toFixed(2)} km` : "-"}
-                      </div>
-                      {/* Estado, supervivencia y recomendaciones se muestran solo en el popup del mapa */}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {arboles.length === 0 && !loading && (
           <Card>

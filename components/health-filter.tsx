@@ -24,13 +24,13 @@ export function HealthFilter({ activeFilters, onFilterChange }: HealthFilterProp
         <CardTitle className="text-lg">Filtrar por Estado de Salud</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="flex flex-wrap gap-4">
           {HEALTH_FILTER_OPTIONS.map((option) => {
             const health = HEALTH_STATUS[option.value as keyof typeof HEALTH_STATUS]
             const isChecked = activeFilters.includes(option.value)
 
             return (
-              <div key={option.value} className="flex items-center space-x-2">
+              <div key={option.value} className="flex items-center space-x-2 min-w-[140px]">
                 <Checkbox
                   id={option.value}
                   checked={isChecked}

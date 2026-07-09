@@ -1,14 +1,14 @@
 export const HEALTH_STATUS = {
   EXCELENTE: {
-    color: '#22c55e',
-    emoji: '🟢',
+    color: '#0ea5e9',
+    emoji: '🔵',
     label: 'Excelente',
-    bgColor: 'bg-green-50',
-    textColor: 'text-green-900',
-    borderColor: 'border-green-200'
+    bgColor: 'bg-sky-50',
+    textColor: 'text-sky-900',
+    borderColor: 'border-sky-200'
   },
   BUENO: {
-    color: '#4ade80',
+    color: '#16a34a',
     emoji: '🟢',
     label: 'Bueno',
     bgColor: 'bg-green-50',
@@ -16,24 +16,24 @@ export const HEALTH_STATUS = {
     borderColor: 'border-green-300'
   },
   REGULAR: {
-    color: '#eab308',
+    color: '#f59e0b',
     emoji: '🟡',
     label: 'Regular',
-    bgColor: 'bg-yellow-50',
-    textColor: 'text-yellow-900',
-    borderColor: 'border-yellow-200'
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-900',
+    borderColor: 'border-amber-200'
   },
   MALO: {
-    color: '#ef4444',
-    emoji: '🔴',
+    color: '#f97316',
+    emoji: '🟠',
     label: 'Malo',
-    bgColor: 'bg-red-50',
-    textColor: 'text-red-900',
-    borderColor: 'border-red-200'
+    bgColor: 'bg-orange-50',
+    textColor: 'text-orange-900',
+    borderColor: 'border-orange-200'
   },
   CRITICO: {
     color: '#dc2626',
-    emoji: '🆘',
+    emoji: '🔴',
     label: 'Crítico',
     bgColor: 'bg-red-100',
     textColor: 'text-red-950',
@@ -43,36 +43,47 @@ export const HEALTH_STATUS = {
 
 export type HealthStatus = keyof typeof HEALTH_STATUS
 
+function normalizeHealthStatus(status?: string): HealthStatus | undefined {
+  if (!status) return undefined
+
+  const normalized = String(status).trim().toUpperCase()
+  return normalized in HEALTH_STATUS ? normalized as HealthStatus : undefined
+}
+
 export function getHealthColor(status?: string): string {
-  if (!status || !(status in HEALTH_STATUS)) {
+  const normalized = normalizeHealthStatus(status)
+  if (!normalized) {
     return '#94a3b8'
   }
-  return HEALTH_STATUS[status as HealthStatus].color
+  return HEALTH_STATUS[normalized].color
 }
 
 export function getHealthEmoji(status?: string): string {
-  if (!status || !(status in HEALTH_STATUS)) {
+  const normalized = normalizeHealthStatus(status)
+  if (!normalized) {
     return '❓'
   }
-  return HEALTH_STATUS[status as HealthStatus].emoji
+  return HEALTH_STATUS[normalized].emoji
 }
 
 export function getHealthLabel(status?: string): string {
-  if (!status || !(status in HEALTH_STATUS)) {
+  const normalized = normalizeHealthStatus(status)
+  if (!normalized) {
     return 'Sin datos'
   }
-  return HEALTH_STATUS[status as HealthStatus].label
+  return HEALTH_STATUS[normalized].label
 }
 
 export function getHealthStyles(status?: string) {
-  if (!status || !(status in HEALTH_STATUS)) {
+  const normalized = normalizeHealthStatus(status)
+  if (!normalized) {
     return {
       bgColor: 'bg-slate-50',
       textColor: 'text-slate-900',
       borderColor: 'border-slate-200'
     }
   }
-  const health = HEALTH_STATUS[status as HealthStatus]
+  const health = HEALTH_STATUS[normalized]
   return {
     bgColor: health.bgColor,
     textColor: health.textColor,
@@ -81,10 +92,10 @@ export function getHealthStyles(status?: string) {
 }
 
 export const HEALTH_FILTER_OPTIONS = [
-  { value: 'EXCELENTE', label: 'Excelente', color: '#22c55e' },
-  { value: 'BUENO', label: 'Bueno', color: '#4ade80' },
-  { value: 'REGULAR', label: 'Regular', color: '#eab308' },
-  { value: 'MALO', label: 'Malo', color: '#ef4444' },
+  { value: 'EXCELENTE', label: 'Excelente', color: '#0ea5e9' },
+  { value: 'BUENO', label: 'Bueno', color: '#16a34a' },
+  { value: 'REGULAR', label: 'Regular', color: '#f59e0b' },
+  { value: 'MALO', label: 'Malo', color: '#f97316' },
   { value: 'CRITICO', label: 'Crítico', color: '#dc2626' }
 ] as const
 
@@ -97,10 +108,10 @@ export const SURVIVAL_STATUS_MULTIPLIERS = {
 } as const
 
 const SURVIVAL_STATUS_BOUNDS = {
-  EXCELENTE: { min: 70, max: 100 },
-  BUENO: { min: 60, max: 89 },
-  REGULAR: { min: 45, max: 79 },
-  MALO: { min: 20, max: 59 },
+  EXCELENTE: { min: 80, max: 100 },
+  BUENO: { min: 65, max: 79 },
+  REGULAR: { min: 50, max: 64 },
+  MALO: { min: 40, max: 59 },
   CRITICO: { min: 0, max: 39 }
 } as const
 
@@ -113,7 +124,7 @@ function getSeedOffset(value?: string | number): number {
     ? value
     : String(value).split("").reduce((sum, char) => sum + char.charCodeAt(0), 0)
 
-  return (seed % 7) - 3
+  return (seed % 11) - 5
 }
 
 export function getCoherentSurvivalScore(
@@ -133,7 +144,8 @@ export function getCoherentSurvivalScore(
 
   if (status && status in SURVIVAL_STATUS_BOUNDS) {
     const range = SURVIVAL_STATUS_BOUNDS[status as HealthStatus]
-    return Math.max(range.min, Math.min(range.max, adjusted))
+    const varied = Math.max(range.min, Math.min(range.max, adjusted))
+    return varied
   }
 
   return Math.max(0, Math.min(100, adjusted))
