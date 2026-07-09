@@ -60,7 +60,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
            fecha_plantacion = $5, descripcion = $6, foto_url = $7,
            estado_salud = $8, altura_actual_cm = $9, diametro_tronco_cm = $10,
            actualizado_en = NOW()
-       WHERE id = $11 AND usuario_id = $12
+       WHERE id = $11 AND usuario_id = $12 AND deleted_at IS NULL
        RETURNING *`,
       [nombre, especie, latitud, longitud, fecha_plantacion, descripcion, fotoFinal, saludFinal, alturaFinal, diametroFinal, treeId, userId],
     )
@@ -107,7 +107,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (ownershipError) return ownershipError
 
     const result = await query(
-      `DELETE FROM arboles
+      `UPDATE arboles
+       SET deleted_at = NOW()
        WHERE id = $1 AND usuario_id = $2
        RETURNING id`,
       [treeId, userId],

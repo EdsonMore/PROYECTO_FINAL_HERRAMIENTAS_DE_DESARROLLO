@@ -36,7 +36,7 @@ export async function validateResourceOwnership(
 ) {
   try {
     const result = await query(
-      `SELECT ${selectColumns} FROM ${tableName} WHERE id = $1 AND usuario_id = $2`,
+      `SELECT ${selectColumns} FROM ${tableName} WHERE id = $1 AND usuario_id = $2 AND deleted_at IS NULL`,
       [resourceId, userId]
     );
 

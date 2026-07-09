@@ -308,46 +308,18 @@ export async function GET(request: NextRequest) {
     const limit = parseOptionalPositiveInt(searchParams.get("limit"))
     const offset = parseOptionalPositiveInt(searchParams.get("offset"))
 
-    // Consultar BD (fuente primaria de datos, filtrada por usuario)
-    let queryText = `${selectedQuery} WHERE a.usuario_id = $1 ORDER BY a.creado_en DESC`
+    // Consultar BD (solo árboles del usuario autenticado, no eliminados)
+    let queryText = `${selectedQuery} WHERE a.usuario_id = $1 AND a.deleted_at IS NULL ORDER BY a.creado_en DESC`
     const queryParams: Array<number> = [userId]
 
     let rows: any[] = []
     try {
       const result = await query(queryText, queryParams)
       rows = result.rows.map(enrichTreeWithWeather)
-      console.log(`Consulta a BD devolvió ${rows.length} filas para userId=${userId}`)
     } catch (dbError) {
-      console.warn("Error en consulta a BD al obtener árboles, intentando fallback sin filtro de usuario:", dbError)
-      try {
-        const fallbackQuery = `${selectedQuery} ORDER BY a.creado_en DESC LIMIT 500`
-        const fallbackResult = await query(fallbackQuery)
-        rows = fallbackResult.rows.map(enrichTreeWithWeather)
-        console.log(`Fallback sin user filter devolvió ${rows.length} filas (enriquecidas)`)
-      } catch (fallbackErr) {
-        console.warn("Fallback sin filtro también falló, intentando leer SQL local como fuente de datos:", fallbackErr)
-        rows = await loadTreesFromLocalSql(userId)
-        console.log(`Leídas ${rows.length} filas de SQL local`)
-      }
+      console.error("Error en consulta a BD al obtener árboles:", dbError)
+      return NextResponse.json({ error: "Error al obtener árboles" }, { status: 500 })
     }
-
-    const localSeedRows = await loadTreesFromLocalSql(userId)
-    if (localSeedRows.length > 0) {
-      const existingIds = new Set(rows.map((tree) => Number(tree.id)).filter(Number.isFinite))
-      const localOnlyRows = localSeedRows.filter((tree) => !existingIds.has(Number(tree.id)))
-      if (localOnlyRows.length > 0) {
-        rows = [...rows, ...localOnlyRows]
-        console.log(`Se agregaron ${localOnlyRows.length} árboles del SQL local al resultado`)
-      }
-    }
-
-    if (rows.length === 0) {
-      const generated = buildDemoTrees(userId, 49)
-      rows = generated.map(enrichTreeWithWeather)
-    }
-
-    rows = assignBalancedHealthStates(rows)
-    rows = appendBalancedDemoTrees(rows, userId)
 
     const start = offset ?? 0
     const end = limit !== null && limit !== undefined ? start + limit : undefined
