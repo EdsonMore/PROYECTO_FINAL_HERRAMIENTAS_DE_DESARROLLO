@@ -467,7 +467,18 @@ INSERT INTO arboles (id, usuario_id, especie_id, nombre, especie, latitud, longi
 (110, 1, 46, 'Arce Dorado', 'Arce', -5.22500000, -80.55500000, '2022-04-18', 'Arce para otoño', 250.00, 15.00, 'REGULAR'),
 (111, 1, 47, 'Fresno Noble', 'Fresno', -5.16500000, -80.70500000, '2019-08-23', 'Fresno para muebles', 500.00, 30.00, 'MALO'),
 (112, 1, 48, 'Nogal Negro', 'Nogal', -5.13000000, -80.69000000, '2017-11-11', 'Nogal de madera oscura', 700.00, 40.00, 'EXCELENTE'),
-(113, 1, 49, 'Cipres Elegante', 'Cipres', -5.26000000, -80.60000000, '2021-05-05', 'Ciprés de porte elegante', 450.00, 26.00, 'BUENO')
+(113, 1, 49, 'Cipres Elegante', 'Cipres', -5.26000000, -80.60000000, '2021-05-05', 'Ciprés de porte elegante', 450.00, 26.00, 'BUENO'),
+(114, 1, 4, 'Limón de Catacaos', 'Limón', -5.27360000, -80.67750000, '2017-08-10', 'Árbol de limón cuidado por los vecinos de Catacaos', 360.00, 21.00, 'EXCELENTE'),
+(115, 1, 5, 'Naranja de Castilla', 'Naranja', -5.22100000, -80.64700000, '2018-02-21', 'Árbol cítrico en huerto urbano de Castilla', 410.00, 27.00, 'BUENO'),
+(116, 1, 1, 'Mango de San Miguel', 'Mango', -5.19870000, -80.63520000, '2016-11-03', 'Mango tradicional en la zona norte de Piura', 760.00, 40.00, 'BUENO'),
+(117, 1, 11, 'Plátano del Centro', 'Plátano', -5.19050000, -80.62840000, '2021-01-15', 'Plátano de producción continua en zona urbana', 320.00, 17.50, 'REGULAR'),
+(118, 1, 12, 'Coco de la Costa', 'Coco', -5.18620000, -80.62210000, '2015-06-27', 'Coco de playa y clima cálido', 1180.00, 56.00, 'EXCELENTE'),
+(119, 1, 17, 'Aguacate de Miraflores', 'Aguacate', -5.20560000, -80.64130000, '2019-04-18', 'Aguacate de buena producción en barrio residencial', 530.00, 30.00, 'BUENO'),
+(121, 1, 27, 'Lúcuma de Piura', 'Lúcuma', -5.12000000, -80.64000000, '2018-07-22', 'Lúcuma adaptada al clima cálido de Piura', 330.00, 19.00, 'BUENO'),
+(122, 1, 31, 'Anona de la Costa', 'Anona', -5.18200000, -80.70500000, '2021-03-11', 'Árbol de anona en zona costera de Piura', 270.00, 15.00, 'MALO'),
+(123, 1, 38, 'Eucalipto de Piura', 'Eucalipto', -5.17000000, -80.65000000, '2014-09-05', 'Eucalipto de sombra y protección en Piura', 900.00, 44.00, 'EXCELENTE'),
+(124, 1, 40, 'Teca de la Zona Franca', 'Teca', -5.18040000, -80.64070000, '2017-12-29', 'Teca ornamental y de sombra en la zona urbana', 580.00, 33.00, 'REGULAR'),
+(125, 1, 42, 'Caoba de Piura', 'Caoba', -5.14000000, -80.62000000, '2016-01-14', 'Árbol de caoba en zona de crecimiento moderado', 640.00, 37.00, 'BUENO')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================

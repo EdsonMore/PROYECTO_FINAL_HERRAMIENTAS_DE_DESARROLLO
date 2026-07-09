@@ -154,10 +154,11 @@ async function parseArbolesFromSQL(sqlContent: string) {
     }
   }
 
-  // Asignar estado_salud a cada árbol si hay seguimiento
+  // Asignar estado_salud a cada árbol: priorizar el último seguimiento si existe,
+  // pero conservar el estado original del árbol cuando no haya seguimiento asociado.
   const final = arboles.map(a => ({
     ...a,
-    estado_salud: segByArbol[a.id]?.salud ?? undefined,
+    estado_salud: segByArbol[a.id]?.salud ?? a.estado_salud ?? undefined,
   }))
 
   return final

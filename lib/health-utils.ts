@@ -1,14 +1,14 @@
 export const HEALTH_STATUS = {
   EXCELENTE: {
-    color: '#22c55e',
-    emoji: '🟢',
+    color: '#0ea5e9',
+    emoji: '🔵',
     label: 'Excelente',
-    bgColor: 'bg-green-50',
-    textColor: 'text-green-900',
-    borderColor: 'border-green-200'
+    bgColor: 'bg-sky-50',
+    textColor: 'text-sky-900',
+    borderColor: 'border-sky-200'
   },
   BUENO: {
-    color: '#4ade80',
+    color: '#16a34a',
     emoji: '🟢',
     label: 'Bueno',
     bgColor: 'bg-green-50',
@@ -16,24 +16,24 @@ export const HEALTH_STATUS = {
     borderColor: 'border-green-300'
   },
   REGULAR: {
-    color: '#eab308',
+    color: '#f59e0b',
     emoji: '🟡',
     label: 'Regular',
-    bgColor: 'bg-yellow-50',
-    textColor: 'text-yellow-900',
-    borderColor: 'border-yellow-200'
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-900',
+    borderColor: 'border-amber-200'
   },
   MALO: {
-    color: '#ef4444',
-    emoji: '🔴',
+    color: '#f97316',
+    emoji: '🟠',
     label: 'Malo',
-    bgColor: 'bg-red-50',
-    textColor: 'text-red-900',
-    borderColor: 'border-red-200'
+    bgColor: 'bg-orange-50',
+    textColor: 'text-orange-900',
+    borderColor: 'border-orange-200'
   },
   CRITICO: {
     color: '#dc2626',
-    emoji: '🆘',
+    emoji: '🔴',
     label: 'Crítico',
     bgColor: 'bg-red-100',
     textColor: 'text-red-950',
@@ -81,10 +81,10 @@ export function getHealthStyles(status?: string) {
 }
 
 export const HEALTH_FILTER_OPTIONS = [
-  { value: 'EXCELENTE', label: 'Excelente', color: '#22c55e' },
-  { value: 'BUENO', label: 'Bueno', color: '#4ade80' },
-  { value: 'REGULAR', label: 'Regular', color: '#eab308' },
-  { value: 'MALO', label: 'Malo', color: '#ef4444' },
+  { value: 'EXCELENTE', label: 'Excelente', color: '#0ea5e9' },
+  { value: 'BUENO', label: 'Bueno', color: '#16a34a' },
+  { value: 'REGULAR', label: 'Regular', color: '#f59e0b' },
+  { value: 'MALO', label: 'Malo', color: '#f97316' },
   { value: 'CRITICO', label: 'Crítico', color: '#dc2626' }
 ] as const
 

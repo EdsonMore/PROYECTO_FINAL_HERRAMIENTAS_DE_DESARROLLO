@@ -15,6 +15,8 @@ import {
   TreePine,
   Compass,
   AlertCircle,
+  CloudSun,
+  Activity,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { HealthFilter } from "@/components/health-filter";
@@ -43,6 +45,11 @@ interface TreeDistance extends Arbol {
   distance?: number | null;
   weather?: WeatherInfo;
 }
+
+const DEFAULT_PIURA_LOCATION: UserLocation = {
+  lat: -5.1946,
+  lng: -80.6307,
+};
 
 export function GeolocalizacionContent() {
   const { data: session, status } = useSession();
@@ -273,18 +280,23 @@ export function GeolocalizacionContent() {
     });
   }
 
-  const calculateDistances = async (location: UserLocation) => {
+  const calculateDistances = async (location: UserLocation | null) => {
+    const baseLocation = location ?? userLocation ?? DEFAULT_PIURA_LOCATION;
     const distances = arboles
-      .map((arbol) => ({
-        ...arbol,
-        distance: calculateDistance(
-          location.lat,
-          location.lng,
-          Number(arbol.latitud),
-          Number(arbol.longitud)
-        ),
-      }))
-      .sort((a, b) => a.distance - b.distance);
+      .map((arbol) => {
+        const lat = Number(arbol.latitud);
+        const lon = Number(arbol.longitud);
+        const distance = Number.isFinite(lat) && Number.isFinite(lon)
+          ? calculateDistance(baseLocation.lat, baseLocation.lng, lat, lon)
+          : null;
+
+        return {
+          ...arbol,
+          distance,
+        };
+      })
+      .filter((arbol) => arbol.distance != null)
+      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
 
     // Obtener datos de clima para cada árbol
     const treesWithWeather = await Promise.all(
@@ -301,7 +313,7 @@ export function GeolocalizacionContent() {
                     const finalRecs = Array.isArray(recomendaciones) ? [...recomendaciones, ...zoneRecs] : [...zoneRecs]
                     return {
                       ...tree,
-                      distance: null,
+                      distance: tree.distance,
                       weather: {
                         temperatura: weatherData.current?.temperatura,
                         humedad: weatherData.current?.humedad,
@@ -316,7 +328,7 @@ export function GeolocalizacionContent() {
         } catch (error) {
           console.error("Error fetching weather for tree:", error);
         }
-        return { ...tree, weather: { indice_supervivencia: 75, recomendaciones: generateLocalRecommendations(tree.especie, tree.estado_salud, 75) } };
+        return { ...tree, distance: tree.distance, weather: { indice_supervivencia: 75, recomendaciones: generateLocalRecommendations(tree.especie, tree.estado_salud, 75) } };
       })
     );
 
@@ -324,10 +336,10 @@ export function GeolocalizacionContent() {
   };
 
   useEffect(() => {
-    if (userLocation && arboles.length > 0) {
+    if (arboles.length > 0) {
       calculateDistances(userLocation);
     }
-  }, [arboles]);
+  }, [arboles, userLocation]);
 
   const mapMarkers = useMemo(() => [
     ...(userLocation
@@ -355,18 +367,18 @@ export function GeolocalizacionContent() {
         // Estado de salud
         if (a.estado_salud) {
           const healthColors: Record<string, string> = {
-            EXCELENTE: "#22c55e",
-            BUENO: "#4ade80",
+            EXCELENTE: "#0ea5e9",
+            BUENO: "#16a34a",
             REGULAR: "#f59e0b",
-            MALO: "#ef4444",
+            MALO: "#f97316",
             CRITICO: "#dc2626",
           };
           const healthLabels: Record<string, string> = {
-            EXCELENTE: "✅ Excelente",
+            EXCELENTE: "🔵 Excelente",
             BUENO: "🟢 Bueno",
-            REGULAR: "⚠️ Regular",
-            MALO: "🔴 Malo",
-            CRITICO: "🆘 Crítico",
+            REGULAR: "🟡 Regular",
+            MALO: "🟠 Malo",
+            CRITICO: "🔴 Crítico",
           };
           const color = healthColors[a.estado_salud] || "#6b7280";
           const label = healthLabels[a.estado_salud] || a.estado_salud;
@@ -489,111 +501,194 @@ export function GeolocalizacionContent() {
         )}
 
         {treeDistances.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Filtrar por Estado de Salud</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <HealthFilter
-                activeFilters={activeHealthFilters}
-                onFilterChange={setActiveHealthFilters}
-              />
-            </CardContent>
-          </Card>
+          <div className="mb-6">
+            <HealthFilter
+              activeFilters={activeHealthFilters}
+              onFilterChange={setActiveHealthFilters}
+            />
+          </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Mapa Interactivo</CardTitle>
-                <Button
-                  onClick={getGeolocation}
-                  disabled={geoLoading}
-                  size="sm"
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {geoLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Detectando...
-                    </>
-                  ) : (
-                    <>
-                      <Navigation className="h-4 w-4" />
-                      Mi Ubicación
-                    </>
-                  )}
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <MapClusteringComponent
-                  center={
-                    userLocation
-                      ? [userLocation.lat, userLocation.lng]
-                      : [-5.1946, -80.6307]
-                  }
-                  // Cargar inicialmente en clusters (zoom inicial más lejano)
-                  zoom={11}
-                  markers={mapMarkers}
-                  clusteringConfig={{
-                    maxClusterRadius: 80,
-                    showCoverageOnHover: false,
-                    zoomToBoundsOnClick: true,
-                    // Desagregar al acercar a zoom 15 o superior
-                    disableClusteringAtZoom: 15,
-                    // Si hay muchos marcadores en el mismo punto, desplegarlos tipo "spiderfy" al hacer clic
-                    spiderfyOnMaxZoom: true,
-                  }}
-                />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Mapa Interactivo</CardTitle>
+                  <Button
+                    onClick={getGeolocation}
+                    disabled={geoLoading}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    {geoLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Detectando...
+                      </>
+                    ) : (
+                      <>
+                        <Navigation className="h-4 w-4" />
+                        Mi Ubicación
+                      </>
+                    )}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <MapClusteringComponent
+                    center={
+                      userLocation
+                        ? [userLocation.lat, userLocation.lng]
+                        : [DEFAULT_PIURA_LOCATION.lat, DEFAULT_PIURA_LOCATION.lng]
+                    }
+                    // Cargar inicialmente en clusters (zoom inicial más lejano)
+                    zoom={11}
+                    markers={mapMarkers}
+                    clusteringConfig={{
+                      maxClusterRadius: 80,
+                      showCoverageOnHover: false,
+                      zoomToBoundsOnClick: true,
+                      // Desagregar al acercar a zoom 15 o superior
+                      disableClusteringAtZoom: 15,
+                      // Si hay muchos marcadores en el mismo punto, desplegarlos tipo "spiderfy" al hacer clic
+                      spiderfyOnMaxZoom: true,
+                    }}
+                  />
+                </CardContent>
+              </Card>
+
+              {treeDistances.length > 0 && (
+                <Card className="overflow-hidden border-0 shadow-sm">
+                  <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50 border-b">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-full bg-emerald-100 p-2">
+                        <MapPin className="h-4 w-4 text-emerald-700" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">
+                          Árboles Cercanos ({treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).length})
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Lista ordenada por distancia desde tu ubicación
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                      {treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
+                        <div
+                          key={arbol.id}
+                          className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-3 shadow-sm"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center font-bold text-sm text-emerald-800">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-sm line-clamp-1">{arbol.nombre}</h3>
+                              {arbol.especie && (
+                                <p className="text-xs text-muted-foreground line-clamp-1">
+                                  🌿 {arbol.especie}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <div className="text-sm font-bold text-emerald-700">
+                              {arbol.distance != null ? `${arbol.distance.toFixed(2)} km` : "-"}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Tu Ubicación</CardTitle>
+            <Card className="overflow-hidden border-0 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-emerald-100 p-2">
+                    <MapPin className="h-4 w-4 text-emerald-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Tu Ubicación</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ubicación actual detectada y lista para usar
+                    </p>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-4">
                 {userLocation ? (
                   <>
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-xs text-green-900 font-semibold">Latitud</p>
-                      <p className="text-sm font-mono text-green-700">
-                        {userLocation.lat.toFixed(6)}
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                          Estado
+                        </p>
+                        <span className="rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white">
+                          Activa
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-emerald-800">
+                        Tu posición ha sido detectada correctamente.
                       </p>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-xs text-blue-900 font-semibold">Longitud</p>
-                      <p className="text-sm font-mono text-blue-700">
-                        {userLocation.lng.toFixed(6)}
-                      </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-sky-200 bg-sky-50 p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+                          Latitud
+                        </p>
+                        <p className="mt-1 text-sm font-mono text-sky-800">
+                          {userLocation.lat.toFixed(6)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                          Longitud
+                        </p>
+                        <p className="mt-1 text-sm font-mono text-blue-800">
+                          {userLocation.lng.toFixed(6)}
+                        </p>
+                      </div>
                     </div>
+
                     <Button
                       onClick={getGeolocation}
                       disabled={geoLoading}
                       className="w-full"
                       size="sm"
+                      variant="outline"
                     >
-                      <Navigation className="h-4 w-4 mr-2" />
-                      Actualizar
+                      <Navigation className="mr-2 h-4 w-4" />
+                      Actualizar ubicación
                     </Button>
                   </>
                 ) : (
-                  <div className="text-center py-6">
-                    <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No se ha detectado ubicación
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
+                      <MapPin className="h-6 w-6 text-slate-500" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-700">
+                      No se ha detectado tu ubicación
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Activa la detección para ver tu posición en el mapa.
                     </p>
                     <Button
                       onClick={getGeolocation}
                       disabled={geoLoading}
-                      className="w-full mt-3"
+                      className="mt-4 w-full"
                       size="sm"
                     >
-                      Detectar Ubicación
+                      Detectar ubicación
                     </Button>
                   </div>
                 )}
@@ -601,34 +696,73 @@ export function GeolocalizacionContent() {
             </Card>
 
             {userWeather && userWeather.current && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                     Clima Actual
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                    <p className="text-xs text-orange-900 font-semibold">🌡️ Temperatura</p>
-                    <p className="text-2xl font-bold text-orange-600">
-                      {Math.round(userWeather.current.temperatura)}°C
-                    </p>
-                    <p className="text-xs text-orange-700 mt-1">
-                      Sensación: {Math.round(userWeather.current.sensacion_termica)}°C
-                    </p>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-xs text-blue-900 font-semibold">💧 Humedad</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {Math.round(userWeather.current.humedad)}%
-                    </p>
-                  </div>
-                    {userWeather.current.velocidad_viento !== undefined && (
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                      <p className="text-xs text-purple-900 font-semibold">💨 Viento</p>
-                      <p className="text-sm font-semibold text-purple-700">
-                        {userWeather.current.velocidad_viento != null ? `${userWeather.current.velocidad_viento.toFixed(1)} m/s` : "N/A"}
+              <Card className="overflow-hidden border-0 shadow-sm">
+                <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-full bg-sky-100 p-2">
+                      <CloudSun className="h-4 w-4 text-sky-700" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Clima Actual</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Condiciones meteorológicas en tu zona
                       </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-4">
+                  <div className="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-700">
+                          🌡️ Temperatura
+                        </p>
+                        <p className="mt-1 text-3xl font-bold text-orange-600">
+                          {Math.round(userWeather.current.temperatura)}°C
+                        </p>
+                      </div>
+                      <div className="rounded-full bg-orange-100 px-3 py-2 text-sm font-semibold text-orange-700">
+                        Ahora
+                      </div>
+                    </div>
+                    <p className="mt-3 text-sm text-orange-700">
+                      Sensación térmica: {Math.round(userWeather.current.sensacion_termica)}°C
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                          💧 Humedad
+                        </p>
+                        <p className="mt-1 text-3xl font-bold text-blue-600">
+                          {Math.round(userWeather.current.humedad)}%
+                        </p>
+                      </div>
+                      <div className="rounded-full bg-blue-100 px-3 py-2 text-sm font-semibold text-blue-700">
+                        Aire
+                      </div>
+                    </div>
+                  </div>
+
+                  {userWeather.current.velocidad_viento !== undefined && (
+                    <div className="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-violet-50 p-4 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-purple-700">
+                            💨 Viento
+                          </p>
+                          <p className="mt-1 text-xl font-semibold text-purple-700">
+                            {userWeather.current.velocidad_viento != null
+                              ? `${userWeather.current.velocidad_viento.toFixed(1)} m/s`
+                              : "N/A"}
+                          </p>
+                        </div>
+                        <div className="rounded-full bg-purple-100 px-3 py-2 text-sm font-semibold text-purple-700">
+                          Fresco
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -637,73 +771,60 @@ export function GeolocalizacionContent() {
 
             {/* Se removió la tarjeta resumen de 'Riesgo Ambiental para Árboles' por petición del usuario. */}
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Estadísticas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="bg-primary/10 rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground">Total de Árboles</p>
-                  <p className="text-2xl font-bold text-primary">{arboles.length}</p>
+            <Card className="overflow-hidden border-0 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-violet-50 to-fuchsia-50 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-violet-100 p-2">
+                    <Activity className="h-4 w-4 text-violet-700" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Estadísticas</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Resumen rápido de tus árboles cercanos
+                    </p>
+                  </div>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-4">
+                <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">
+                        Total de árboles
+                      </p>
+                      <p className="mt-1 text-3xl font-bold text-violet-800">{arboles.length}</p>
+                    </div>
+                    <div className="rounded-full bg-violet-100 px-3 py-2 text-sm font-semibold text-violet-700">
+                      Registrados
+                    </div>
+                  </div>
+                </div>
+
                 {treeDistances.length > 0 && (
-                  <>
-                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                      <p className="text-xs text-green-900 font-semibold">Árbol Más Cercano</p>
-                      <p className="text-sm text-green-700">
-                        {treeDistances[0]?.distance != null ? `${treeDistances[0].distance.toFixed(2)} km` : "-"}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-4 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                        Más cercano
+                      </p>
+                      <p className="mt-1 text-xl font-bold text-emerald-800">
+                        {treeDistances[0]?.distance != null ? `${treeDistances[0].distance.toFixed(2)} km` : "0.00 km"}
                       </p>
                     </div>
-                    <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
-                      <p className="text-xs text-orange-900 font-semibold">Árbol Más Lejano</p>
-                      <p className="text-sm text-orange-700">
-                        {treeDistances.length > 0 && treeDistances[treeDistances.length - 1]?.distance != null ? `${treeDistances[treeDistances.length - 1]!.distance!.toFixed(2)} km` : "-"}
+                    <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                        Más lejano
+                      </p>
+                      <p className="mt-1 text-xl font-bold text-amber-800">
+                        {treeDistances.length > 0 && treeDistances[treeDistances.length - 1]?.distance != null ? `${treeDistances[treeDistances.length - 1]!.distance!.toFixed(2)} km` : "0.00 km"}
                       </p>
                     </div>
-                  </>
+                  </div>
                 )}
               </CardContent>
             </Card>
+
           </div>
         </div>
-
-        {treeDistances.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Árboles Cercanos a tu Ubicación ({treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
-                  <div
-                    key={arbol.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:border-green-400 hover:bg-green-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm line-clamp-1">{arbol.nombre}</h3>
-                        {arbol.especie && (
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            🌿 {arbol.especie}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <div className="text-sm font-bold text-green-600">
-                        {arbol.distance != null ? `${arbol.distance.toFixed(2)} km` : "-"}
-                      </div>
-                      {/* Estado, supervivencia y recomendaciones se muestran solo en el popup del mapa */}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {arboles.length === 0 && !loading && (
           <Card>
