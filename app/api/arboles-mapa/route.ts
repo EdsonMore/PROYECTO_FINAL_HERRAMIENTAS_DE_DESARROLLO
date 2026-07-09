@@ -14,6 +14,7 @@ export async function GET() {
         a.foto_url,
         (SELECT s.salud FROM seguimientos s WHERE s.arbol_id = a.id ORDER BY s.fecha_seguimiento DESC LIMIT 1) as estado_salud
        FROM arboles a
+       WHERE a.deleted_at IS NULL
        ORDER BY a.id`
     );
 
