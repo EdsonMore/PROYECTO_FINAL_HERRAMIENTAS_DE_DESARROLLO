@@ -13,11 +13,13 @@ export const createClusterIcon = (cluster: L.MarkerCluster) => {
   try {
     const childMarkers: any[] = cluster.getAllChildMarkers ? cluster.getAllChildMarkers() : [];
     childMarkers.forEach((m) => {
-      const hs = m.options?.healthStatus;
+      const hs = typeof m.options?.healthStatus === "string"
+        ? String(m.options.healthStatus).trim().toUpperCase()
+        : undefined;
       const idx = m.options?.indice_supervivencia;
-      if (hs === "excelente") green++;
-      else if (hs === "regular") yellow++;
-      else if (hs === "malo") red++;
+      if (hs === "EXCELENTE" || hs === "BUENO") green++;
+      else if (hs === "REGULAR") yellow++;
+      else if (hs === "MALO" || hs === "CRITICO") red++;
       else if (typeof idx === "number") {
         if (idx >= 80) green++;
         else if (idx >= 60) yellow++;
@@ -31,17 +33,18 @@ export const createClusterIcon = (cluster: L.MarkerCluster) => {
   // Color primario por mayoría
   // Usar colores canónicos desde health-utils
   let primaryColor = "#6b7280"; // gris
-  if (green >= yellow && green >= red) primaryColor = getHealthColor("excelente");
-  else if (yellow >= green && yellow >= red) primaryColor = getHealthColor("regular");
-  else if (red >= green && red >= yellow) primaryColor = getHealthColor("malo");
+  if (green >= yellow && green >= red) primaryColor = getHealthColor("BUENO");
+  else if (yellow >= green && yellow >= red) primaryColor = getHealthColor("REGULAR");
+  else if (red >= green && red >= yellow) primaryColor = getHealthColor("CRITICO");
 
   if (count > 150) size = 56;
   else if (count > 80) size = 48;
   else if (count > 30) size = 44;
 
   const html = `
-    <div style="width:${size}px;height:${size}px;background:${primaryColor};border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:16px;box-shadow:0 2px 4px rgba(0,0,0,0.25)">
-      <div style="font-size:16px;line-height:1">${count}</div>
+    <div style="width:${size}px;height:${size}px;background:${primaryColor};border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,0.3);position:relative;overflow:visible">
+      <div style="font-size:15px;line-height:1">${count}</div>
+      <div style="position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid ${primaryColor};"></div>
     </div>
   `;
 
@@ -56,40 +59,46 @@ export const createCustomMarkerIcon = (color: string = "blue") => {
   return L.divIcon({
     html: `
       <div style="
-        background: ${color};
-        border: 3px solid white;
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 42px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));
         position: relative;
       ">
         <div style="
-          background: rgba(255,255,255,0.9);
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          box-shadow: inset 0 1px 0 rgba(0,0,0,0.05);
+          position: absolute;
+          top: 0;
+          width: 28px;
+          height: 28px;
+          background: ${color};
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 2px solid white;
+          box-shadow: inset 0 1px 2px rgba(255,255,255,0.4);
         "></div>
         <div style="
           position: absolute;
-          right: -2px;
-          top: -2px;
+          top: 8px;
+          width: 12px;
+          height: 12px;
+          background: white;
+          border-radius: 50%;
+          transform: rotate(45deg);
+        "></div>
+        <div style="
+          position: absolute;
+          bottom: 0;
           width: 10px;
           height: 10px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.85);
-          display:flex;align-items:center;justify-content:center;
-          font-size:8px;color:#111;border:1px solid rgba(0,0,0,0.06)
-        ">✓</div>
+          background: transparent;
+        "></div>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
+    iconSize: [30, 42],
+    iconAnchor: [15, 42],
+    popupAnchor: [0, -42],
     className: "tree-marker",
   });
 };

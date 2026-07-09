@@ -43,36 +43,47 @@ export const HEALTH_STATUS = {
 
 export type HealthStatus = keyof typeof HEALTH_STATUS
 
+function normalizeHealthStatus(status?: string): HealthStatus | undefined {
+  if (!status) return undefined
+
+  const normalized = String(status).trim().toUpperCase()
+  return normalized in HEALTH_STATUS ? normalized as HealthStatus : undefined
+}
+
 export function getHealthColor(status?: string): string {
-  if (!status || !(status in HEALTH_STATUS)) {
+  const normalized = normalizeHealthStatus(status)
+  if (!normalized) {
     return '#94a3b8'
   }
-  return HEALTH_STATUS[status as HealthStatus].color
+  return HEALTH_STATUS[normalized].color
 }
 
 export function getHealthEmoji(status?: string): string {
-  if (!status || !(status in HEALTH_STATUS)) {
+  const normalized = normalizeHealthStatus(status)
+  if (!normalized) {
     return '❓'
   }
-  return HEALTH_STATUS[status as HealthStatus].emoji
+  return HEALTH_STATUS[normalized].emoji
 }
 
 export function getHealthLabel(status?: string): string {
-  if (!status || !(status in HEALTH_STATUS)) {
+  const normalized = normalizeHealthStatus(status)
+  if (!normalized) {
     return 'Sin datos'
   }
-  return HEALTH_STATUS[status as HealthStatus].label
+  return HEALTH_STATUS[normalized].label
 }
 
 export function getHealthStyles(status?: string) {
-  if (!status || !(status in HEALTH_STATUS)) {
+  const normalized = normalizeHealthStatus(status)
+  if (!normalized) {
     return {
       bgColor: 'bg-slate-50',
       textColor: 'text-slate-900',
       borderColor: 'border-slate-200'
     }
   }
-  const health = HEALTH_STATUS[status as HealthStatus]
+  const health = HEALTH_STATUS[normalized]
   return {
     bgColor: health.bgColor,
     textColor: health.textColor,
@@ -97,10 +108,10 @@ export const SURVIVAL_STATUS_MULTIPLIERS = {
 } as const
 
 const SURVIVAL_STATUS_BOUNDS = {
-  EXCELENTE: { min: 70, max: 100 },
-  BUENO: { min: 60, max: 89 },
-  REGULAR: { min: 45, max: 79 },
-  MALO: { min: 20, max: 59 },
+  EXCELENTE: { min: 80, max: 100 },
+  BUENO: { min: 65, max: 79 },
+  REGULAR: { min: 50, max: 64 },
+  MALO: { min: 40, max: 59 },
   CRITICO: { min: 0, max: 39 }
 } as const
 
@@ -113,7 +124,7 @@ function getSeedOffset(value?: string | number): number {
     ? value
     : String(value).split("").reduce((sum, char) => sum + char.charCodeAt(0), 0)
 
-  return (seed % 7) - 3
+  return (seed % 11) - 5
 }
 
 export function getCoherentSurvivalScore(
@@ -133,7 +144,8 @@ export function getCoherentSurvivalScore(
 
   if (status && status in SURVIVAL_STATUS_BOUNDS) {
     const range = SURVIVAL_STATUS_BOUNDS[status as HealthStatus]
-    return Math.max(range.min, Math.min(range.max, adjusted))
+    const varied = Math.max(range.min, Math.min(range.max, adjusted))
+    return varied
   }
 
   return Math.max(0, Math.min(100, adjusted))

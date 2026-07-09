@@ -148,47 +148,52 @@ export function GeolocalizacionContent() {
       });
       if (res.ok) {
         const data = await res.json();
-        setArboles(data);
+        const normalizedData = normalizeTrees(Array.isArray(data) ? data : []);
+        setArboles(normalizedData as Arbol[]);
 
-        // Si no tenemos userLocation aún, igualmente intentamos obtener clima
-        // para cada árbol y poblar treeDistances para que se vean en el mapa.
-        if (!userLocation) {
-          try {
-            const treesWithWeather = await Promise.all(
-              data.map(async (tree: any) => {
-                try {
-                  const weatherRes = await fetch(
-                    `/geolocalizacion/api-clima?lat=${tree.latitud}&lon=${tree.longitud}&species=${encodeURIComponent(tree.especie || "")}`
-                  );
-                  if (weatherRes.ok) {
-                    const weatherData = await weatherRes.json();
-                    const indice = weatherData.indices?.indice_supervivencia ?? 75;
-                    const recomendaciones = weatherData.recomendaciones_arbol ?? generateLocalRecommendations(tree.especie, tree.estado_salud, indice);
-                    return {
-                      ...tree,
-                      distance: null,
-                      weather: {
-                        temperatura: weatherData.current?.temperatura,
-                        humedad: weatherData.current?.humedad,
-                        descripcion: weatherData.current?.descripcion,
-                        icono: weatherData.current?.icono,
-                        indice_supervivencia: indice,
-                        riesgo_ambiental: weatherData.indices?.riesgo_ambiental ?? 'desconocido',
-                        recomendaciones,
-                      },
-                    };
-                  }
-                } catch (err) {
-                  console.error("Error fetching weather for tree (no location):", err);
+        const fallbackTrees = normalizedData.map((tree: any) => ({
+          ...tree,
+          distance: null,
+          weather: { indice_supervivencia: tree.indice_supervivencia ?? 75, recomendaciones: tree.recomendaciones ?? [] },
+        }));
+
+        setTreeDistances(fallbackTrees);
+
+        try {
+          const treesWithWeather = await Promise.all(
+            normalizedData.map(async (tree: any) => {
+              try {
+                const weatherRes = await fetch(
+                  `/geolocalizacion/api-clima?lat=${tree.latitud}&lon=${tree.longitud}&species=${encodeURIComponent(tree.especie || "")}`
+                );
+                if (weatherRes.ok) {
+                  const weatherData = await weatherRes.json();
+                  const indice = weatherData.indices?.indice_supervivencia ?? 75;
+                  const recomendaciones = weatherData.recomendaciones_arbol ?? generateLocalRecommendations(tree.especie, tree.estado_salud, indice);
+                  return {
+                    ...tree,
+                    distance: null,
+                    weather: {
+                      temperatura: weatherData.current?.temperatura,
+                      humedad: weatherData.current?.humedad,
+                      descripcion: weatherData.current?.descripcion,
+                      icono: weatherData.current?.icono,
+                      indice_supervivencia: indice,
+                      riesgo_ambiental: weatherData.indices?.riesgo_ambiental ?? 'desconocido',
+                      recomendaciones,
+                    },
+                  };
                 }
-                return { ...tree, distance: null, weather: { indice_supervivencia: 75, recomendaciones: [] } };
-              })
-            );
-            setTreeDistances(normalizeTrees(treesWithWeather));
-          } catch (err) {
-            console.error("Error poblando árboles sin ubicación:", err);
-            setTreeDistances(normalizeTrees(data.map((t: any) => ({ ...t, distance: null, weather: { indice_supervivencia: 75, recomendaciones: [] } }))));
-          }
+              } catch (err) {
+                console.error("Error fetching weather for tree (no location):", err);
+              }
+              return { ...tree, distance: null, weather: { indice_supervivencia: tree.indice_supervivencia ?? 75, recomendaciones: tree.recomendaciones ?? [] } };
+            })
+          );
+          setTreeDistances(normalizeTrees(treesWithWeather));
+        } catch (err) {
+          console.error("Error poblando árboles sin ubicación:", err);
+          setTreeDistances(fallbackTrees);
         }
       }
     } catch (error) {
@@ -265,15 +270,104 @@ export function GeolocalizacionContent() {
       return recs
     }
 
+  const getRecommendationCards = (tree: any) => {
+    const status = String(tree.estado_salud || "").trim().toUpperCase();
+    const species = String(tree.especie || "").trim();
+    const seed = Number(tree.id ?? 0) % 4;
+    const temp = typeof tree.weather?.temperatura === "number" ? tree.weather.temperatura : null;
+    const humidity = typeof tree.weather?.humedad === "number" ? tree.weather.humedad : null;
+    const distance = typeof tree.distance === "number" ? tree.distance : null;
+
+    const statusCards: Record<string, Array<{ icon: string; title: string; text: string; color: string }>> = {
+      EXCELENTE: [
+        { icon: "✨", title: "Crecimiento estable", text: "Mantén el monitoreo mensual y conserva el follaje limpio.", color: "#0f766e" },
+        { icon: "🌿", title: "Mantenimiento preventivo", text: "Una revisión breve cada 15 días evita problemas futuros.", color: "#0891b2" },
+        { icon: "📈", title: "Seguimiento continuo", text: "Registra el crecimiento para detectar cambios tempranos.", color: "#7c3aed" },
+      ],
+      BUENO: [
+        { icon: "💧", title: "Riego moderado", text: "Mantén el suelo húmedo, pero evita el exceso de agua.", color: "#0284c7" },
+        { icon: "🪴", title: "Cuidado activo", text: "Revisa hojas, tronco y raíces con regularidad.", color: "#16a34a" },
+        { icon: "☀️", title: "Equilibrio de luz", text: "Asegura exposición solar sin estrés térmico.", color: "#d97706" },
+      ],
+      REGULAR: [
+        { icon: "⚠️", title: "Monitoreo semanal", text: "Prioriza observación activa de hojas, ramas y suelo.", color: "#ea580c" },
+        { icon: "🧰", title: "Intervención ligera", text: "Aplica riego controlado y limpia restos de poda.", color: "#f59e0b" },
+        { icon: "🌤️", title: "Ajuste ambiental", text: "Protege el árbol de sol intenso y vientos secos.", color: "#b45309" },
+      ],
+      MALO: [
+        { icon: "🚑", title: "Intervención urgente", text: "Revisa raíces, riego y posibles plagas de inmediato.", color: "#dc2626" },
+        { icon: "🛡️", title: "Protección activa", text: "Refuerza soporte, sombra y nutrición del suelo.", color: "#f97316" },
+        { icon: "🩺", title: "Asesoría técnica", text: "Un seguimiento profesional puede recuperar la vitalidad.", color: "#c2410c" },
+      ],
+      CRITICO: [
+        { icon: "🆘", title: "Atención inmediata", text: "Evalúa la salud del tronco y sistema radicular sin demora.", color: "#b91c1c" },
+        { icon: "🌱", title: "Recuperación prioritaria", text: "Prioriza riego, protección y revisión estructural.", color: "#991b1b" },
+        { icon: "👩‍🔬", title: "Seguimiento experto", text: "La intervención técnica es clave para la supervivencia.", color: "#7f1d1d" },
+      ],
+      DEFAULT: [
+        { icon: "🌳", title: "Cuidado continuo", text: "Mantén una revisión periódica para sostener su salud.", color: "#475569" },
+      ],
+    };
+
+    const speciesTips = [
+      { match: "limón", icon: "🍋", title: "Riego preciso", text: "El limón responde mejor a riego moderado y drenaje adecuado.", color: "#f59e0b" },
+      { match: "mango", icon: "🥭", title: "Nutrición balanceada", text: "El mango necesita suelo fértil y buen drenaje.", color: "#16a34a" },
+      { match: "coco", icon: "🥥", title: "Protección costera", text: "El coco se beneficia de sombra y protección contra el salitre.", color: "#0ea5e9" },
+      { match: "cacao", icon: "🍫", title: "Humedad constante", text: "El cacao favorece suelos húmedos y bien protegidos.", color: "#8b5cf6" },
+      { match: "aguacate", icon: "🥑", title: "Suelo profundo", text: "El aguacate necesita drenaje excelente y control de sequía.", color: "#84cc16" },
+    ];
+
+    const envTips = [] as Array<{ icon: string; title: string; text: string; color: string }>;
+    if (temp != null && temp > 30) {
+      envTips.push({ icon: "🌞", title: "Calor intenso", text: "Considera sombra ligera en horas de mayor sol.", color: "#ea580c" });
+    } else if (temp != null && temp < 20) {
+      envTips.push({ icon: "❄️", title: "Temperatura baja", text: "Revisa que no haya estrés por frío o humedad excesiva.", color: "#0ea5e9" });
+    }
+
+    if (humidity != null && humidity > 80) {
+      envTips.push({ icon: "💦", title: "Humedad alta", text: "Monitorea hongos y exceso de agua en raíces.", color: "#2563eb" });
+    } else if (humidity != null && humidity < 45) {
+      envTips.push({ icon: "🏜️", title: "Ambiente seco", text: "Aumenta la observación del suelo y el riego puntual.", color: "#b45309" });
+    }
+
+    if (distance != null && distance < 5) {
+      envTips.push({ icon: "📍", title: "Cercanía al usuario", text: "Es un buen momento para revisar el árbol con frecuencia.", color: "#4f46e5" });
+    } else if (distance != null && distance > 20) {
+      envTips.push({ icon: "🧭", title: "Distancia mayor", text: "Programar visitas periódicas ayuda a conservarlo.", color: "#64748b" });
+    }
+
+    const cards = [] as Array<{ icon: string; title: string; text: string; color: string }>;
+    const primaryCards = statusCards[status] || statusCards.DEFAULT;
+    const primary = primaryCards[seed % primaryCards.length];
+    cards.push(primary);
+
+    const speciesTip = speciesTips.find((item) => species.toLowerCase().includes(item.match)) ?? null;
+    if (speciesTip) {
+      cards.push({ ...speciesTip, title: speciesTip.title, text: speciesTip.text });
+    }
+
+    if (envTips.length > 0) {
+      cards.push(envTips[seed % envTips.length]);
+    }
+
+    return cards.slice(0, 3);
+  };
+
+  const normalizeHealthStatus = (status?: string) => String(status ?? "").trim().toUpperCase();
+
   const normalizeTrees = (arr: any[]): TreeDistance[] => {
     return arr.map((t, idx) => {
       const safeId = t.id ?? t._id ?? t.usuario_id ?? `fallback-${idx}-${Date.now()}`;
       const weatherIndice = t.weather?.indice_supervivencia ?? t.indices?.indice_supervivencia ?? null;
       const indice = t.indice_supervivencia ?? weatherIndice ?? 75;
       const recomendaciones = t.recomendaciones ?? t.weather?.recomendaciones ?? t.recomendaciones_arbol ?? [];
+      const normalizedHealth = normalizeHealthStatus(t.estado_salud);
       return {
         ...t,
         id: safeId,
+        latitud: Number(t.latitud),
+        longitud: Number(t.longitud),
+        estado_salud: normalizedHealth || undefined,
         indice_supervivencia: indice,
         recomendaciones,
       } as TreeDistance;
@@ -341,30 +435,36 @@ export function GeolocalizacionContent() {
     }
   }, [arboles, userLocation]);
 
-  const mapMarkers = useMemo(() => [
-    ...(userLocation
-      ? [
-          {
-            lat: userLocation.lat,
-            lng: userLocation.lng,
-            popup: "<strong>📍 Tu ubicación actual</strong>",
-          },
-        ]
-      : []),
-    ...treeDistances
-      .filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud))
-      .map((a) => {
-        let popupContent = `<div class="popup-container" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">`;
+  const mapMarkers = useMemo(() => {
+    const sourceTrees: TreeDistance[] = treeDistances.length > 0
+      ? treeDistances
+      : (arboles as unknown as TreeDistance[]);
+
+    return [
+      ...(userLocation
+        ? [
+            {
+              lat: userLocation.lat,
+              lng: userLocation.lng,
+              popup: "<strong>📍 Tu ubicación actual</strong>",
+            },
+          ]
+        : []),
+      ...sourceTrees
+        .filter((arbol) => {
+          const health = normalizeHealthStatus(arbol.estado_salud);
+          return health && activeHealthFilters.includes(health);
+        })
+        .map((a) => {
+        let popupContent = `<div class="popup-container" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; width: 300px; max-width: 88vw; line-height: 1.4;">`;
         
-        // Nombre del árbol
-        popupContent += `<div style="font-weight: bold; color: #1f2937; font-size: 14px; margin-bottom: 6px;">🌳 ${a.nombre}</div>`;
+        popupContent += `<div style="background: linear-gradient(135deg, #f8fafc 0%, #ecfeff 100%); border: 1px solid #dbeafe; border-radius: 10px; padding: 8px 10px; margin-bottom: 7px;">`;
+        popupContent += `<div style="font-weight: 800; color: #0f172a; font-size: 13px; margin-bottom: 3px;">🌳 ${a.nombre}</div>`;
         
-        // Especie
         if (a.especie) {
-          popupContent += `<div style="color: #6b7280; font-size: 12px; margin-bottom: 6px;">🌿 ${a.especie}</div>`;
+          popupContent += `<div style="color: #6b7280; font-size: 11px; margin-bottom: 5px;">🌿 ${a.especie}</div>`;
         }
         
-        // Estado de salud
         if (a.estado_salud) {
           const healthColors: Record<string, string> = {
             EXCELENTE: "#0ea5e9",
@@ -382,64 +482,78 @@ export function GeolocalizacionContent() {
           };
           const color = healthColors[a.estado_salud] || "#6b7280";
           const label = healthLabels[a.estado_salud] || a.estado_salud;
-          popupContent += `<div style="background: ${color}15; border-left: 3px solid ${color}; padding: 6px 8px; margin: 6px 0; border-radius: 3px; font-size: 12px; color: ${color}; font-weight: 600;">${label}</div>`;
+          popupContent += `<div style="background: ${color}15; border-left: 3px solid ${color}; padding: 7px 8px; border-radius: 6px; font-size: 12px; color: ${color}; font-weight: 700;">${label}</div>`;
         }
+        popupContent += `</div>`;
         
-        // Distancia
+        popupContent += `<div style="display: grid; gap: 6px;">`;
+        
         if (a.distance != null) {
-          popupContent += `<div style="color: #16a34a; font-size: 12px; font-weight: 600; margin: 6px 0;">📏 ${a.distance.toFixed(2)} km</div>`;
+          popupContent += `<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 7px; padding: 6px 7px; color: #166534; font-size: 11px; font-weight: 700;">📏 Distancia: ${a.distance.toFixed(2)} km</div>`;
         }
         
-        // Información climática
         if (a.weather?.temperatura !== undefined || a.weather?.humedad !== undefined) {
-          popupContent += `<div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 8px; border-radius: 4px; margin-top: 8px;">`;
-          
+          popupContent += `<div style="background: #f8fafc; border: 1px solid #dbeafe; border-radius: 7px; padding: 7px;">`;
+          popupContent += `<div style="font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Clima</div>`;
           if (a.weather.temperatura !== undefined) {
-            popupContent += `<div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #0369a1; font-weight: 600; margin-bottom: 4px;">🌡️ Temperatura: <span style="color: #ea580c; font-weight: bold;">${Math.round(a.weather.temperatura)}°C</span></div>`;
+            popupContent += `<div style="display: flex; justify-content: space-between; font-size: 12px; color: #0f172a; margin-bottom: 3px;"><span>🌡️ Temperatura</span><strong>${Math.round(a.weather.temperatura)}°C</strong></div>`;
           }
-          
           if (a.weather.humedad !== undefined) {
-            popupContent += `<div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #0369a1; font-weight: 600;">💧 Humedad: <span style="color: #0284c7; font-weight: bold;">${Math.round(a.weather.humedad)}%</span></div>`;
+            popupContent += `<div style="display: flex; justify-content: space-between; font-size: 12px; color: #0f172a;"><span>💧 Humedad</span><strong>${Math.round(a.weather.humedad)}%</strong></div>`;
           }
-          
           popupContent += `</div>`;
         }
         
-        // Mostrar sólo el índice de supervivencia (porcentaje) en el popup
         {
           const baseIndice = a.weather?.indice_supervivencia ?? a.indice_supervivencia ?? 75;
           const supervivenciaScore = getCoherentSurvivalScore(a.estado_salud, baseIndice, a.id);
           if (supervivenciaScore !== null) {
-            popupContent += `<div style="background: #eef2ff; border-left: 3px solid #6366f1; padding: 6px 8px; margin-top: 8px; border-radius: 3px; font-size: 12px; color: #3730a3; font-weight: 600;">Índice de Supervivencia: <span style="font-weight: bold; color: #0f172a;">${supervivenciaScore}%</span></div>`;
+            popupContent += `<div style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 1px solid #c7d2fe; border-radius: 7px; padding: 7px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #4338ca; font-weight: 700;">`;
+            popupContent += `<span>📊 Supervivencia</span>`;
+            popupContent += `<span style="font-size: 14px; color: #111827;">${supervivenciaScore}%</span>`;
+            popupContent += `</div>`;
           }
         }
         
-        // Recomendaciones: mostrar todas (sin truncado)
         if (a.weather?.recomendaciones && a.weather.recomendaciones.length > 0) {
-          popupContent += `<div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 8px; border-radius: 3px; margin-top: 8px; font-size: 11px; color: #92400e;">`;
-          a.weather.recomendaciones.forEach((rec: string) => {
-            popupContent += `<div style="margin-bottom: 4px;">${rec}</div>`;
-          });
-          popupContent += `</div>`;
+          const recommendationCards = getRecommendationCards(a);
+          if (recommendationCards.length > 0) {
+            popupContent += `<div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fde68a; border-radius: 7px; padding: 7px;">`;
+            popupContent += `<div style="font-size: 10px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px;">Recomendaciones</div>`;
+            recommendationCards.forEach((card) => {
+              popupContent += `<div style="display: flex; gap: 7px; align-items: flex-start; padding: 6px 7px; border-radius: 7px; background: ${card.color}12; border-left: 3px solid ${card.color}; margin-bottom: 5px;">`;
+              popupContent += `<div style="font-size: 12px; line-height: 1.1;">${card.icon}</div>`;
+              popupContent += `<div>`;
+              popupContent += `<div style="font-size: 10px; font-weight: 700; color: #334155; margin-bottom: 1px;">${card.title}</div>`;
+              popupContent += `<div style="font-size: 10px; color: #475569; line-height: 1.3;">${card.text}</div>`;
+              popupContent += `</div>`;
+              popupContent += `</div>`;
+            });
+            popupContent += `</div>`;
+          }
         }
         
         popupContent += `</div>`;
+        popupContent += `</div>`;
         
-        return {
-          lat: a.latitud,
-          lng: a.longitud,
-          healthStatus: a.estado_salud ? String(a.estado_salud).toLowerCase() : undefined,
-          popup: popupContent,
-          nombre: a.nombre,
-          especie: a.especie,
-          temperatura: a.weather?.temperatura,
-          humedad: a.weather?.humedad,
-          distance: a.distance,
-          indice_supervivencia: a.weather?.indice_supervivencia ?? null,
-          recomendaciones: a.weather?.recomendaciones ?? a.weather?.recomendaciones ?? [],
-        };
-      }),
-  ], [userLocation, treeDistances, activeHealthFilters]);
+        popupContent += `</div>`;
+        
+          return {
+            lat: Number(a.latitud),
+            lng: Number(a.longitud),
+            healthStatus: normalizeHealthStatus(a.estado_salud) || undefined,
+            popup: popupContent,
+            nombre: a.nombre,
+            especie: a.especie,
+            temperatura: a.weather?.temperatura,
+            humedad: a.weather?.humedad,
+            distance: a.distance,
+            indice_supervivencia: a.weather?.indice_supervivencia ?? null,
+            recomendaciones: a.weather?.recomendaciones ?? a.weather?.recomendaciones ?? [],
+          };
+        }),
+    ];
+  }, [userLocation, treeDistances, arboles, activeHealthFilters]);
 
   if (status === "loading" || loading) {
     return (

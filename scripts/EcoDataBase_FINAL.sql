@@ -468,6 +468,8 @@ INSERT INTO arboles (id, usuario_id, especie_id, nombre, especie, latitud, longi
 (111, 1, 47, 'Fresno Noble', 'Fresno', -5.16500000, -80.70500000, '2019-08-23', 'Fresno para muebles', 500.00, 30.00, 'MALO'),
 (112, 1, 48, 'Nogal Negro', 'Nogal', -5.13000000, -80.69000000, '2017-11-11', 'Nogal de madera oscura', 700.00, 40.00, 'EXCELENTE'),
 (113, 1, 49, 'Cipres Elegante', 'Cipres', -5.26000000, -80.60000000, '2021-05-05', 'Ciprés de porte elegante', 450.00, 26.00, 'BUENO'),
+(115, 1, 50, 'Árbol BD 1', 'Caucho', -5.19600000, -80.63250000, '2026-07-08', 'Árbol insertado desde la sesión', 180.00, 12.00, 'CRITICO'),
+(116, 1, 51, 'Árbol BD 2', 'Guayabo', -5.19200000, -80.62850000, '2026-07-08', 'Segundo árbol insertado desde la sesión', 160.00, 10.00, 'CRITICO');
 (114, 1, 4, 'Limón de Catacaos', 'Limón', -5.27360000, -80.67750000, '2017-08-10', 'Árbol de limón cuidado por los vecinos de Catacaos', 360.00, 21.00, 'EXCELENTE'),
 (115, 1, 5, 'Naranja de Castilla', 'Naranja', -5.22100000, -80.64700000, '2018-02-21', 'Árbol cítrico en huerto urbano de Castilla', 410.00, 27.00, 'BUENO'),
 (116, 1, 1, 'Mango de San Miguel', 'Mango', -5.19870000, -80.63520000, '2016-11-03', 'Mango tradicional en la zona norte de Piura', 760.00, 40.00, 'BUENO'),
@@ -478,7 +480,9 @@ INSERT INTO arboles (id, usuario_id, especie_id, nombre, especie, latitud, longi
 (122, 1, 31, 'Anona de la Costa', 'Anona', -5.18200000, -80.70500000, '2021-03-11', 'Árbol de anona en zona costera de Piura', 270.00, 15.00, 'MALO'),
 (123, 1, 38, 'Eucalipto de Piura', 'Eucalipto', -5.17000000, -80.65000000, '2014-09-05', 'Eucalipto de sombra y protección en Piura', 900.00, 44.00, 'EXCELENTE'),
 (124, 1, 40, 'Teca de la Zona Franca', 'Teca', -5.18040000, -80.64070000, '2017-12-29', 'Teca ornamental y de sombra en la zona urbana', 580.00, 33.00, 'REGULAR'),
-(125, 1, 42, 'Caoba de Piura', 'Caoba', -5.14000000, -80.62000000, '2016-01-14', 'Árbol de caoba en zona de crecimiento moderado', 640.00, 37.00, 'BUENO')
+(125, 1, 42, 'Caoba de Piura', 'Caoba', -5.14000000, -80.62000000, '2016-01-14', 'Árbol de caoba en zona de crecimiento moderado', 640.00, 37.00, 'BUENO'),
+(126, 1, 5, 'Naranja de Chulucanas', 'Naranja', -5.18800000, -80.64800000, '2020-02-14', 'Árbol cítrico de la zona norte', 390.00, 23.00, 'BUENO'),
+(127, 1, 17, 'Aguacate de Castilla', 'Aguacate', -5.20500000, -80.64200000, '2018-04-10', 'Aguacate de sombra en barrio urbano', 510.00, 29.00, 'BUENO')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================
