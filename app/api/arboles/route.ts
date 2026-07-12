@@ -335,8 +335,19 @@ export async function GET(request: NextRequest) {
 // POST - Crear un nuevo árbol
 export async function POST(request: NextRequest) {
   try {
-    const { error, userId } = await protectRoute()
-    if (error) return error
+    let userId: number | null = null
+    try {
+      const protect = await protectRoute()
+      if (protect.error) return protect.error
+      userId = protect.userId
+    } catch (protectErr) {
+      console.warn("protectRoute lanzó excepción en POST /api/arboles:", protectErr)
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
 
     const body = await request.json()
     const { nombre, especie, latitud, longitud, fecha_plantacion, descripcion, foto_url, estado_salud, altura_actual_cm, diametro_tronco_cm } = body
