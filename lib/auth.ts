@@ -19,11 +19,13 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email y contraseña son requeridos");
         }
 
+        const normalizedEmail = credentials.email.toLowerCase().trim();
+
         try {
           // Buscar usuario en la base de datos - seleccionar solo campos necesarios
           const result = await query(
             "SELECT id, email, password_hash, nombre, avatar_url, rol, estado FROM usuarios WHERE email = $1",
-            [credentials.email]
+            [normalizedEmail]
           );
 
           const user = result.rows[0];
@@ -38,7 +40,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           console.log("🔍 DEBUG LOGIN:", {
-            email: user.email,
+            email: normalizedEmail,
             password_hash_existe: !!user.password_hash,
             password_hash_length: user.password_hash?.length,
             rol: user.rol,
