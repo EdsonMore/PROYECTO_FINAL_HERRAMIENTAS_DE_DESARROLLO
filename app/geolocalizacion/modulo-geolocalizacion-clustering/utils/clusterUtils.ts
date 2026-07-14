@@ -1,7 +1,24 @@
 import { getHealthColor } from "@/lib/health-utils";
-import L from "leaflet";
 
-export const createClusterIcon = (cluster: L.MarkerCluster) => {
+let L: any = null;
+
+/** Llamar desde MapClusteringComponentInternal después de cargar Leaflet */
+export const initLeaflet = (leafletInstance: any) => {
+  L = leafletInstance;
+};
+
+const ensureLeaflet = async () => {
+  if (!L) {
+    const leaflet = await import("leaflet");
+    L = leaflet.default;
+  }
+  return L;
+};
+
+// SÍNCRONA: Leaflet requiere que iconCreateFunction retorne un icono directamente (no una Promise)
+// L ya está cargado para cuando esta función es invocada por MarkerClusterGroup
+export const createClusterIcon = (cluster: any) => {
+
   const count = cluster.getChildCount();
   let size = 38;
 
@@ -30,9 +47,8 @@ export const createClusterIcon = (cluster: L.MarkerCluster) => {
     // ignore
   }
 
-  // Color primario por mayoría
-  // Usar colores canónicos desde health-utils
-  let primaryColor = "#6b7280"; // gris
+  // Color primario por mayoría usando colores canónicos desde health-utils
+  let primaryColor = "#6b7280"; // gris por defecto
   if (green >= yellow && green >= red) primaryColor = getHealthColor("BUENO");
   else if (yellow >= green && yellow >= red) primaryColor = getHealthColor("REGULAR");
   else if (red >= green && red >= yellow) primaryColor = getHealthColor("CRITICO");
@@ -55,7 +71,9 @@ export const createClusterIcon = (cluster: L.MarkerCluster) => {
   });
 };
 
-export const createCustomMarkerIcon = (color: string = "blue") => {
+// SÍNCRONA: L.marker() requiere un icono directo, no una Promise
+// L ya está cargado cuando se agregan marcadores al mapa
+export const createCustomMarkerIcon = (color: string = "#6b7280") => {
   return L.divIcon({
     html: `
       <div style="

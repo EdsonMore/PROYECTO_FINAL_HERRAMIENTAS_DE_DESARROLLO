@@ -24,7 +24,8 @@ const loadLeaflet = async () => {
 };
 
 import { ClusterMarker, ClusteringConfig } from "../types";
-import { createClusterIcon, createCustomMarkerIcon, getMarkerColor } from "../utils/clusterUtils";
+import { createClusterIcon, createCustomMarkerIcon, getMarkerColor, initLeaflet } from "../utils/clusterUtils";
+
 
 import "leaflet/dist/leaflet.css";
 
@@ -61,6 +62,8 @@ export function MapClusteringComponent({
       try {
         const leaflet = await loadLeaflet();
         leafletRef.current = leaflet;
+        // Compartir la instancia con clusterUtils para que createClusterIcon y createCustomMarkerIcon puedan usarla
+        initLeaflet(leaflet);
         await import("leaflet.markercluster");
         await import("leaflet.markercluster/dist/MarkerCluster.css");
         await import("leaflet.markercluster/dist/MarkerCluster.Default.css");
@@ -187,13 +190,34 @@ export function MapClusteringComponent({
   useEffect(() => {
     console.log("Markers effect running - isReady:", isReady, "markers count:", markers.length, "hasClusterGroup:", !!markerClusterGroupRef.current, "hasMap:", !!mapRef.current);
 
-    if (!isReady || !markerClusterGroupRef.current || !mapRef.current || isUnmountingRef.current) return;
+    if (!isReady || !mapRef.current || isUnmountingRef.current) return;
 
     const L = leafletRef.current;
     if (!L) return;
 
     try {
-      markerClusterGroupRef.current.clearLayers();
+      // Eliminar el cluster group anterior y crear uno nuevo en lugar de clearLayers()
+      // Esto evita el error '_leaflet_events' que ocurre cuando hay marcadores con íconos inválidos
+      if (markerClusterGroupRef.current) {
+        try {
+          mapRef.current.removeLayer(markerClusterGroupRef.current);
+        } catch (e) {
+          console.warn("Error removiendo cluster group anterior:", e);
+        }
+        markerClusterGroupRef.current = null;
+      }
+
+      const newClusterGroup = new (L as any).MarkerClusterGroup({
+        maxClusterRadius: clusteringConfig.maxClusterRadius ?? 80,
+        showCoverageOnHover: clusteringConfig.showCoverageOnHover ?? false,
+        zoomToBoundsOnClick: clusteringConfig.zoomToBoundsOnClick ?? true,
+        disableClusteringAtZoom: clusteringConfig.disableClusteringAtZoom ?? 15,
+        spiderfyOnMaxZoom: clusteringConfig.spiderfyOnMaxZoom ?? false,
+        spiderLegPolylineOptions: clusteringConfig.spiderLegPolylineOptions ?? { weight: 0, opacity: 0 },
+        iconCreateFunction: createClusterIcon,
+      });
+      mapRef.current.addLayer(newClusterGroup);
+      markerClusterGroupRef.current = newClusterGroup;
 
       markers.forEach((marker, index) => {
         try {
@@ -202,7 +226,7 @@ export function MapClusteringComponent({
           const markerColor = getMarkerColor(hs, (marker as any).indice_supervivencia ?? null, isFirstMarker && !hs);
           const leafletMarker = L.marker([marker.lat, marker.lng], {
             icon: createCustomMarkerIcon(markerColor),
-            // Pasamos propiedades personalizadas para que el cluster pueda leerlas
+            // Propiedades personalizadas para que el cluster pueda leerlas
             indice_supervivencia: (marker as any).indice_supervivencia ?? null,
             recomendaciones: (marker as any).recomendaciones ?? [],
             healthStatus: hs ?? null,
@@ -231,6 +255,7 @@ export function MapClusteringComponent({
       console.error("Error actualizando marcadores con clustering:", error);
     }
   }, [markers, clusteringConfig, isReady]);
+
 
   return (
     <div

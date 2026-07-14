@@ -22,7 +22,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { HealthFilter } from "@/components/health-filter";
 import { getCoherentSurvivalScore, getHealthLabel } from "@/lib/health-utils";
 import { MapClusteringComponent } from "./modulo-geolocalizacion-clustering";
+import { ClimateSimulationPanel } from "./components/ClimateSimulationPanel";
 import type { Arbol } from "@/types";
+
 
 interface UserLocation {
   lat: number;
@@ -453,8 +455,10 @@ export function GeolocalizacionContent() {
       ...sourceTrees
         .filter((arbol) => {
           const health = normalizeHealthStatus(arbol.estado_salud);
-          return health && activeHealthFilters.includes(health);
+          // Si no tiene estado de salud, incluirlo igual; si tiene, verificar el filtro activo
+          return !health || activeHealthFilters.includes(health);
         })
+
         .map((a) => {
         let popupContent = `<div class="popup-container" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; width: 300px; max-width: 88vw; line-height: 1.4;">`;
         
@@ -573,39 +577,59 @@ export function GeolocalizacionContent() {
       <Navbar />
 
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-2">
-              <Compass className="h-8 w-8 text-green-600" />
-              Geolocalización
-            </h1>
-            <p className="text-muted-foreground">
-              Visualiza tu ubicación y los árboles más cercanos
-            </p>
+        {/* Header principal elegante (Crema y Almendra) */}
+        <div className="relative overflow-hidden rounded-3xl p-6 mb-8 border border-amber-200/60 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm"
+          style={{ background: "linear-gradient(135deg, #fdf8f2 0%, #f5e6d3 60%, #eddcc8 100%)" }}>
+          
+          {/* Destellos decorativos */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 right-1/4 w-32 h-32 rounded-full opacity-10"
+              style={{ background: "radial-gradient(circle, #fcd34d, transparent)" }} />
           </div>
-          <Button
+
+          <div className="relative flex items-center gap-4">
+            <div className="rounded-2xl p-3 border border-amber-300/30 shadow-sm"
+              style={{ background: "rgba(217,119,6,0.06)", backdropFilter: "blur(8px)" }}>
+              <Compass className="h-8 w-8 text-amber-700" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black text-amber-950 tracking-tight">
+                Geolocalización
+              </h1>
+              <p className="text-amber-850 text-sm mt-0.5 font-medium">
+                Visualiza tu ubicación y los árboles más cercanos
+              </p>
+            </div>
+          </div>
+
+          <button
             onClick={() => {
               setLoading(true);
               fetchArboles();
             }}
             disabled={loading}
-            size="sm"
-            variant="outline"
-            className="gap-2"
+            className="relative flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-60 hover:scale-105 active:scale-95 shadow-sm md:self-center self-start"
+            style={{
+              background: loading ? "rgba(255,255,255,0.4)" : "rgba(217,119,6,0.09)",
+              border: "1px solid rgba(217,119,6,0.25)",
+              color: "#78350f",
+              backdropFilter: "blur(8px)",
+            }}
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Actualizando...
+                <Loader2 className="h-4 w-4 animate-spin text-amber-700" />
+                <span>Actualizando...</span>
               </>
             ) : (
               <>
-                <Navigation className="h-4 w-4" />
-                Refrescar
+                <Navigation className="h-4 w-4 text-amber-700" />
+                <span>Refrescar datos</span>
               </>
             )}
-          </Button>
+          </button>
         </div>
+
 
         {error && (
           <Alert variant="destructive" className="mb-6">
@@ -625,100 +649,223 @@ export function GeolocalizacionContent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Mapa Interactivo</CardTitle>
-                  <Button
+            <div className="space-y-5">
+
+              {/* ── Mapa Interactivo Premium (Crema y Almendra Cálido) ── */}
+              <div className="rounded-3xl overflow-hidden shadow-xl border border-amber-200/60">
+
+                {/* Header del mapa */}
+                <div className="relative px-5 py-4 flex items-center justify-between"
+                  style={{ background: "linear-gradient(135deg, #fdf8f2 0%, #f5e6d3 60%, #eddcc8 100%)", borderBottom: "1px solid #e7d1b8" }}>
+                  {/* Destellos decorativos */}
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1 right-24 w-32 h-32 rounded-full opacity-30"
+                      style={{ background: "radial-gradient(circle, #fcd34d, transparent)" }} />
+                    <div className="absolute bottom-0 left-16 w-20 h-20 rounded-full opacity-20"
+                      style={{ background: "radial-gradient(circle, #f97316, transparent)" }} />
+                  </div>
+
+                  <div className="relative flex items-center gap-3">
+                    {/* Ícono con glow */}
+                    <div className="rounded-2xl p-2.5 border border-amber-300/30"
+                      style={{ background: "rgba(217,119,6,0.06)", backdropFilter: "blur(8px)" }}>
+                      <MapPin className="h-5 w-5 text-amber-700" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-black text-amber-950 tracking-tight">Mapa Interactivo</h2>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                          <span className="text-[11px] text-amber-800/80 font-medium">En vivo</span>
+                        </div>
+                        {mapMarkers.length > 0 && (
+                          <span className="text-[11px] text-amber-700/50">·</span>
+                        )}
+                        {mapMarkers.length > 0 && (
+                          <span className="text-[11px] font-bold text-amber-800">
+                            {mapMarkers.length} marcadores
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botón de ubicación glassmorphism */}
+                  <button
                     onClick={getGeolocation}
                     disabled={geoLoading}
-                    size="sm"
-                    variant="outline"
-                    className="gap-2"
+                    className="relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 disabled:opacity-60 hover:scale-105 active:scale-95 shadow-sm"
+                    style={{
+                      background: geoLoading ? "rgba(255,255,255,0.4)" : "rgba(217,119,6,0.09)",
+                      border: "1px solid rgba(217,119,6,0.25)",
+                      color: "#78350f",
+                      backdropFilter: "blur(8px)",
+                    }}
                   >
                     {geoLoading ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Detectando...
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-700" />
+                        <span className="text-amber-700 text-xs">Detectando...</span>
                       </>
                     ) : (
                       <>
-                        <Navigation className="h-4 w-4" />
-                        Mi Ubicación
+                        <Navigation className="h-3.5 w-3.5 text-amber-700" />
+                        <span className="text-xs">Mi ubicación</span>
                       </>
                     )}
-                  </Button>
-                </CardHeader>
-                <CardContent>
+                  </button>
+                </div>
+
+                {/* Leyenda de colores de salud */}
+                <div className="flex items-center gap-1 px-5 py-2 flex-wrap"
+                  style={{ background: "linear-gradient(to right, #f5e6d3, #eddcc8)", borderBottom: "1px solid #e2cbab" }}>
+                  <span className="text-[10px] text-amber-900/60 font-bold uppercase tracking-wider mr-2">Salud:</span>
+                  {[
+                    { label: "Excelente", color: "#0ea5e9" },
+                    { label: "Bueno",     color: "#16a34a" },
+                    { label: "Regular",   color: "#f59e0b" },
+                    { label: "Malo",      color: "#f97316" },
+                    { label: "Crítico",   color: "#ef4444" },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center gap-1 mr-3">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: item.color }} />
+                      <span className="text-[10px] text-amber-950 font-medium">{item.label}</span>
+                    </div>
+                  ))}
+                  {userLocation && (
+                    <>
+                      <div className="mx-1 w-px h-3 bg-amber-300" />
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
+                        <span className="text-[10px] text-amber-950 font-medium">Tú</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* El mapa */}
+                <div className="relative">
                   <MapClusteringComponent
                     center={
                       userLocation
                         ? [userLocation.lat, userLocation.lng]
                         : [DEFAULT_PIURA_LOCATION.lat, DEFAULT_PIURA_LOCATION.lng]
                     }
-                    // Cargar inicialmente en clusters (zoom inicial más lejano)
                     zoom={11}
                     markers={mapMarkers}
                     clusteringConfig={{
                       maxClusterRadius: 80,
                       showCoverageOnHover: false,
                       zoomToBoundsOnClick: true,
-                      // Desagregar al acercar a zoom 15 o superior
                       disableClusteringAtZoom: 15,
-                      // Si hay muchos marcadores en el mismo punto, desplegarlos tipo "spiderfy" al hacer clic
                       spiderfyOnMaxZoom: true,
                     }}
                   />
-                </CardContent>
-              </Card>
+                  {/* Gradiente inferior sobre el mapa */}
+                  <div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none"
+                    style={{ background: "linear-gradient(to top, rgba(237,220,200,0.15), transparent)" }} />
+                </div>
 
+                {/* Footer del mapa */}
+                <div className="px-5 py-2.5 flex items-center justify-between"
+                  style={{ background: "#fdf8f2", borderTop: "1px solid #eddcc8" }}>
+                  <span className="text-[10px] text-amber-900/40 font-medium">© OpenStreetMap · Leaflet</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-amber-900/40 font-medium">Haz clic en el mapa o en un marcador para más info</span>
+                    <Compass className="h-3 w-3 text-amber-600/60" />
+                  </div>
+                </div>
+              </div>
+
+
+
+              {/* ── Lista de árboles cercanos rediseñada ── */}
               {treeDistances.length > 0 && (
-                <Card className="overflow-hidden border-0 shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50 border-b">
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-full bg-emerald-100 p-2">
-                        <MapPin className="h-4 w-4 text-emerald-700" />
+                <div className="rounded-3xl overflow-hidden border border-slate-200/60 shadow-md">
+                  {/* Header */}
+                  <div className="px-5 py-4 flex items-center justify-between"
+                    style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", borderBottom: "1px solid #bbf7d0" }}>
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-2xl bg-emerald-600 p-2 shadow-sm">
+                        <TreePine className="h-4 w-4 text-white" />
                       </div>
                       <div>
-                        <CardTitle className="text-base">
-                          Árboles Cercanos ({treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).length})
-                        </CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Lista ordenada por distancia desde tu ubicación
+                        <h3 className="font-black text-emerald-900 text-sm">Árboles Cercanos</h3>
+                        <p className="text-[11px] text-emerald-600 mt-0.5">
+                          {treeDistances.filter((a) => !a.estado_salud || activeHealthFilters.includes(a.estado_salud)).length} árboles · ordenados por distancia
                         </p>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                      {treeDistances.filter((arbol) => arbol.estado_salud && activeHealthFilters.includes(arbol.estado_salud)).map((arbol, index) => (
-                        <div
-                          key={arbol.id}
-                          className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-3 shadow-sm"
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center font-bold text-sm text-emerald-800">
+                    <div className="rounded-2xl bg-emerald-100 px-3 py-1.5 text-center">
+                      <p className="text-lg font-black text-emerald-800">
+                        {treeDistances.filter((a) => !a.estado_salud || activeHealthFilters.includes(a.estado_salud)).length}
+                      </p>
+                      <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-wide">visibles</p>
+                    </div>
+                  </div>
+
+                  {/* Lista */}
+                  <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto bg-white">
+
+
+
+                    {treeDistances
+                      .filter((arbol) => !arbol.estado_salud || activeHealthFilters.includes(arbol.estado_salud))
+                      .map((arbol, index) => {
+                        const healthColors: Record<string, string> = {
+                          EXCELENTE: "#0ea5e9", BUENO: "#16a34a", REGULAR: "#f59e0b", MALO: "#f97316", CRITICO: "#ef4444",
+                        };
+                        const healthEmojis: Record<string, string> = {
+                          EXCELENTE: "🔵", BUENO: "🟢", REGULAR: "🟡", MALO: "🟠", CRITICO: "🔴",
+                        };
+                        const hc = arbol.estado_salud ? healthColors[arbol.estado_salud] ?? "#94a3b8" : "#94a3b8";
+                        const he = arbol.estado_salud ? healthEmojis[arbol.estado_salud] ?? "⚪" : "⚪";
+                        const maxDist = Math.max(...treeDistances.map((t) => t.distance ?? 0), 1);
+                        const distPct = arbol.distance != null ? Math.min(100, (arbol.distance / maxDist) * 100) : 0;
+
+                        return (
+                          <div key={arbol.id}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors duration-150">
+                            {/* Número */}
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 text-white"
+                              style={{ background: `linear-gradient(135deg, ${hc}, ${hc}bb)` }}>
                               {index + 1}
                             </div>
+
+                            {/* Info */}
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-sm line-clamp-1">{arbol.nombre}</h3>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs">{he}</span>
+                                <span className="text-sm font-bold text-slate-800 line-clamp-1">{arbol.nombre}</span>
+                              </div>
                               {arbol.especie && (
-                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                  🌿 {arbol.especie}
-                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">🌿 {arbol.especie}</p>
+                              )}
+                              {/* Barra de distancia */}
+                              {arbol.distance != null && (
+                                <div className="mt-1.5 flex items-center gap-2">
+                                  <div className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
+                                    <div className="h-full rounded-full transition-all duration-500"
+                                      style={{ width: `${distPct}%`, background: `linear-gradient(to right, ${hc}99, ${hc})` }} />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Distancia */}
+                            <div className="flex-shrink-0 text-right">
+                              <div className="text-sm font-black" style={{ color: hc }}>
+                                {arbol.distance != null ? `${arbol.distance.toFixed(2)}` : "–"}
+                              </div>
+                              {arbol.distance != null && (
+                                <div className="text-[10px] text-slate-400 font-semibold">km</div>
                               )}
                             </div>
                           </div>
-                          <div className="flex-shrink-0 text-right">
-                            <div className="text-sm font-bold text-emerald-700">
-                              {arbol.distance != null ? `${arbol.distance.toFixed(2)} km` : "-"}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                        );
+                      })}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -951,6 +1098,10 @@ export function GeolocalizacionContent() {
             </CardContent>
           </Card>
         )}
+
+        {/* ── Simulación de Impacto Climático ── */}
+        <ClimateSimulationPanel arboles={treeDistances.length > 0 ? treeDistances : arboles as any} />
+
       </main>
 
       <Footer />

@@ -317,8 +317,16 @@ export async function GET(request: NextRequest) {
       const result = await query(queryText, queryParams)
       rows = result.rows.map(enrichTreeWithWeather)
     } catch (dbError) {
-      console.error("Error en consulta a BD al obtener árboles:", dbError)
-      return NextResponse.json({ error: "Error al obtener árboles" }, { status: 500 })
+      console.warn("Error en consulta a BD, usando fallback SQL local:", dbError)
+    }
+
+    // Fallback al SQL local si la BD falla o no retorna filas
+    if (rows.length === 0) {
+      const sqlRows = await loadTreesFromLocalSql(userId)
+      if (sqlRows.length > 0) {
+        console.log(`BD sin filas o caída — cargando ${sqlRows.length} árboles desde SQL local`)
+        rows = sqlRows
+      }
     }
 
     const start = offset ?? 0
