@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,8 +52,6 @@ const DEFAULT_PIURA_LOCATION: UserLocation = {
 };
 
 export function GeolocalizacionContent() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [userWeather, setUserWeather] = useState<any>(null);
   const [arboles, setArboles] = useState<Arbol[]>([]);
@@ -67,19 +63,9 @@ export function GeolocalizacionContent() {
   const [activeTreeFilters, setActiveTreeFilters] = useState<string[]>(["EXCELENTE", "BUENO", "REGULAR", "MALO", "CRITICO"]);
 
   useEffect(() => {
-    // En desarrollo permitimos ver la página sin autenticación para facilitar pruebas.
-    if (status === "unauthenticated" && process.env.NODE_ENV === "production") {
-      router.push("/login");
-    }
-  }, [status, router]);
-
-  useEffect(() => {
-    // En desarrollo permitir carga como "guest" para pruebas locales
-    if (status === "authenticated" || process.env.NODE_ENV !== "production") {
-      fetchArboles();
-      getGeolocation();
-    }
-  }, [status]);
+    fetchArboles();
+    getGeolocation();
+  }, []);
 
   const getGeolocation = () => {
     if (!navigator.geolocation) {
@@ -465,6 +451,10 @@ export function GeolocalizacionContent() {
         popupContent += `<div style="background: linear-gradient(135deg, #f8fafc 0%, #ecfeff 100%); border: 1px solid #dbeafe; border-radius: 10px; padding: 8px 10px; margin-bottom: 7px;">`;
         popupContent += `<div style="font-weight: 800; color: #0f172a; font-size: 13px; margin-bottom: 3px;">🌳 ${a.nombre}</div>`;
         
+        if (a.usuario_nombre) {
+          popupContent += `<div style="color: #0891b2; font-size: 11px; margin-bottom: 4px;">👤 Plantado por: ${a.usuario_nombre}</div>`;
+        }
+        
         if (a.especie) {
           popupContent += `<div style="color: #6b7280; font-size: 11px; margin-bottom: 5px;">🌿 ${a.especie}</div>`;
         }
@@ -559,7 +549,7 @@ export function GeolocalizacionContent() {
     ];
   }, [userLocation, treeDistances, arboles, activeHealthFilters]);
 
-  if (status === "loading" || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />

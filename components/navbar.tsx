@@ -40,7 +40,7 @@ export function Navbar() {
     { href: "/", label: "Inicio", protected: false, roles: ["USER", "ADMIN"] },
     { href: "/dashboard", label: "Dashboard", protected: true, roles: ["USER"] },
     { href: "/mi-arbol", label: "Mi Árbol", protected: true, roles: ["USER"] },
-    { href: "/geolocalizacion", label: "Geolocalización", protected: true, roles: ["USER", "ADMIN"] },
+    { href: "/geolocalizacion", label: "Geolocalización", protected: false, roles: ["USER", "ADMIN"] },
     { href: "/seguimientos", label: "Seguimientos", protected: true, roles: ["USER"] },
     { href: "/clima", label: "Clima", protected: true, roles: ["USER", "ADMIN"] },
     { href: "/identificador", label: "Identificador IA", protected: true, roles: ["USER", "ADMIN"] },
