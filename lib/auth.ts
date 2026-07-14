@@ -20,10 +20,13 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
+          // Normalizar email a minúsculas (mismo tratamiento que en registro)
+          const normalizedEmail = credentials.email.toLowerCase().trim();
+
           // Buscar usuario en la base de datos - seleccionar solo campos necesarios
           const result = await query(
             "SELECT id, email, password_hash, nombre, avatar_url, rol, estado FROM usuarios WHERE email = $1",
-            [credentials.email]
+            [normalizedEmail]
           );
 
           const user = result.rows[0];

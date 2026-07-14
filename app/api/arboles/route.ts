@@ -184,8 +184,9 @@ const ARBOLES_SELECTS: Record<ArbolQueryMode, string> = {
          FROM arboles a`,
   summary: `SELECT a.id, a.nombre, a.especie, a.foto_url, a.estado_salud, a.creado_en
             FROM arboles a`,
-  geo: `SELECT a.id, a.nombre, a.especie, a.latitud, a.longitud, a.foto_url, a.estado_salud, a.creado_en
-        FROM arboles a`,
+  geo: `SELECT a.id, a.nombre, a.especie, a.latitud, a.longitud, a.foto_url, a.estado_salud, a.creado_en, u.nombre as usuario_nombre
+         FROM arboles a
+         LEFT JOIN usuarios u ON a.usuario_id = u.id`,
 }
 
 function parseOptionalPositiveInt(value: string | null) {
@@ -285,40 +286,52 @@ async function autoRegistrarEspecie(especie: string) {
   }
 }
 
-// GET - Obtener todos los árboles del usuario
+// GET - Obtener árboles
 export async function GET(request: NextRequest) {
   try {
-    // Intentamos obtener userId mediante protectRoute. Si falla (callbacks de NextAuth
-    // intentan consultar la BD), caemos a modo demo para no bloquear la visualización.
-    let userId: number | null = 1
-    try {
-      const protect = await protectRoute()
-      if (!protect.error && protect.userId) {
-        userId = protect.userId
-      } else {
-        console.warn("protectRoute devolvió error o sin userId, usando userId=1 para demo", protect.error)
-      }
-    } catch (protectErr) {
-      console.warn("protectRoute lanzó excepción, usando modo demo para /api/arboles:", protectErr)
-      userId = 1
-    }
     const { searchParams } = new URL(request.url)
     const mode = (searchParams.get("mode") as ArbolQueryMode) || "full"
-    const selectedQuery = ARBOLES_SELECTS[mode] ?? ARBOLES_SELECTS.full
     const limit = parseOptionalPositiveInt(searchParams.get("limit"))
     const offset = parseOptionalPositiveInt(searchParams.get("offset"))
 
-    // Consultar BD (solo árboles del usuario autenticado, no eliminados)
-    let queryText = `${selectedQuery} WHERE a.usuario_id = $1 AND a.deleted_at IS NULL ORDER BY a.creado_en DESC`
-    const queryParams: Array<number> = [userId]
-
     let rows: any[] = []
-    try {
-      const result = await query(queryText, queryParams)
-      rows = result.rows.map(enrichTreeWithWeather)
-    } catch (dbError) {
-      console.error("Error en consulta a BD al obtener árboles:", dbError)
-      return NextResponse.json({ error: "Error al obtener árboles" }, { status: 500 })
+
+    if (mode === "geo") {
+      // Modo geo público: no requiere auth, muestra TODOS los árboles con nombre de quien plantó
+      const queryText = `${ARBOLES_SELECTS.geo} WHERE a.deleted_at IS NULL ORDER BY a.creado_en DESC`
+      try {
+        const result = await query(queryText)
+        rows = result.rows.map(enrichTreeWithWeather)
+      } catch (dbError) {
+        console.error("Error en consulta a BD al obtener árboles (geo):", dbError)
+        return NextResponse.json({ error: "Error al obtener árboles" }, { status: 500 })
+      }
+    } else {
+      // Modos full/summary: requieren auth, solo del usuario autenticado
+      let userId: number | null = 1
+      try {
+        const protect = await protectRoute()
+        if (!protect.error && protect.userId) {
+          userId = protect.userId
+        } else {
+          console.warn("protectRoute devolvió error o sin userId, usando userId=1 para demo", protect.error)
+        }
+      } catch (protectErr) {
+        console.warn("protectRoute lanzó excepción, usando modo demo para /api/arboles:", protectErr)
+        userId = 1
+      }
+
+      const selectedQuery = ARBOLES_SELECTS[mode] ?? ARBOLES_SELECTS.full
+      const queryText = `${selectedQuery} WHERE a.usuario_id = $1 AND a.deleted_at IS NULL ORDER BY a.creado_en DESC`
+      const queryParams: Array<number> = [userId]
+
+      try {
+        const result = await query(queryText, queryParams)
+        rows = result.rows.map(enrichTreeWithWeather)
+      } catch (dbError) {
+        console.error("Error en consulta a BD al obtener árboles:", dbError)
+        return NextResponse.json({ error: "Error al obtener árboles" }, { status: 500 })
+      }
     }
 
     const start = offset ?? 0
