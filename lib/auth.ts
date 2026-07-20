@@ -19,6 +19,8 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email y contraseña son requeridos");
         }
 
+        const normalizedEmail = credentials.email.toLowerCase().trim();
+
         try {
           // Normalizar email a minúsculas (mismo tratamiento que en registro)
           const normalizedEmail = credentials.email.toLowerCase().trim();
@@ -41,7 +43,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           console.log("🔍 DEBUG LOGIN:", {
-            email: user.email,
+            email: normalizedEmail,
             password_hash_existe: !!user.password_hash,
             password_hash_length: user.password_hash?.length,
             rol: user.rol,

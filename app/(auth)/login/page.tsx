@@ -81,7 +81,7 @@ export default function LoginPage() {
         
         // Obtener la URL de redirección del callback
         // NO redirigir automáticamente - dejar al usuario en la página actual o ir al inicio
-        const callbackUrl = searchParams.get("callbackUrl") || "/";
+        const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
         console.log("📍 Redirigiendo a:", callbackUrl);
         
         // Redirigir inmediatamente sin esperar más
