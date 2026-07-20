@@ -480,8 +480,22 @@ INSERT INTO arboles (id, usuario_id, especie_id, nombre, especie, latitud, longi
 (123, 1, 40, 'Teca de la Zona Franca', 'Teca', -5.18040000, -80.64070000, '2017-12-29', 'Teca ornamental y de sombra en la zona urbana', 580.00, 33.00, 'REGULAR'),
 (124, 1, 42, 'Caoba de Piura', 'Caoba', -5.14000000, -80.62000000, '2016-01-14', 'Árbol de caoba en zona de crecimiento moderado', 640.00, 37.00, 'BUENO'),
 (125, 1, 5, 'Naranja de Chulucanas', 'Naranja', -5.18800000, -80.64800000, '2020-02-14', 'Árbol cítrico de la zona norte', 390.00, 23.00, 'BUENO'),
-(126, 1, 17, 'Aguacate de Castilla', 'Aguacate', -5.20500000, -80.64200000, '2018-04-10', 'Aguacate de sombra en barrio urbano', 510.00, 29.00, 'BUENO')
-ON CONFLICT (id) DO NOTHING;
+(126, 1, 17, 'Aguacate de Castilla', 'Aguacate', -5.20500000, -80.64200000, '2018-04-10', 'Aguacate de sombra en barrio urbano', 510.00, 29.00, 'BUENO'),
+
+--- arboles brandon:
+(128,3, 1, 'Neem Centenario', 'Neem',-5.19432500, -80.62374100,'2019-05-15','Árbol resistente al clima cálido y seco de Piura.',850.50, 45.20, 'BUENO'),
+(129, 3, 2, 'Algarrobo Real', 'Algarrobo',-5.20185200, -80.61892400,'2020-08-20','Especie emblemática del bosque seco piurano.',520.00, 28.50, 'EXCELENTE'),
+(130, 3, 3, 'Tamarindo Dulce', 'Tamarindo',-5.18841600, -80.63214800,'2022-01-10','Produce frutos utilizados en bebidas y postres.',280.00, 15.00, 'BUENO'),
+(131, 3, 4, 'Limón Piurano', 'Limón',-5.21352400, -80.61185700,'2018-11-05','Cultivado por su excelente producción anual.',350.00, 22.00, 'EXCELENTE'),
+(132, 3, 5, 'Mango Kent', 'Mango',-5.18263500, -80.64158200,'2017-03-12','Mango de exportación cultivado en Piura.',420.00, 28.00, 'BUENO'),
+(133, 3, 6, 'Guayaba Silvestre', 'Guayaba',-5.20687100, -80.60214300,'2021-04-25','Árbol frutal de crecimiento rápido.',180.00, 12.00, 'REGULAR'),
+(134, 3, 7, 'Papaya Gigante', 'Papaya',-5.19174200, -80.65281600,'2022-07-18','Produce frutos de gran tamaño durante todo el año.',150.00, 10.00, 'BUENO'),
+(135, 3, 8, 'Naranja Valencia', 'Naranja',-5.21748600, -80.61721400,'2019-09-30','Variedad apreciada por su sabor dulce.',220.00, 15.00, 'EXCELENTE'),
+(136, 3, 9, 'Molle Costeño', 'Molle',-5.18472500, -80.62541800,'2016-06-15','Árbol ornamental adaptado al clima seco.',630.00, 35.00, 'BUENO'),
+(137, 3, 10, 'Coco Tropical', 'Coco',-5.19981200, -80.60652700,'2020-03-21','Palmera de frutos tropicales cultivada en la costa.',410.00, 18.00, 'REGULAR'),
+(138, 3, 11, 'Palto Hass', 'Palta',-5.21063200, -80.63421500,'2021-09-14','Árbol productor de paltas de excelente calidad.',270.00, 14.50, 'BUENO'),
+(139, 3, 12, 'Ponciana Roja', 'Ponciana',-5.18754100, -80.61482500,'2018-12-03','Árbol ornamental conocido por sus flores rojas.',560.00, 31.00, 'EXCELENTE'),
+(140, 3, 13, 'Eucalipto Andino', 'Eucalipto',-5.20418600, -80.64631800,'2017-08-11','Árbol utilizado por su rápido crecimiento y sombra.',720.00, 40.00, 'BUENO');
 
 -- ============================
 -- 18. INSERTAR SEGUIMIENTOS CON FECHAS VARIADAS
@@ -562,7 +576,22 @@ INSERT INTO seguimientos (id, arbol_id, usuario_id, titulo, descripcion, altura_
 (109, 65, 1, 'Seguimiento verano 2026', 'Calor intenso', 900.00, 'BUENO', 'RIEGO', '2026-06-15', 32.00, 50.00, 'Aumentar riego'),
 (110, 68, 1, 'Nuevos limones', 'Floración abundante', 365.00, 'EXCELENTE', 'OBSERVACION', '2026-06-20', 30.00, 55.00, 'Buena producción'),
 (111, 76, 1, 'Nuevos cocos', 'Crecimiento de cocos', 1260.00, 'EXCELENTE', 'OBSERVACION', '2026-06-25', 31.00, 52.00, 'Cocos grandes'),
-(112, 97, 1, 'Segunda floración', 'Nuevas flores rojas', 570.00, 'EXCELENTE', 'OBSERVACION', '2026-07-01', 29.50, 58.00, 'Mejor que la primera')
+(112, 97, 1, 'Segunda floración', 'Nuevas flores rojas', 570.00, 'EXCELENTE', 'OBSERVACION', '2026-07-01', 29.50, 58.00, 'Mejor que la primera'),
+
+-- Brandon: Seguimientos de árboles
+(113, 128, 3, 'Inspección del Neem', 'Se verificó el correcto crecimiento del árbol y el estado de sus hojas.', 855.00, 'BUENO', 'OBSERVACION', '2026-01-15', 31.5, 65.0, 'No presenta signos de plagas ni enfermedades.'),
+(114, 129, 3, 'Poda preventiva del Algarrobo', 'Se realizó poda ligera para favorecer su desarrollo.', 525.00, 'EXCELENTE', 'PODA', '2026-01-20', 32.0, 58.0, 'Se retiraron ramas secas del extremo superior.'),
+(115, 130, 3, 'Riego del Tamarindo', 'El árbol presenta un crecimiento adecuado.', 285.50, 'BUENO', 'RIEGO', '2026-02-02', 30.0, 72.0, 'Se recomienda aumentar la frecuencia de riego durante el verano.'),
+(116, 131, 3, 'Fertilización del Limón', 'Se aplicó fertilizante orgánico al pie del árbol.', 356.00, 'EXCELENTE', 'FERTILIZACION', '2026-02-10', 31.8, 68.0, 'El follaje presenta excelente coloración.'),
+(117, 132, 3, 'Monitoreo del Mango', 'Se observaron brotes nuevos y frutos en desarrollo.', 425.00, 'BUENO', 'OBSERVACION', '2026-02-15', 32.5, 66.0, 'No se evidencian daños ocasionados por insectos.'),
+(118, 133, 3, 'Control sanitario de Guayaba', 'Se detectaron pequeñas manchas en algunas hojas.', 183.00, 'REGULAR', 'OBSERVACION', '2026-03-01', 30.8, 61.0, 'Se recomienda aplicar tratamiento preventivo antifúngico.'),
+(119, 134, 3, 'Seguimiento de Papaya', 'La planta mantiene un desarrollo favorable.', 155.00, 'BUENO', 'OBSERVACION', '2026-03-08', 31.0, 74.0, 'Se observa una adecuada humedad del suelo.'),
+(120, 135, 3, 'Evaluación de Naranja', 'Presenta abundante follaje y buen estado general.', 226.00, 'EXCELENTE', 'OBSERVACION', '2026-03-15', 30.5, 69.0, 'Se recomienda continuar con el plan de fertilización.'),
+(121, 136, 3, 'Poda del Molle', 'Se realizó mantenimiento de ramas inferiores.', 635.00, 'BUENO', 'PODA', '2026-04-02', 32.2, 57.0, 'No requiere intervenciones adicionales.'),
+(122, 137, 3, 'Riego del Coco', 'La palmera presenta crecimiento uniforme.', 415.00, 'REGULAR', 'RIEGO', '2026-04-12', 33.0, 76.0, 'Es necesario mantener una adecuada irrigación.'),
+(123, 138, 3, 'Fertilización del Palto', 'Se aplicó abono orgánico rico en potasio.', 275.00, 'BUENO', 'FERTILIZACION', '2026-04-20', 31.7, 67.0, 'Se espera un incremento del crecimiento vegetativo.'),
+(124, 139, 3, 'Inspección de la Ponciana', 'Presenta abundante floración característica de la especie.', 565.00, 'EXCELENTE', 'OBSERVACION', '2026-05-01', 30.2, 63.0, 'No presenta signos de estrés hídrico.'),
+(125, 140, 3, 'Evaluación del Eucalipto', 'Árbol vigoroso y con excelente desarrollo estructural.', 728.00, 'BUENO', 'OBSERVACION', '2026-05-15', 29.8, 60.0, 'Se recomienda continuar con el monitoreo semestral.')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================

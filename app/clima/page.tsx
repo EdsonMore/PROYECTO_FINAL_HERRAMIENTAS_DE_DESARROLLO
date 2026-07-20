@@ -116,9 +116,53 @@ export default function ClimaPage() {
   const saveWeatherHistory = (history: WeatherHistory[]) => {
     try {
       const key = `weatherHistory_${session?.user?.email || "guest"}`;
-      localStorage.setItem(key, JSON.stringify(history));
+      const jsonData = JSON.stringify(history);
+
+      // Verificar si el dato es demasiado grande (> 4MB)
+      if (jsonData.length > 4 * 1024 * 1024) {
+        console.warn("Historial demasiado grande, compactando...");
+
+        // Mantener solo los últimos 15 registros
+        const compactedHistory = history.slice(-15);
+        const compactedJson = JSON.stringify(compactedHistory);
+
+        // Si aún es muy grande, reducir a 10
+        if (compactedJson.length > 4 * 1024 * 1024) {
+          const reducedHistory = history.slice(-10);
+          localStorage.setItem(key, JSON.stringify(reducedHistory));
+          console.log("Historial reducido a 10 registros");
+        } else {
+          localStorage.setItem(key, compactedJson);
+          console.log("Historial compactado a 15 registros");
+        }
+        return;
+      }
+
+      // Guardado normal
+      localStorage.setItem(key, jsonData);
     } catch (err) {
-      console.error("Error guardando historial:", err);
+      // Si falla por cuota, hacer una limpieza de emergencia
+      if (err instanceof Error && err.name === "QuotaExceededError") {
+        console.warn("QuotaExcedida, limpiando historial antiguo...");
+
+        try {
+          const key = `weatherHistory_${session?.user?.email || "guest"}`;
+          // Guardar solo los últimos 5 registros
+          const emergencyHistory = history.slice(-5);
+          localStorage.setItem(key, JSON.stringify(emergencyHistory));
+          console.log("Historial reducido a 5 registros por emergencia");
+        } catch (emergencyErr) {
+          // Si aún falla, eliminar completamente
+          console.error(
+            "No se pudo guardar ni siquiera 5 registros, eliminando historial",
+          );
+          localStorage.removeItem(
+            `weatherHistory_${session?.user?.email || "guest"}`,
+          );
+        }
+      } else {
+        console.error("Error guardando historial:", err);
+      }
     }
   };
 
@@ -538,12 +582,105 @@ export default function ClimaPage() {
     };
   };
 
+  const normalizeSpecies = (species?: string) => {
+    if (!species) return "";
+
+    return species
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  };
+
+  const getSpeciesSpecificTips = (species?: string) => {
+    const normalizedSpecies = normalizeSpecies(species);
+    const tips: string[] = [];
+
+    if (normalizedSpecies.includes("mango")) {
+      tips.push(
+        "🥭 El mango tolera calor, pero necesita un suelo húmedo sin encharcamientos.",
+      );
+      tips.push(
+        "🌿 Mantén una capa de mulch alrededor del tronco para reducir el estrés por sequía.",
+      );
+    } else if (normalizedSpecies.includes("guayaba")) {
+      tips.push(
+        "🍈 La guayaba responde mejor a riegos frecuentes y moderados, evitando el exceso de agua.",
+      );
+      tips.push(
+        "✂️ Una poda ligera ayuda a mantener buena circulación y menos estrés térmico.",
+      );
+    } else if (
+      normalizedSpecies.includes("pino") ||
+      normalizedSpecies.includes("cedro")
+    ) {
+      tips.push(
+        "🌲 Estas coníferas prefieren suelos bien drenados y menos riego en épocas frías o húmedas.",
+      );
+      tips.push(
+        "🛡️ Protege la base del árbol de vientos fuertes y cambios bruscos de temperatura.",
+      );
+    } else if (normalizedSpecies.includes("eucalipto")) {
+      tips.push(
+        "🌿 El eucalipto demanda más agua en verano, pero evita encharcamientos.",
+      );
+      tips.push(
+        "🪵 Mantén el suelo cubierto para conservar humedad y reducir el estrés.",
+      );
+    } else if (
+      normalizedSpecies.includes("cafe") ||
+      normalizedSpecies.includes("café")
+    ) {
+      tips.push(
+        "☕ El café necesita sombra parcial y suelo húmedo, pero con buen drenaje.",
+      );
+      tips.push(
+        "🌧️ Revisa que no se acumule agua en la raíz durante periodos lluviosos.",
+      );
+    } else if (normalizedSpecies.includes("caoba")) {
+      tips.push(
+        "🌳 La caoba se desarrolla mejor con riegos regulares y suelo bien drenado.",
+      );
+      tips.push(
+        "🌤️ En calor extremo, protege el tronco del sol directo excesivo.",
+      );
+    } else if (normalizedSpecies.includes("roble")) {
+      tips.push(
+        "🌳 El roble prefiere ambientes estables y evita cambios bruscos de humedad.",
+      );
+      tips.push(
+        "🪵 Mantén el sustrato húmedo, pero no saturado, sobre todo en verano.",
+      );
+    } else if (
+      normalizedSpecies.includes("palma") ||
+      normalizedSpecies.includes("palmera")
+    ) {
+      tips.push(
+        "🌴 La palmera tolera calor, pero necesita riego profundo y poco frecuente.",
+      );
+      tips.push(
+        "🧴 Revisa que las hojas no se tornen por falta de agua o exceso de sol.",
+      );
+    } else {
+      tips.push(
+        "🌱 Ajusta el riego según la especie y observa el estado de las hojas.",
+      );
+      tips.push(
+        "🧪 Mantén el suelo húmedo, pero nunca encharcado, para favorecer el desarrollo.",
+      );
+    }
+
+    return tips;
+  };
+
   const getDetailedAdvice = (
     temp: number,
     humidity: number,
     windSpeed: number,
+    species?: string,
   ) => {
     const tips: string[] = [];
+    const speciesTips = getSpeciesSpecificTips(species);
 
     if (temp > 35) {
       tips.push(
@@ -588,8 +725,8 @@ export default function ClimaPage() {
     }
 
     return tips.length > 0
-      ? tips
-      : ["✅ Condiciones óptimas para el cuidado de tu árbol."];
+      ? [...tips, ...speciesTips]
+      : ["✅ Condiciones óptimas para el cuidado de tu árbol.", ...speciesTips];
   };
 
   const overallTrend =
@@ -645,7 +782,10 @@ export default function ClimaPage() {
 
   const forecastPath = forecastLine
     .map((value, index) => {
-      const x = forecastLine.length === 1 ? 50 : (index / (forecastLine.length - 1)) * 100;
+      const x =
+        forecastLine.length === 1
+          ? 50
+          : (index / (forecastLine.length - 1)) * 100;
       const y =
         100 -
         ((value - minForecast) / Math.max(maxForecast - minForecast, 1)) * 70 -
@@ -670,7 +810,9 @@ export default function ClimaPage() {
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-100 backdrop-blur">
                   <Leaf className="h-4 w-4" />
-                  <span>Monitoreo climático en tiempo real + Predicción 7 días</span>
+                  <span>
+                    Monitoreo climático en tiempo real + Predicción 7 días
+                  </span>
                 </div>
 
                 <div className="max-w-2xl space-y-4">
@@ -678,8 +820,9 @@ export default function ClimaPage() {
                     Clima de tu <span className="text-emerald-700">Árbol</span>
                   </h1>
                   <p className="max-w-xl text-base leading-7 text-slate-600 md:text-lg">
-                    Consulta las condiciones climáticas actuales y obtén una predicción
-                    inteligente para los próximos 7 días basada en datos históricos.
+                    Consulta las condiciones climáticas actuales y obtén una
+                    predicción inteligente para los próximos 7 días basada en
+                    datos históricos.
                   </p>
                 </div>
 
@@ -709,9 +852,7 @@ export default function ClimaPage() {
               </div>
 
               <div className="relative mx-auto w-full max-w-2xl">
-                <div
-                  className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-transparent p-4 shadow-[0_30px_80px_rgba(51,92,54,0.18)] backdrop-blur"
-                >
+                <div className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-transparent p-4 shadow-[0_30px_80px_rgba(51,92,54,0.18)] backdrop-blur">
                   <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
                     <div className="rounded-[1.5rem] bg-white/85 p-5 shadow-sm ring-1 ring-white/80">
                       <div className="flex items-start justify-between gap-4">
@@ -727,14 +868,17 @@ export default function ClimaPage() {
                                 {heroWeather.main?.temp?.toFixed(0)}°C
                               </p>
                               <p className="text-sm font-semibold text-emerald-700">
-                                {weather?.weather?.[0]?.description || "Parcialmente nublado"}
+                                {weather?.weather?.[0]?.description ||
+                                  "Parcialmente nublado"}
                               </p>
                             </div>
                           </div>
                         </div>
                         <div className="rounded-2xl bg-emerald-50 px-3 py-2 text-right text-xs font-semibold text-emerald-700">
                           <div>{heroWeather.name}</div>
-                          <div className="text-emerald-600/80">{heroWeather.sys?.country}</div>
+                          <div className="text-emerald-600/80">
+                            {heroWeather.sys?.country}
+                          </div>
                         </div>
                       </div>
 
@@ -764,13 +908,20 @@ export default function ClimaPage() {
                       <div className="rounded-[1.5rem] bg-white/90 p-4 shadow-sm ring-1 ring-white/80">
                         <div className="mb-3 flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-slate-900">Próximos 7 días</p>
-                            <p className="text-xs text-slate-500">Tendencia climática estimada</p>
+                            <p className="text-sm font-semibold text-slate-900">
+                              Próximos 7 días
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Tendencia climática estimada
+                            </p>
                           </div>
                           <Calendar className="h-5 w-5 text-emerald-600" />
                         </div>
                         <div className="rounded-2xl bg-emerald-50/80 p-3">
-                          <svg viewBox="0 0 100 60" className="h-24 w-full overflow-visible">
+                          <svg
+                            viewBox="0 0 100 60"
+                            className="h-24 w-full overflow-visible"
+                          >
                             <polyline
                               fill="none"
                               stroke="#6b8f3a"
@@ -780,12 +931,25 @@ export default function ClimaPage() {
                               points={forecastPath}
                             />
                             {forecastLine.map((value, index) => {
-                              const x = forecastLine.length === 1 ? 50 : (index / (forecastLine.length - 1)) * 100;
+                              const x =
+                                forecastLine.length === 1
+                                  ? 50
+                                  : (index / (forecastLine.length - 1)) * 100;
                               const y =
                                 100 -
-                                ((value - minForecast) / Math.max(maxForecast - minForecast, 1)) * 70 -
+                                ((value - minForecast) /
+                                  Math.max(maxForecast - minForecast, 1)) *
+                                  70 -
                                 15;
-                              return <circle key={index} cx={x} cy={y} r="1.8" fill="#7aa83a" />;
+                              return (
+                                <circle
+                                  key={index}
+                                  cx={x}
+                                  cy={y}
+                                  r="1.8"
+                                  fill="#7aa83a"
+                                />
+                              );
                             })}
                           </svg>
                           <div className="mt-1 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-slate-500">
@@ -802,8 +966,12 @@ export default function ClimaPage() {
                             <Droplets className="h-5 w-5" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-slate-900">Riego recomendado</p>
-                            <p className="text-sm text-emerald-700">En {irrigationLabel.toLowerCase()}</p>
+                            <p className="text-sm font-semibold text-slate-900">
+                              Riego recomendado
+                            </p>
+                            <p className="text-sm text-emerald-700">
+                              En {irrigationLabel.toLowerCase()}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -822,7 +990,9 @@ export default function ClimaPage() {
                 <div className="max-w-2xl space-y-3">
                   <div className="flex items-center gap-2 text-emerald-700">
                     <Leaf className="h-5 w-5" />
-                    <span className="text-lg font-bold">Selecciona un árbol</span>
+                    <span className="text-lg font-bold">
+                      Selecciona un árbol
+                    </span>
                   </div>
                   {arbolesLoading ? (
                     <div className="flex items-center gap-3 text-sm text-slate-500">
@@ -836,9 +1006,13 @@ export default function ClimaPage() {
                           🌱
                         </div>
                         <div>
-                          <p className="text-lg font-bold text-slate-900">Aún no tienes árboles registrados</p>
+                          <p className="text-lg font-bold text-slate-900">
+                            Aún no tienes árboles registrados
+                          </p>
                           <p className="max-w-xl text-sm leading-6 text-slate-600">
-                            Registra tu primer árbol en "Mi Árbol" para ver el clima de su ubicación y recibir predicciones personalizadas.
+                            Registra tu primer árbol en "Mi Árbol" para ver el
+                            clima de su ubicación y recibir predicciones
+                            personalizadas.
                           </p>
                         </div>
                       </div>
@@ -864,11 +1038,16 @@ export default function ClimaPage() {
                           </SelectTrigger>
                           <SelectContent>
                             {arboles.map((arbol) => (
-                              <SelectItem key={arbol.id} value={arbol.id.toString()}>
+                              <SelectItem
+                                key={arbol.id}
+                                value={arbol.id.toString()}
+                              >
                                 <div className="flex items-center gap-2">
                                   <span>🌳 {arbol.nombre}</span>
                                   {arbol.especie && (
-                                    <span className="text-xs text-gray-500">({arbol.especie})</span>
+                                    <span className="text-xs text-gray-500">
+                                      ({arbol.especie})
+                                    </span>
                                   )}
                                 </div>
                               </SelectItem>
@@ -878,7 +1057,9 @@ export default function ClimaPage() {
                       </div>
 
                       <Button
-                        onClick={() => selectedArbol && fetchWeatherForArbol(selectedArbol)}
+                        onClick={() =>
+                          selectedArbol && fetchWeatherForArbol(selectedArbol)
+                        }
                         disabled={!selectedArbol || weatherLoading}
                         className="h-12 rounded-2xl bg-emerald-700 px-6 text-white shadow-lg shadow-emerald-200 hover:bg-emerald-800"
                       >
@@ -902,14 +1083,17 @@ export default function ClimaPage() {
                   <div className="rounded-[1.5rem] bg-white p-4 shadow-sm ring-1 ring-emerald-100">
                     <div className="flex items-center gap-2 text-emerald-700">
                       <MapPin className="h-4 w-4" />
-                      <span className="text-sm font-semibold">Ubicación seleccionada</span>
+                      <span className="text-sm font-semibold">
+                        Ubicación seleccionada
+                      </span>
                     </div>
                     <p className="mt-2 text-sm text-slate-700">
                       <strong>{selectedArbol.nombre}</strong>
                       {selectedArbol.especie && ` (${selectedArbol.especie})`}
                     </p>
                     <p className="text-xs text-slate-500">
-                      Lat: {(+selectedArbol.latitud).toFixed(4)} · Lon: {(+selectedArbol.longitud).toFixed(4)}
+                      Lat: {(+selectedArbol.latitud).toFixed(4)} · Lon:{" "}
+                      {(+selectedArbol.longitud).toFixed(4)}
                     </p>
                   </div>
                 )}
@@ -917,11 +1101,12 @@ export default function ClimaPage() {
             </div>
           </div>
         </section>
-
         <section id="como-funciona" className="bg-white px-4 py-10">
           <div className="container mx-auto max-w-7xl">
             <div className="mb-6 text-center">
-              <h2 className="text-2xl font-black text-slate-900 md:text-3xl">¿Cómo funciona?</h2>
+              <h2 className="text-2xl font-black text-slate-900 md:text-3xl">
+                ¿Cómo funciona?
+              </h2>
             </div>
             <div className="grid gap-4 lg:grid-cols-3">
               {[
@@ -952,10 +1137,16 @@ export default function ClimaPage() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-700 text-lg font-black text-white">
                       {item.step}
                     </div>
-                    <div className="rounded-2xl bg-white p-3 shadow-sm">{item.icon}</div>
+                    <div className="rounded-2xl bg-white p-3 shadow-sm">
+                      {item.icon}
+                    </div>
                   </div>
-                  <h3 className="mt-4 text-lg font-bold text-slate-900">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{item.text}</p>
+                  <h3 className="mt-4 text-lg font-bold text-slate-900">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {item.text}
+                  </p>
                   {index < 2 && (
                     <div className="mt-4 hidden h-px bg-emerald-100 lg:block" />
                   )}
@@ -972,10 +1163,13 @@ export default function ClimaPage() {
                 <div>
                   <div className="flex items-center gap-3 text-sky-700">
                     <ShieldCheck className="h-6 w-6" />
-                    <h3 className="text-xl font-black text-slate-900">Datos confiables para el mejor cuidado</h3>
+                    <h3 className="text-xl font-black text-slate-900">
+                      Datos confiables para el mejor cuidado
+                    </h3>
                   </div>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-                    Usamos fuentes meteorológicas confiables y modelos avanzados para brindarte información precisa y útil para tu árbol.
+                    Usamos fuentes meteorológicas confiables y modelos avanzados
+                    para brindarte información precisa y útil para tu árbol.
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-center text-sm font-semibold text-slate-700">
@@ -1878,15 +2072,23 @@ export default function ClimaPage() {
 
                 {/* Recommendations Section */}
                 <div className="space-y-4">
-                  <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                    <CheckCircle className="h-7 w-7 text-green-600" />
-                    Recomendaciones de Cuidado
-                  </h2>
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                      <CheckCircle className="h-7 w-7 text-green-600" />
+                      Recomendaciones de Cuidado
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      {selectedArbol?.especie
+                        ? `Sugerencias adaptadas a la especie: ${selectedArbol.especie}.`
+                        : "Consejos ajustados a las condiciones del clima y a la especie del árbol."}
+                    </p>
+                  </div>
                   <div className="grid gap-3">
                     {getDetailedAdvice(
                       weather.main?.temp,
                       weather.main?.humidity,
                       weather.wind?.speed,
+                      selectedArbol?.especie,
                     ).map((tip, index) => (
                       <Card
                         key={index}
