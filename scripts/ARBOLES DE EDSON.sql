@@ -117,7 +117,9 @@ VALUES
 
 (2, 'Persea americana', 'Aguacate Criollo - Catacaos', -5.2670, -80.6720, '2020-09-10', 
  'Aguacate criollo de la zona. Altura 7 metros. Frutos medianos de buena calidad. Adaptado al clima de Catacaos. Zona de Paltares 456.', 
- 720.00, 45.00, 'BUENO', NOW(), NOW());
+ 720.00, 45.00, 'BUENO', NOW(), NOW())
+ 
+ ;
 
 -- ============================================================
 -- 3. VERIFICAR INSERCIÓN
