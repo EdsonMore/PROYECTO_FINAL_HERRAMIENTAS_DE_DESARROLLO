@@ -50,34 +50,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Construir prompt con contexto e historial
-    let promptCompleto = SYSTEM_INSTRUCTIONS + "\n\n";
-
+    // Construir contexto de la sesión (sin mezclar con system instructions)
+    let contextoParts = "";
     if (Object.keys(contexto).length > 0) {
       const ctx = Object.entries(contexto)
         .map(([k, v]) => `${k}: ${v}`)
         .join(", ");
-      promptCompleto += `Contexto actual: ${ctx}\n`;
+      contextoParts += `Contexto del árbol identificado: ${ctx}\n`;
     }
 
-    // Agregar historial de conversación si existe
-    if (historial.length > 0) {
-      promptCompleto += "\nHistorial de conversación:\n";
-      historial.forEach((msg) => {
+    // Limitar historial en backend como medida de seguridad (máx 10 mensajes)
+    const historialLimitado = historial.slice(-10);
+    if (historialLimitado.length > 0) {
+      contextoParts += "\nHistorial de conversación:\n";
+      historialLimitado.forEach((msg) => {
         const rol = msg.rol === "usuario" ? "Usuario" : "Asistente";
-        promptCompleto += `${rol}: ${msg.contenido}\n`;
+        contextoParts += `${rol}: ${msg.contenido}\n`;
       });
-      promptCompleto += "\n";
+      contextoParts += "\n";
     }
 
-    promptCompleto += `Nueva pregunta del usuario: ${mensaje}`;
+    const mensajeCompleto = contextoParts
+      ? `${contextoParts}Nueva pregunta del usuario: ${mensaje}`
+      : mensaje;
 
-    // Llamar a Google Gemini
+    // Llamar a Google Gemini usando systemInstruction como campo separado
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     const payload = {
+      systemInstruction: {
+        parts: [{ text: SYSTEM_INSTRUCTIONS }],
+      },
       contents: [
         {
-          parts: [{ text: promptCompleto }],
+          parts: [{ text: mensajeCompleto }],
         },
       ],
     };

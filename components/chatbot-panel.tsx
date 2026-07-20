@@ -42,7 +42,6 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showChat, setShowChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -221,9 +220,12 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
+    // Guardar valor antes de limpiar para evitar bug de closure
+    const mensajeActual = inputValue;
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      texto: inputValue,
+      texto: mensajeActual,
       esUsuario: true,
       timestamp: Date.now(),
     };
@@ -232,18 +234,20 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
     setInputValue("");
 
     if (savingStep === "waiting_for_name") {
-      await handleSaveTreeFlow(inputValue);
+      await handleSaveTreeFlow(mensajeActual);
       return;
     }
 
     setLoading(true);
 
     try {
-      // Construir historial para enviar
-      const historial = chatMessages.map((msg) => ({
-        rol: msg.esUsuario ? ("usuario" as const) : ("asistente" as const),
-        contenido: msg.texto,
-      }));
+      // Limitar historial a los últimos 10 mensajes para evitar prompts excesivos
+      const historial = chatMessages
+        .slice(-10)
+        .map((msg) => ({
+          rol: msg.esUsuario ? ("usuario" as const) : ("asistente" as const),
+          contenido: msg.texto,
+        }));
 
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -251,14 +255,14 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          mensaje: inputValue,
+          mensaje: mensajeActual,
           contexto: speciesData
             ? {
                 especie: speciesData.commonName,
                 nombreCientifico: speciesData.scientificName,
               }
             : {},
-          historial, // Enviar historial para contexto
+          historial, // Historial limitado a últimos 10 mensajes
         }),
       });
 
@@ -385,7 +389,7 @@ export function ChatbotPanel({ speciesData }: ChatbotPanelProps) {
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                   placeholder="Escribe tu pregunta..."
                   className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-green-600 placeholder-gray-400 bg-gray-50"
                   disabled={loading}
