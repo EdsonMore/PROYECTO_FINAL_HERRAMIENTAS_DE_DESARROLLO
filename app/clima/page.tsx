@@ -36,6 +36,7 @@ import {
   ShieldCheck,
   BarChart3,
   TreePine,
+  Download,
 } from "lucide-react";
 import type { Arbol } from "@/types";
 
@@ -481,6 +482,233 @@ export default function ClimaPage() {
     saveWeatherHistory([]);
   };
 
+  const buildReportData = () => {
+    const currentWeather = weather ?? {
+      main: {
+        temp: heroWeather.main?.temp ?? 0,
+        feels_like: heroWeather.main?.feels_like ?? 0,
+        humidity: heroWeather.main?.humidity ?? 0,
+        pressure: heroWeather.main?.pressure ?? 0,
+      },
+      wind: {
+        speed: heroWeather.wind?.speed ?? 0,
+        gust: heroWeather.wind?.gust ?? 0,
+      },
+      weather: [
+        { description: heroWeather.weather?.[0]?.description ?? "Sin datos" },
+      ],
+      clouds: { all: heroWeather.clouds?.all ?? 0 },
+      name: heroWeather.name ?? selectedArbol?.nombre ?? "Árbol",
+      sys: { country: heroWeather.sys?.country ?? "" },
+    };
+
+    const reportRows = weatherHistory.map((item) => ({
+      fecha: item.timestampFormato,
+      arbol: item.arbolNombre,
+      especie: item.arbolEspecie || "Sin especie",
+      temperatura: item.clima?.main?.temp?.toFixed(1) ?? "N/D",
+      humedad: item.clima?.main?.humidity?.toFixed(0) ?? "N/D",
+      viento: item.clima?.wind?.speed?.toFixed(1) ?? "N/D",
+      descripcion: item.clima?.weather?.[0]?.description ?? "Sin datos",
+    }));
+
+    return {
+      treeName: selectedArbol?.nombre || heroWeather.name || "Árbol",
+      treeSpecies: selectedArbol?.especie || "Sin especie",
+      currentWeather,
+      prediction,
+      reportRows,
+    };
+  };
+
+  const exportToPdf = () => {
+    const reportData = buildReportData();
+    const reportWindow = window.open("", "_blank", "width=1100,height=900");
+
+    if (!reportWindow) {
+      setError("Tu navegador bloqueó la ventana de impresión del reporte.");
+      return;
+    }
+
+    const predictionRows = reportData.prediction
+      .map(
+        (item) => `
+          <tr>
+            <td>${item.date}</td>
+            <td>${item.description}</td>
+            <td>${item.tempMax}°C</td>
+            <td>${item.tempMin}°C</td>
+            <td>${item.humidity}%</td>
+            <td>${item.windSpeed} km/h</td>
+          </tr>`,
+      )
+      .join("");
+
+    const historyRows = reportData.reportRows
+      .map(
+        (item) => `
+          <tr>
+            <td>${item.fecha}</td>
+            <td>${item.arbol}</td>
+            <td>${item.especie}</td>
+            <td>${item.temperatura}°C</td>
+            <td>${item.humedad}%</td>
+            <td>${item.viento} km/h</td>
+            <td>${item.descripcion}</td>
+          </tr>`,
+      )
+      .join("");
+
+    reportWindow.document.write(`
+      <html>
+        <head>
+          <title>Reporte climático</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
+            h1, h2 { color: #065f46; }
+            .card { border: 1px solid #d1d5db; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+            th, td { border: 1px solid #d1d5db; padding: 6px; text-align: left; }
+            th { background: #ecfdf5; }
+          </style>
+        </head>
+        <body>
+          <h1>Reporte climático detallado</h1>
+          <p><strong>Árbol:</strong> ${reportData.treeName}</p>
+          <p><strong>Especie:</strong> ${reportData.treeSpecies}</p>
+          <p><strong>Fecha de generación:</strong> ${new Date().toLocaleString("es-ES")}</p>
+
+          <div class="card">
+            <h2>Clima actual</h2>
+            <p><strong>Temperatura:</strong> ${reportData.currentWeather.main?.temp?.toFixed(1) ?? "N/D"}°C</p>
+            <p><strong>Humedad:</strong> ${reportData.currentWeather.main?.humidity ?? "N/D"}%</p>
+            <p><strong>Viento:</strong> ${reportData.currentWeather.wind?.speed?.toFixed(1) ?? "N/D"} km/h</p>
+            <p><strong>Descripción:</strong> ${reportData.currentWeather.weather?.[0]?.description ?? "Sin datos"}</p>
+          </div>
+
+          <div class="card">
+            <h2>Predicción de 7 días</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Día</th>
+                  <th>Clima</th>
+                  <th>Máx.</th>
+                  <th>Mín.</th>
+                  <th>Humedad</th>
+                  <th>Viento</th>
+                </tr>
+              </thead>
+              <tbody>${predictionRows}</tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h2>Historial de consultas del árbol</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Árbol</th>
+                  <th>Especie</th>
+                  <th>Temp.</th>
+                  <th>Humedad</th>
+                  <th>Viento</th>
+                  <th>Descripción</th>
+                </tr>
+              </thead>
+              <tbody>${historyRows}</tbody>
+            </table>
+          </div>
+        </body>
+      </html>
+    `);
+
+    reportWindow.document.close();
+    reportWindow.focus();
+    reportWindow.print();
+  };
+
+  const exportToExcel = () => {
+    const reportData = buildReportData();
+    const rows: string[][] = [];
+
+    rows.push(["Reporte climático detallado", ""]);
+    rows.push(["Árbol", reportData.treeName]);
+    rows.push(["Especie", reportData.treeSpecies]);
+    rows.push(["Fecha de generación", new Date().toLocaleString("es-ES")]);
+    rows.push([]);
+    rows.push(["Clima actual", ""]);
+    rows.push([
+      "Temperatura",
+      `${reportData.currentWeather.main?.temp?.toFixed(1) ?? "N/D"}°C`,
+    ]);
+    rows.push([
+      "Humedad",
+      `${reportData.currentWeather.main?.humidity ?? "N/D"}%`,
+    ]);
+    rows.push([
+      "Viento",
+      `${reportData.currentWeather.wind?.speed?.toFixed(1) ?? "N/D"} km/h`,
+    ]);
+    rows.push([
+      "Descripción",
+      reportData.currentWeather.weather?.[0]?.description ?? "Sin datos",
+    ]);
+    rows.push([]);
+    rows.push(["Predicción de 7 días", ""]);
+    rows.push(["Día", "Clima", "Máx.", "Mín.", "Humedad", "Viento"]);
+
+    reportData.prediction.forEach((item) => {
+      rows.push([
+        item.date,
+        item.description,
+        `${item.tempMax}°C`,
+        `${item.tempMin}°C`,
+        `${item.humidity}%`,
+        `${item.windSpeed} km/h`,
+      ]);
+    });
+
+    rows.push([]);
+    rows.push(["Historial de consultas", ""]);
+    rows.push([
+      "Fecha",
+      "Árbol",
+      "Especie",
+      "Temperatura",
+      "Humedad",
+      "Viento",
+      "Descripción",
+    ]);
+
+    reportData.reportRows.forEach((item) => {
+      rows.push([
+        item.fecha,
+        item.arbol,
+        item.especie,
+        `${item.temperatura}°C`,
+        `${item.humedad}%`,
+        `${item.viento} km/h`,
+        item.descripcion,
+      ]);
+    });
+
+    const csvContent = rows
+      .map((row) =>
+        row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","),
+      )
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reporte-clima-${(reportData.treeName || "arbol").toLowerCase().replace(/\s+/g, "-")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     if (selectedArbol && !weather && !weatherLoading) {
       fetchWeatherForArbol(selectedArbol);
@@ -842,6 +1070,16 @@ export default function ClimaPage() {
                       ¿Cómo funciona?
                     </Button>
                   </Link>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={exportToPdf}
+                      variant="outline"
+                      className="h-12 rounded-xl border-emerald-200 bg-white/80 px-5 text-emerald-700 hover:bg-emerald-50"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar PDF
+                    </Button>
+                  </div>
                 </div>
 
                 <p className="text-sm text-slate-500">
